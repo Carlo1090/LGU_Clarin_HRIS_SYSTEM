@@ -40,14 +40,14 @@ Entry format: Status, Context, Decision, Consequences.
   MySQL 8.4.
 - **Decision:** Use MySQL 8.4 for development and production.
 - **Consequences:**
-  - Step 2 (audit log): the prompt asks for `jsonb` columns. MySQL has `JSON`,
-    which works but behaves differently. The tamper-protection plan (revoked
-    UPDATE/DELETE rights plus triggers) is possible on MySQL, but must be tested
-    on MySQL itself.
-  - Step 4: PostgreSQL row-level security does not exist in MySQL. The second
-    line of defense for sensitive tables must be redesigned (for example
-    restricted database views and application-level scopes).
-  - Revisit this decision before starting Step 2, while switching is cheap.
+    - Step 2 (audit log): the prompt asks for `jsonb` columns. MySQL has `JSON`,
+      which works but behaves differently. The tamper-protection plan (revoked
+      UPDATE/DELETE rights plus triggers) is possible on MySQL, but must be tested
+      on MySQL itself.
+    - Step 4: PostgreSQL row-level security does not exist in MySQL. The second
+      line of defense for sensitive tables must be redesigned (for example
+      restricted database views and application-level scopes).
+    - Revisit this decision before starting Step 2, while switching is cheap.
 
 ## D-004: RustFS replaces MinIO for local file storage
 
@@ -58,12 +58,12 @@ Entry format: Status, Context, Decision, Consequences.
 - **Decision:** Use `rustfs/rustfs` as the S3-compatible store in Docker
   Compose. It is only used for local development.
 - **Consequences:**
-  - The RustFS project describes some of its S3 compatibility as preview. We
-    have not yet tested uploads against it.
-  - The image tag is `latest`. Pin an exact version once we depend on it.
-  - The production storage choice (self-hosted store, or a government-approved
-    cloud store) is still open and must be decided before Step 5, together with
-    DICT hosting guidance.
+    - The RustFS project describes some of its S3 compatibility as preview. We
+      have not yet tested uploads against it.
+    - The image tag is `latest`. Pin an exact version once we depend on it.
+    - The production storage choice (self-hosted store, or a government-approved
+      cloud store) is still open and must be decided before Step 5, together with
+      DICT hosting guidance.
 
 ## D-005: The app container does not use `env_file`
 
