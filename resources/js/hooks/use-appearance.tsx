@@ -34,7 +34,9 @@ const getStoredAppearance = (): Appearance => {
         return 'system';
     }
 
-    return (localStorage.getItem('appearance') as Appearance) || 'system';
+    const stored = localStorage.getItem('appearance');
+
+    return stored === 'light' || stored === 'dark' ? stored : 'system';
 };
 
 const isDarkMode = (appearance: Appearance): boolean => {
@@ -70,6 +72,13 @@ const mediaQuery = (): MediaQueryList | null => {
 
 const handleSystemThemeChange = (): void => applyTheme(currentAppearance);
 
+const subscribeToSystemTheme = (callback: () => void): (() => void) => {
+    const query = mediaQuery();
+    query?.addEventListener('change', callback);
+
+    return () => query?.removeEventListener('change', callback);
+};
+
 export function initializeTheme(): void {
     if (typeof window === 'undefined') {
         return;
@@ -94,9 +103,17 @@ export function useAppearance(): UseAppearanceReturn {
         () => 'system',
     );
 
-    const resolvedAppearance: ResolvedAppearance = isDarkMode(appearance)
-        ? 'dark'
-        : 'light';
+    const systemPrefersDark = useSyncExternalStore(
+        subscribeToSystemTheme,
+        prefersDark,
+        () => false,
+    );
+    const resolvedAppearance: ResolvedAppearance =
+        appearance === 'system'
+            ? systemPrefersDark
+                ? 'dark'
+                : 'light'
+            : appearance;
 
     const updateAppearance = (mode: Appearance): void => {
         currentAppearance = mode;
