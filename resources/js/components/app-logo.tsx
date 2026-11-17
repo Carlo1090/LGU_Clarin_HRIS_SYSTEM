@@ -1,16 +1,20 @@
-import { Landmark } from 'lucide-react';
-
 export default function AppLogo() {
     return (
         <>
-            <div className="flex aspect-square size-9 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-sm">
-                <Landmark aria-hidden="true" className="size-5" />
+            <div className="flex aspect-square size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white sm:size-10">
+                <img
+                    src="/images/clarin_logo.png"
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="size-full object-contain"
+                />
             </div>
-            <div className="ml-1 grid flex-1 text-left">
-                <span className="truncate text-sm leading-tight font-semibold">
+            <div className="grid min-w-0 text-left">
+                <span className="truncate text-sm leading-tight font-semibold text-foreground">
                     LGU Clarin
                 </span>
-                <span className="truncate text-[10px] leading-tight text-muted-foreground">
+                <span className="hidden truncate text-[10px] leading-tight font-medium text-muted-foreground sm:block">
                     Human Resource System
                 </span>
             </div>

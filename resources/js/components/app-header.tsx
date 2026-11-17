@@ -1,5 +1,6 @@
-﻿import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import AppLogo from '@/components/app-logo';
+import AppearanceToggle from '@/components/appearance-toggle';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     <AppLogo />
                 </Link>
                 <div className="flex shrink-0 items-center gap-2">
+                    <AppearanceToggle />
                     <nav aria-label="Main navigation">
                         <Button variant="ghost" asChild>
                             <Link href={dashboard()}>Dashboard</Link>
