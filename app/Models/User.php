@@ -7,6 +7,8 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -46,5 +48,70 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    public function attendanceImports(): HasMany
+    {
+        return $this->hasMany(AttendanceImport::class, 'uploaded_by');
+    }
+
+    public function attendanceCorrections(): HasMany
+    {
+        return $this->hasMany(AttendanceCorrection::class, 'approved_by');
+    }
+
+    public function overtimeCtoRecords(): HasMany
+    {
+        return $this->hasMany(OvertimeCtoRecord::class, 'approved_by');
+    }
+
+    public function leaveApplications(): HasMany
+    {
+        return $this->hasMany(LeaveApplication::class, 'approved_by');
+    }
+
+    public function applicantEvaluations(): HasMany
+    {
+        return $this->hasMany(ApplicantEvaluation::class, 'evaluator_id');
+    }
+
+    public function recruitmentSelections(): HasMany
+    {
+        return $this->hasMany(RecruitmentSelection::class, 'selected_by');
+    }
+
+    public function performanceReviews(): HasMany
+    {
+        return $this->hasMany(PerformanceReview::class, 'reviewer_id');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    public function loginActivities(): HasMany
+    {
+        return $this->hasMany(LoginActivity::class);
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(Announcement::class, 'posted_by');
     }
 }
