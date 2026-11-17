@@ -4,8 +4,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    env_file:
-      - .env
     volumes:
       - ./:/var/www/html
       - vendor_data:/var/www/html/vendor
