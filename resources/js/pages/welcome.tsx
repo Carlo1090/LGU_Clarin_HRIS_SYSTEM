@@ -438,6 +438,31 @@ export default function Welcome() {
                         </div>
                     </section>
 
+                    <section
+                        id="users"
+                        aria-labelledby="users-heading"
+                        className="mx-auto max-w-6xl px-6 py-16 lg:px-10"
+                    >
+                        <h2 id="users-heading" className="text-3xl font-semibold tracking-tight">
+                            Who uses the HRIS?
+                        </h2>
+                        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            {[
+                                ['Municipal employees', 'Access their employee records and submit requests.'],
+                                ['Department heads', 'Review requests and coordinate with HR for their teams.'],
+                                ['HRMO staff', 'Manage personnel records and process employee requests.'],
+                                ['MIS administrators', 'Manage system access and help users with technical issues.'],
+                            ].map(([role, description]) => (
+                                <li key={role} className="rounded-2xl border border-border bg-card p-5">
+                                    <h3 className="font-semibold">{role}</h3>
+                                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                                        {description}
+                                    </p>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+
                     {/* Bottom Info / Help Section */}
                     <section
                         id="about"

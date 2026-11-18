@@ -199,7 +199,7 @@
 
 .public-surface section[id],
 .public-surface p[id] {
-    scroll-margin-top: 6rem;
+    @apply scroll-mt-36 lg:scroll-mt-24;
 }
 
 @media (prefers-reduced-motion: reduce) {
