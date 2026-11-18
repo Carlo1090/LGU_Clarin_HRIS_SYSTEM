@@ -11,6 +11,7 @@ class DisciplinaryRecord extends Model
 
     protected $fillable = ['employee_id', 'case_number', 'offense', 'details', 'sanction', 'incident_date', 'resolved_date'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

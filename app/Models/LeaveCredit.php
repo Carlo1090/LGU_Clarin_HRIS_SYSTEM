@@ -11,11 +11,13 @@ class LeaveCredit extends Model
 
     protected $fillable = ['employee_id', 'leave_type_id', 'earned_days', 'used_days', 'remaining_days', 'year'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
     }
 
+    /** @return BelongsTo<LeaveType, $this> */
     public function leaveType(): BelongsTo
     {
         return $this->belongsTo(LeaveType::class);

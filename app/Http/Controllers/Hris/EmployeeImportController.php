@@ -38,10 +38,10 @@ class EmployeeImportController
             'status_options' => ['required', 'array', 'min:1', 'max:8'],
             'status_options.*' => ['required', 'string', 'max:30', 'not_regex:/,/'],
         ]);
-        $statuses = collect($input['status_options'])->map(fn ($status) => trim($status))->filter()->unique()->values();
+        $statuses = collect($request->array('status_options'))->map(fn ($status) => trim($status))->filter()->unique()->values();
         abort_if($statuses->isEmpty() || $statuses->count() !== count($input['status_options']), 422, 'Enter distinct status names without blank values.');
         abort_if(strlen($statuses->implode(',')) > 253, 422, 'The combined status choices are too long for Excel’s dropdown.');
-        $template->save($input['columns'], $statuses->all());
+        $template->save($input['columns'], array_values($statuses->all()));
 
         return back()->with('success', 'Employee template columns and choices updated.');
     }
@@ -74,7 +74,7 @@ class EmployeeImportController
         $rows = $request->session()->pull('employee_import.'.$input['token']);
         abort_unless(is_array($rows) && count($rows), 410, 'Import preview expired. Upload the workbook again.');
         abort_if(collect($rows)->contains(fn ($row) => ! $row['valid']), 422, 'Fix all spreadsheet row errors and preview the corrected workbook.');
-        $result = $import->commit($rows, $request->user(), $input['approval_reference']);
+        $result = $import->commit(array_values($rows), $request->user(), $input['approval_reference']);
 
         return Inertia::render('hris/import-employees', [
             'result' => collect($result)->except('credentials')->all(),

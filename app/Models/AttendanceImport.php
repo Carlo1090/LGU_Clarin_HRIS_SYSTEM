@@ -11,6 +11,7 @@ class AttendanceImport extends Model
 
     protected $fillable = ['file_name', 'upload_batch', 'uploaded_by', 'status', 'imported_at'];
 
+    /** @return BelongsTo<User, $this> */
     public function uploadedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');

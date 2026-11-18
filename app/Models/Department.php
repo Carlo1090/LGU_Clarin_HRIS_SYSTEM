@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\DepartmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Department extends Model
 {
+    /** @use HasFactory<DepartmentFactory> */
     use HasFactory;
 
     public const PLANTILLA_OFFICES = [
@@ -30,31 +32,37 @@ class Department extends Model
 
     protected $fillable = ['parent_department_id', 'name', 'code', 'description'];
 
+    /** @return BelongsTo<Department, $this> */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_department_id');
     }
 
+    /** @return HasMany<Department, $this> */
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_department_id');
     }
 
+    /** @return HasMany<Position, $this> */
     public function positions(): HasMany
     {
         return $this->hasMany(Position::class);
     }
 
+    /** @return HasMany<PlantillaItem, $this> */
     public function plantillaItems(): HasMany
     {
         return $this->hasMany(PlantillaItem::class);
     }
 
+    /** @return HasMany<Employee, $this> */
     public function employees(): HasMany
     {
         return $this->hasMany(Employee::class);
     }
 
+    /** @return HasMany<Vacancy, $this> */
     public function vacancies(): HasMany
     {
         return $this->hasMany(Vacancy::class);

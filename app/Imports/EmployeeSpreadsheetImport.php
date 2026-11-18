@@ -50,6 +50,7 @@ class EmployeeSpreadsheetImport
         'soloparentidnumber' => 'solo_parent_id_number', 'gsisbpnumber' => 'gsis_bp_number', 'emailaddress' => 'email',
     ];
 
+    /** @return list<array<string, mixed>> */
     public function parse(UploadedFile $file): array
     {
         if ($file->getClientOriginalExtension() !== 'xlsx') {
@@ -86,7 +87,6 @@ class EmployeeSpreadsheetImport
 
         foreach ($dataRows as $excelRow => $values) {
             $data = array_fill_keys(array_unique(array_merge(self::FIELDS, $customKeys)), null);
-            $data['present_fields'] = array_values(array_unique($mappedHeaders));
             foreach ($mappedHeaders as $index => $field) {
                 $value = trim((string) ($values[$index] ?? ''));
                 $data[$field] = $value === '' ? null : $value;
@@ -127,7 +127,7 @@ class EmployeeSpreadsheetImport
             }
 
             $existing = $data['employee_number'] ? $employees->get($data['employee_number']) : null;
-            $user = $existing?->user ?? ($existing ? User::query()->where('employee_id', $existing->id)->first() : null);
+            $user = $existing->user ?? ($existing ? User::query()->where('employee_id', $existing->id)->first() : null);
             if ($data['email']) {
                 if (isset($seenEmails[$data['email']])) {
                     $errors[] = 'Duplicate email address in this workbook.';
@@ -162,15 +162,15 @@ class EmployeeSpreadsheetImport
                 $errors = array_merge($errors, $validator->errors()->all());
             }
 
-            $data['department_id'] = $department?->id ?? $existing?->department_id;
-            $data['position_id'] = $position?->id ?? ($department && $existing?->department_id !== $department->id ? null : $existing?->position_id);
+            $data['department_id'] = $department->id ?? $existing?->department_id;
+            $data['position_id'] = $position->id ?? ($department && $existing?->department_id !== $department->id ? null : $existing?->position_id);
             $rows[] = [
                 'row' => $excelRow, 'employee_number' => $data['employee_number'] ?? '—',
                 'name' => trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')),
-                'department' => $department?->name ?? '—', 'position' => $position?->title ?? '—',
+                'department' => $department->name ?? '—', 'position' => $position->title ?? '—',
                 'status' => $data['employment_status'] ?? '—',
                 'action' => $existing ? 'Update profile' : 'Create employee account',
-                'valid' => ! $errors, 'errors' => array_values(array_unique($errors)), 'data' => $data,
+                'valid' => ! $errors, 'errors' => array_values(array_unique($errors)), 'data' => $data + ['present_fields' => array_values(array_unique($mappedHeaders))],
             ];
         }
 
@@ -181,6 +181,10 @@ class EmployeeSpreadsheetImport
         return $rows;
     }
 
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return array{createdProfiles: int, updatedProfiles: int, createdAccounts: int, credentials: list<array<string, string>>, emailSetupSent: int}
+     */
     public function commit(array $rows, User $actor, string $approval): array
     {
         $result = DB::transaction(function () use ($rows, $actor, $approval): array {
@@ -199,7 +203,7 @@ class EmployeeSpreadsheetImport
                 }
                 $customFields = array_filter($data, fn ($value, $key) => str_starts_with($key, 'custom_') && $value !== null, ARRAY_FILTER_USE_BOTH);
                 if ($customFields) {
-                    $employeeData['custom_fields'] = array_merge($employee?->custom_fields ?? [], $customFields);
+                    $employeeData['custom_fields'] = array_merge($employee->custom_fields ?? [], $customFields);
                 }
                 $employee ? $employee->update($employeeData) : $employee = Employee::query()->create($employeeData);
                 $employee->refresh();
@@ -245,6 +249,7 @@ class EmployeeSpreadsheetImport
         return $result;
     }
 
+    /** @return array<int, array<int, string>> */
     private function sheetRows(string $path, string $sheetName): array
     {
         $zip = new ZipArchive;
@@ -284,31 +289,43 @@ class EmployeeSpreadsheetImport
         }
         if (($sharedXml = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
             $sharedReader = XMLReader::XML($sharedXml, null, LIBXML_NONET | LIBXML_COMPACT);
+            if (! $sharedReader instanceof XMLReader) {
+                throw ValidationException::withMessages(['file' => 'The workbook shared text could not be read.']);
+            }
             while ($sharedReader->read()) {
                 if ($sharedReader->nodeType === XMLReader::ELEMENT && $sharedReader->localName === 'si') {
                     $node = simplexml_load_string($sharedReader->readOuterXml(), SimpleXMLElement::class, LIBXML_NONET);
+                    if ($node === false) {
+                        throw ValidationException::withMessages(['file' => 'The workbook shared text could not be read.']);
+                    }
                     $shared[] = implode('', array_map('strval', (array) $node->xpath('.//*[local-name()="t"]')));
                 }
             }
             $sharedReader->close();
         }
-        $sheetStat = $target ? $zip->statName($target) : false;
+        $sheetStat = $zip->statName($target);
         if (! $sheetStat || $sheetStat['size'] > 50 * 1024 * 1024) {
             $zip->close();
             throw ValidationException::withMessages(['file' => 'The EMPLOYEES worksheet is missing or too large to import.']);
         }
-        $sheetXml = $target ? $zip->getFromName($target) : false;
+        $sheetXml = $zip->getFromName($target);
         $zip->close();
         if ($sheetXml === false) {
             throw ValidationException::withMessages(['file' => 'The workbook must contain an EMPLOYEES worksheet.']);
         }
         $reader = XMLReader::XML($sheetXml, null, LIBXML_NONET | LIBXML_COMPACT);
+        if (! $reader instanceof XMLReader) {
+            throw ValidationException::withMessages(['file' => 'The EMPLOYEES worksheet could not be read.']);
+        }
         $rows = [];
         while ($reader->read()) {
             if ($reader->nodeType !== XMLReader::ELEMENT || $reader->localName !== 'row') {
                 continue;
             }
             $rowNode = simplexml_load_string($reader->readOuterXml(), SimpleXMLElement::class, LIBXML_NONET);
+            if ($rowNode === false) {
+                throw ValidationException::withMessages(['file' => 'The EMPLOYEES worksheet could not be read.']);
+            }
             $rowNumber = (int) $rowNode['r'];
             $cells = [];
             foreach ($rowNode->c as $cell) {

@@ -33,6 +33,7 @@ class EmployeeImportTemplate
         return storage_path('app/private/employee-import-columns.json');
     }
 
+    /** @return list<array{key: string, label: string}> */
     public function columns(): array
     {
         $path = $this->path();
@@ -44,6 +45,7 @@ class EmployeeImportTemplate
         return is_array($saved) && isset($saved['columns']) ? $saved['columns'] : self::DEFAULT_COLUMNS;
     }
 
+    /** @return list<string> */
     public function statuses(): array
     {
         $saved = is_file($this->path()) ? json_decode((string) file_get_contents($this->path()), true) : null;
@@ -51,6 +53,10 @@ class EmployeeImportTemplate
         return $saved['status_options'] ?? ['active', 'on leave', 'inactive', 'terminated'];
     }
 
+    /**
+     * @param  array<array{key?: string|null, label: string}>  $columns
+     * @param  list<string>  $statuses
+     */
     public function save(array $columns, array $statuses): void
     {
         $known = array_column(self::DEFAULT_COLUMNS, 'key');
@@ -60,8 +66,7 @@ class EmployeeImportTemplate
             $key = $column['key'] ?? '';
             if ($key === '') {
                 $key = 'custom_'.(Str::slug($column['label']) ?: 'field').'_'.Str::lower(Str::random(5));
-            }
-            if (! in_array($key, $known, true) && ! in_array($key, $oldCustom, true)) {
+            } elseif (! in_array($key, $known, true) && ! in_array($key, $oldCustom, true)) {
                 throw ValidationException::withMessages(['columns' => 'Column key is not supported.']);
             }
             $normalized[] = ['key' => $key, 'label' => trim($column['label'])];
@@ -80,13 +85,18 @@ class EmployeeImportTemplate
         if (! is_dir(dirname($path))) {
             mkdir(dirname($path), 0775, true);
         }
-        file_put_contents($path, json_encode(['columns' => array_values($columns), 'status_options' => array_values($statuses)], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR), LOCK_EX);
+        file_put_contents($path, json_encode(['columns' => $columns, 'status_options' => $statuses], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR), LOCK_EX);
     }
 
+    /** @param list<string> $statuses */
     public function download(string $path, array $statuses): void
     {
         $columns = $this->columns();
-        $eligibilities = json_decode(file_get_contents(resource_path('data/plantilla-lookups.json')), true, flags: JSON_THROW_ON_ERROR)['eligibilities'];
+        $lookupContents = file_get_contents(resource_path('data/plantilla-lookups.json'));
+        if ($lookupContents === false) {
+            throw new \RuntimeException('Unable to read employee workbook lookups.');
+        }
+        $eligibilities = json_decode($lookupContents, true, flags: JSON_THROW_ON_ERROR)['eligibilities'];
         $zip = new ZipArchive;
         if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new \RuntimeException('Unable to create the employee workbook.');

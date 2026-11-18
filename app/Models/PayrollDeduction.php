@@ -11,6 +11,7 @@ class PayrollDeduction extends Model
 
     protected $fillable = ['payroll_id', 'deduction_type', 'amount', 'remarks'];
 
+    /** @return BelongsTo<Payroll, $this> */
     public function payroll(): BelongsTo
     {
         return $this->belongsTo(Payroll::class);
