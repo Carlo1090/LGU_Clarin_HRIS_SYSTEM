@@ -1,18 +1,18 @@
-import { Head, Link, useForm } from "@inertiajs/react";
-import type { FormEvent } from "react";
-import InputError from "@/components/input-error";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { dashboard } from "@/routes";
-import { store } from "@/routes/hris/invitations";
+import { Head, Link, useForm } from '@inertiajs/react';
+import type { FormEvent } from 'react';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { dashboard } from '@/routes';
+import { store } from '@/routes/hris/invitations';
 
 export default function InviteAccount({ roles }: { roles: string[] }) {
     const form = useForm({
-        employee_number: "",
-        email: "",
-        role: "",
-        approval_reference: "",
+        employee_number: '',
+        email: '',
+        role: '',
+        approval_reference: '',
     });
 
     function submit(event: FormEvent<HTMLFormElement>) {
@@ -24,17 +24,26 @@ export default function InviteAccount({ roles }: { roles: string[] }) {
         <>
             <Head title="Invite an employee" />
             <main className="mx-auto w-full max-w-xl space-y-6 p-6">
-                <Link href={dashboard()} className="text-sm text-muted-foreground underline">
+                <Link
+                    href={dashboard()}
+                    className="text-sm text-muted-foreground underline"
+                >
                     Back to dashboard
                 </Link>
                 <header>
-                    <h1 className="text-2xl font-semibold">Invite an employee</h1>
+                    <h1 className="text-2xl font-semibold">
+                        Invite an employee
+                    </h1>
                     <p className="mt-2 text-sm text-muted-foreground">
-                        Use an existing employee record. The employee will set a password, verify
-                        their email, and enroll in two-factor authentication.
+                        Use an existing employee record. The employee will set a
+                        password, verify their email, and enroll in two-factor
+                        authentication.
                     </p>
                 </header>
-                <form onSubmit={submit} className="space-y-4 rounded-xl border bg-card p-5">
+                <form
+                    onSubmit={submit}
+                    className="space-y-4 rounded-xl border bg-card p-5"
+                >
                     <div className="space-y-2">
                         <Label htmlFor="employee_number">Employee number</Label>
                         <Input
@@ -42,7 +51,10 @@ export default function InviteAccount({ roles }: { roles: string[] }) {
                             required
                             value={form.data.employee_number}
                             onChange={(event) =>
-                                form.setData("employee_number", event.target.value)
+                                form.setData(
+                                    'employee_number',
+                                    event.target.value,
+                                )
                             }
                         />
                         <InputError message={form.errors.employee_number} />
@@ -53,7 +65,9 @@ export default function InviteAccount({ roles }: { roles: string[] }) {
                             id="email"
                             type="email"
                             value={form.data.email}
-                            onChange={(event) => form.setData("email", event.target.value)}
+                            onChange={(event) =>
+                                form.setData('email', event.target.value)
+                            }
                         />
                         <InputError message={form.errors.email} />
                     </div>
@@ -63,7 +77,9 @@ export default function InviteAccount({ roles }: { roles: string[] }) {
                             id="role"
                             required
                             value={form.data.role}
-                            onChange={(event) => form.setData("role", event.target.value)}
+                            onChange={(event) =>
+                                form.setData('role', event.target.value)
+                            }
                             className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                         >
                             <option value="">Select a role</option>
@@ -74,20 +90,30 @@ export default function InviteAccount({ roles }: { roles: string[] }) {
                         <InputError message={form.errors.role} />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="approval_reference">Approval reference</Label>
+                        <Label htmlFor="approval_reference">
+                            Approval reference
+                        </Label>
                         <Input
                             id="approval_reference"
                             required
                             maxLength={100}
                             value={form.data.approval_reference}
                             onChange={(event) =>
-                                form.setData("approval_reference", event.target.value)
+                                form.setData(
+                                    'approval_reference',
+                                    event.target.value,
+                                )
                             }
                         />
                         <InputError message={form.errors.approval_reference} />
                     </div>
-                    <p className="text-sm text-muted-foreground">An email address is needed to deliver the one-time password setup link.</p>
-                    <Button disabled={form.processing}>Send account setup email</Button>
+                    <p className="text-sm text-muted-foreground">
+                        An email address is needed to deliver the one-time
+                        password setup link.
+                    </p>
+                    <Button disabled={form.processing}>
+                        Send account setup email
+                    </Button>
                 </form>
             </main>
         </>

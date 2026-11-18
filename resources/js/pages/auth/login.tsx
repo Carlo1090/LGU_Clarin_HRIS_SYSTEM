@@ -1,16 +1,16 @@
-import { Form, Head } from "@inertiajs/react";
-import { ArrowRight } from "lucide-react";
-import InputError from "@/components/input-error";
-import PasskeyVerify from "@/components/passkey-verify";
-import PasswordInput from "@/components/password-input";
-import TextLink from "@/components/text-link";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
-import { store } from "@/routes/login";
-import { request } from "@/routes/password";
+import { Form, Head } from '@inertiajs/react';
+import { ArrowRight } from 'lucide-react';
+import InputError from '@/components/input-error';
+import PasskeyVerify from '@/components/passkey-verify';
+import PasswordInput from '@/components/password-input';
+import TextLink from '@/components/text-link';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { store } from '@/routes/login';
+import { request } from '@/routes/password';
 
 type Props = { status?: string; canResetPassword: boolean };
 
@@ -27,12 +27,18 @@ export default function Login({ status, canResetPassword }: Props) {
                 </div>
             )}
             <PasskeyVerify />
-            <Form {...store.form()} resetOnSuccess={["password"]} className="space-y-6">
+            <Form
+                {...store.form()}
+                resetOnSuccess={['password']}
+                className="space-y-6"
+            >
                 {({ processing, errors }) => (
                     <>
                         <div className="space-y-5">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email or Employee Number</Label>
+                                <Label htmlFor="email">
+                                    Email or Employee Number
+                                </Label>
                                 <Input
                                     id="email"
                                     type="text"
@@ -42,9 +48,15 @@ export default function Login({ status, canResetPassword }: Props) {
                                     autoComplete="username"
                                     placeholder="Email or employee number"
                                     aria-invalid={!!errors.email}
-                                    aria-describedby={errors.email ? "email-error" : undefined}
+                                    aria-describedby={
+                                        errors.email ? 'email-error' : undefined
+                                    }
                                 />
-                                <InputError id="email-error" message={errors.email} role="alert" />
+                                <InputError
+                                    id="email-error"
+                                    message={errors.email}
+                                    role="alert"
+                                />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="password">Password</Label>
@@ -56,7 +68,9 @@ export default function Login({ status, canResetPassword }: Props) {
                                     placeholder="Enter your password"
                                     aria-invalid={!!errors.password}
                                     aria-describedby={
-                                        errors.password ? "password-error" : undefined
+                                        errors.password
+                                            ? 'password-error'
+                                            : undefined
                                     }
                                 />
                                 <InputError
@@ -92,9 +106,14 @@ export default function Login({ status, canResetPassword }: Props) {
                                 data-test="login-button"
                             >
                                 {processing ? <Spinner /> : null}
-                                {processing ? "Logging in..." : "Log in to HRIS"}
+                                {processing
+                                    ? 'Logging in...'
+                                    : 'Log in to HRIS'}
                                 {!processing && (
-                                    <ArrowRight aria-hidden="true" className="size-4" />
+                                    <ArrowRight
+                                        aria-hidden="true"
+                                        className="size-4"
+                                    />
                                 )}
                             </Button>
                         </div>
@@ -109,6 +128,6 @@ export default function Login({ status, canResetPassword }: Props) {
 }
 
 Login.layout = {
-    title: "Welcome back",
-    description: "Enter your credentials to access your municipal workspace.",
+    title: 'Welcome back',
+    description: 'Enter your credentials to access your municipal workspace.',
 };

@@ -33,17 +33,17 @@
 
 A change is **MAJOR** if it affects any of the following, even when the code diff is small:
 
-| Category | Examples | Required documentation |
-| --- | --- | --- |
-| Authentication and authorization | Roles, permissions, MFA, registration, password/reset flows, impersonation | Permission matrix, threat/risk impact, tests, recovery procedure |
-| Database/model architecture | New or changed tables, keys, nullable/unique rules, FK relationships, data migrations, retention | Root/child relationships, ERD or table map, migration + rollback/backout, data validation |
-| Employee and 201-file data | Personal fields, employee lifecycle, attachments, PDS/SALN access | Data classification, ownership, access and retention, form/workflow changes |
-| HR workflow/business rule | Employee registration, approval chains, leave credits, attendance correction, appointments | Actors, state machine, authorization, exceptions, audit requirements |
-| Payroll and disbursement | Formulas, salary schedule, deductions, finalization, payslip access, exports | Approved rule/version and effective date, reconciliation, approvers, test cases |
-| Public or internal API/integration | Route contracts, device import, notifications, external systems, file formats | API contract, validation, authentication, failure handling, data flows |
-| Infrastructure/security/privacy | Deployment, secrets, network, logging, encryption, backups, privacy handling | Security impact, operations runbook, restore/rollback test, approvals |
-| Major UI/navigation/reporting | Dashboards, privileged exports, visibility, sensitive summaries | Role-to-screen mapping, data exposure review, accessibility/test evidence |
-| Policy/dependency/legal update | New rule, supported-version change, policy exception, vendor change | Reason, affected requirements, approval, transition/migration plan |
+| Category                           | Examples                                                                                         | Required documentation                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Authentication and authorization   | Roles, permissions, MFA, registration, password/reset flows, impersonation                       | Permission matrix, threat/risk impact, tests, recovery procedure                          |
+| Database/model architecture        | New or changed tables, keys, nullable/unique rules, FK relationships, data migrations, retention | Root/child relationships, ERD or table map, migration + rollback/backout, data validation |
+| Employee and 201-file data         | Personal fields, employee lifecycle, attachments, PDS/SALN access                                | Data classification, ownership, access and retention, form/workflow changes               |
+| HR workflow/business rule          | Employee registration, approval chains, leave credits, attendance correction, appointments       | Actors, state machine, authorization, exceptions, audit requirements                      |
+| Payroll and disbursement           | Formulas, salary schedule, deductions, finalization, payslip access, exports                     | Approved rule/version and effective date, reconciliation, approvers, test cases           |
+| Public or internal API/integration | Route contracts, device import, notifications, external systems, file formats                    | API contract, validation, authentication, failure handling, data flows                    |
+| Infrastructure/security/privacy    | Deployment, secrets, network, logging, encryption, backups, privacy handling                     | Security impact, operations runbook, restore/rollback test, approvals                     |
+| Major UI/navigation/reporting      | Dashboards, privileged exports, visibility, sensitive summaries                                  | Role-to-screen mapping, data exposure review, accessibility/test evidence                 |
+| Policy/dependency/legal update     | New rule, supported-version change, policy exception, vendor change                              | Reason, affected requirements, approval, transition/migration plan                        |
 
 **Documentation-first and same-PR workflow:**
 
@@ -73,18 +73,18 @@ A change is **MAJOR** if it affects any of the following, even when the code dif
 
 > **Proposed logical model, NOT an assertion that the uploaded files contain these actual tables.** Confirm and document real table names, columns, relationships, and cardinalities by inspecting the live project's migrations/schema before coding. No SQL schema dump was included in the two Markdown uploads.
 
-| Logical root / aggregate | Related child records (illustrative) | Integrity rule |
-| --- | --- | --- |
-| `users` (authentication) | Role assignments, MFA factors, session/recovery events | Unique login identity; controlled activation; secure role changes |
-| `employees` (personnel) | Addresses/contact, family, education, work history, documents, appointments, salary history, training | Stable employee identifier; sensitive details controlled by policy |
-| `departments` / `org_units` | Positions, reporting relationships, employee assignment history | Valid organizational hierarchy; maintain effective dates |
-| `plantilla_items` / `positions` | Approved assignment or occupancy history | Enforce approved item number uniqueness and non-overlapping occupancy where applicable |
-| `attendance_imports` | Raw device rows, normalized logs, correction requests and decisions | Preserve source evidence; corrections should not silently overwrite raw rows |
-| `leave_requests` | Approvals, attachments, leave-credit ledger entries | Enforce legal state transitions; ledger reconciles with balances |
-| `payroll_periods` | Payroll runs, line items, deductions, approvals, payslip artifacts | No edits to finalized run; new adjustment/reversal with audit linkage |
-| `vacancies` | Applicants, assessments, recommendations | PII scoped; documented recruitment review criteria |
-| `evaluation_cycles` | Employee evaluations, review and sign-off history | Evaluator must be authorized and within scope |
-| `audit_events` (append-only) | Referential subject/action details | Independent access, immutability/tamper detection, retention policy |
+| Logical root / aggregate        | Related child records (illustrative)                                                                  | Integrity rule                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `users` (authentication)        | Role assignments, MFA factors, session/recovery events                                                | Unique login identity; controlled activation; secure role changes                      |
+| `employees` (personnel)         | Addresses/contact, family, education, work history, documents, appointments, salary history, training | Stable employee identifier; sensitive details controlled by policy                     |
+| `departments` / `org_units`     | Positions, reporting relationships, employee assignment history                                       | Valid organizational hierarchy; maintain effective dates                               |
+| `plantilla_items` / `positions` | Approved assignment or occupancy history                                                              | Enforce approved item number uniqueness and non-overlapping occupancy where applicable |
+| `attendance_imports`            | Raw device rows, normalized logs, correction requests and decisions                                   | Preserve source evidence; corrections should not silently overwrite raw rows           |
+| `leave_requests`                | Approvals, attachments, leave-credit ledger entries                                                   | Enforce legal state transitions; ledger reconciles with balances                       |
+| `payroll_periods`               | Payroll runs, line items, deductions, approvals, payslip artifacts                                    | No edits to finalized run; new adjustment/reversal with audit linkage                  |
+| `vacancies`                     | Applicants, assessments, recommendations                                                              | PII scoped; documented recruitment review criteria                                     |
+| `evaluation_cycles`             | Employee evaluations, review and sign-off history                                                     | Evaluator must be authorized and within scope                                          |
+| `audit_events` (append-only)    | Referential subject/action details                                                                    | Independent access, immutability/tamper detection, retention policy                    |
 
 **Every actual database change MUST document**: owning module, parent and child table, relationship (`1:1`, `1:N`, or `N:M`), primary/foreign keys, `ON DELETE` policy, nullability, defaults, unique/check constraints, indexes, effective-date rules, data sensitivity, backfill, test plan, and rollback/backout method.
 
@@ -107,21 +107,21 @@ A change is **MAJOR** if it affects any of the following, even when the code dif
 
 **Minimum permission matrix (proposed; requires sign-off):**
 
-| Role | Core access | Explicit restriction |
-| --- | --- | --- |
-| Employee | Own permitted profile, DTR, leave requests, payslips | No other employee's PII, payroll administration or approval |
-| Office/Department Head | Scoped employees and assigned review queues | No cross-department access or unauthorized final approval |
-| HR Officer | Authorized employee/201-file maintenance; workflow preparation | Cannot independently approve own sensitive changes |
-| **HRMO Head (`HR HEAD`)** | HR supervision and explicitly delegated HR approvals | Not automatically payroll release, unrestricted privacy access, or MIS admin |
-| Payroll Officer | Prepare/check draft payroll and reports | Cannot independently release own run |
-| Municipal Accountant | Approved payroll review/reconciliation | No implicit HR record edit or treasury authority |
-| Municipal Treasurer | Authorized approved disbursement outputs | No change to salary inputs or payroll calculations |
-| Mayor/Management | Aggregated/approved management analytics | No automatic individual PII/salary detail access |
-| MIS/System Administrator | Technical accounts, infrastructure, monitoring | No default 201-file reads or HR/payroll approvals |
-| DPO | Authorized privacy requests, access/incident oversight | Scope limited to privacy responsibilities |
-| Auditor | Auditable, generally read-only evidence | No editing source transactions without separate approval |
+| Role                      | Core access                                                    | Explicit restriction                                                         |
+| ------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Employee                  | Own permitted profile, DTR, leave requests, payslips           | No other employee's PII, payroll administration or approval                  |
+| Office/Department Head    | Scoped employees and assigned review queues                    | No cross-department access or unauthorized final approval                    |
+| HR Officer                | Authorized employee/201-file maintenance; workflow preparation | Cannot independently approve own sensitive changes                           |
+| **HRMO Head (`HR HEAD`)** | HR supervision and explicitly delegated HR approvals           | Not automatically payroll release, unrestricted privacy access, or MIS admin |
+| Payroll Officer           | Prepare/check draft payroll and reports                        | Cannot independently release own run                                         |
+| Municipal Accountant      | Approved payroll review/reconciliation                         | No implicit HR record edit or treasury authority                             |
+| Municipal Treasurer       | Authorized approved disbursement outputs                       | No change to salary inputs or payroll calculations                           |
+| Mayor/Management          | Aggregated/approved management analytics                       | No automatic individual PII/salary detail access                             |
+| MIS/System Administrator  | Technical accounts, infrastructure, monitoring                 | No default 201-file reads or HR/payroll approvals                            |
+| DPO                       | Authorized privacy requests, access/incident oversight         | Scope limited to privacy responsibilities                                    |
+| Auditor                   | Auditable, generally read-only evidence                        | No editing source transactions without separate approval                     |
 
-### A6. First HRMO Head account — secure *manual* bootstrap
+### A6. First HRMO Head account — secure _manual_ bootstrap
 
 > The project plans to create the **first `HR HEAD` / HRMO Head** account manually. This is a **one-time controlled operation**, not an open registration flow. The exact role slug is a **proposed application identifier** and must match the codebase's verified role schema.
 
@@ -173,17 +173,17 @@ A change is **MAJOR** if it affects any of the following, even when the code dif
 
 ### A10. Minimum test and verification matrix
 
-| Area | Required evidence before release |
-| --- | --- |
-| Accounts/MFA | Unauthorized enrollment/reset blocked; login rate limiting; session invalidation; first HRMO Head 2FA verified |
-| Roles/scopes | Authenticated-but-unauthorized endpoint returns 403; cross-department access denied; own-record-only checks; negative permission checks |
-| DB/migrations | FK/unique constraints; correct history; migration tested on representative anonymized copy; data/backout verified |
-| 201 files/privacy | Private file cannot be downloaded by URL without permission; restricted PII redaction; audit captures access without leaking content |
-| Attendance/leave | Duplicate imports rejected; correction approval chain; ledger reconciliation; overlapping leave handling |
-| Payroll | Approved effective-date rules; independent approver; manual payroll reconciliation; rounding/boundary tests; finalization lock |
-| Workflow concurrency | Double-approval, concurrent request, retries, repeated import, and duplicate finalization cannot corrupt records |
-| Exports/reports | Per-role/department row filtering; forbidden report access; exported artifacts protected and audited |
-| Operations | CI green; backups/restore evidenced; monitoring/alerts tested; smoke tests and rollback/backout plan recorded |
+| Area                 | Required evidence before release                                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Accounts/MFA         | Unauthorized enrollment/reset blocked; login rate limiting; session invalidation; first HRMO Head 2FA verified                          |
+| Roles/scopes         | Authenticated-but-unauthorized endpoint returns 403; cross-department access denied; own-record-only checks; negative permission checks |
+| DB/migrations        | FK/unique constraints; correct history; migration tested on representative anonymized copy; data/backout verified                       |
+| 201 files/privacy    | Private file cannot be downloaded by URL without permission; restricted PII redaction; audit captures access without leaking content    |
+| Attendance/leave     | Duplicate imports rejected; correction approval chain; ledger reconciliation; overlapping leave handling                                |
+| Payroll              | Approved effective-date rules; independent approver; manual payroll reconciliation; rounding/boundary tests; finalization lock          |
+| Workflow concurrency | Double-approval, concurrent request, retries, repeated import, and duplicate finalization cannot corrupt records                        |
+| Exports/reports      | Per-role/department row filtering; forbidden report access; exported artifacts protected and audited                                    |
+| Operations           | CI green; backups/restore evidenced; monitoring/alerts tested; smoke tests and rollback/backout plan recorded                           |
 
 **Acceptance definition of done:** requirements and approval captured; implementation reviewed; role/negative tests pass; security/privacy impact assessed; DB migration/backfill reviewed; runbook/rollback checked; this Markdown's affected sections and Change Register updated; version/status and release approvals recorded. If any mandatory item is unmet, status is `BLOCKED` or `PROPOSED`, never `DEPLOYED`.
 
@@ -228,29 +228,29 @@ A change is **MAJOR** if it affects any of the following, even when the code dif
 
 ### A13. Open decisions / production blockers — do not guess
 
-| Decision required | Owner to confirm | Current status |
-| --- | --- | --- |
-| Existing repository, framework version, database engine and actual schema | MIS / technical lead | **UNVERIFIED** |
-| Verified `HR HEAD` role identifier and exact permissions | HRMO + MIS | **PROPOSED** |
-| Manual first-account authority, operator, recovery process | HRMO + MIS | **PENDING APPROVAL** |
-| Current municipal departments, positions, plantilla and appointment rules | HRMO | **PENDING CONFIRMATION** |
-| Exact approval delegation/segregation of duties by transaction | HRMO / Accountant / Treasurer / Management | **PENDING CONFIRMATION** |
-| Salary schedule, deductions, effective dates and contribution rules | Payroll / Accountant / applicable authority | **PENDING CONFIRMATION** |
-| Leave rules, CSC forms, biometric formats and DTR exceptions | HRMO / responsible office | **PENDING CONFIRMATION** |
-| Data classification, retention, privacy notices and incident procedures | DPO / records authority | **PENDING CONFIRMATION** |
-| Hosting, backup frequency, RPO/RTO, disaster recovery owner, monitoring | MIS / project owner | **PENDING CONFIRMATION** |
-| Actual dashboard/endpoint names and availability | Developers / MIS | **PROPOSED** |
+| Decision required                                                         | Owner to confirm                            | Current status           |
+| ------------------------------------------------------------------------- | ------------------------------------------- | ------------------------ |
+| Existing repository, framework version, database engine and actual schema | MIS / technical lead                        | **UNVERIFIED**           |
+| Verified `HR HEAD` role identifier and exact permissions                  | HRMO + MIS                                  | **PROPOSED**             |
+| Manual first-account authority, operator, recovery process                | HRMO + MIS                                  | **PENDING APPROVAL**     |
+| Current municipal departments, positions, plantilla and appointment rules | HRMO                                        | **PENDING CONFIRMATION** |
+| Exact approval delegation/segregation of duties by transaction            | HRMO / Accountant / Treasurer / Management  | **PENDING CONFIRMATION** |
+| Salary schedule, deductions, effective dates and contribution rules       | Payroll / Accountant / applicable authority | **PENDING CONFIRMATION** |
+| Leave rules, CSC forms, biometric formats and DTR exceptions              | HRMO / responsible office                   | **PENDING CONFIRMATION** |
+| Data classification, retention, privacy notices and incident procedures   | DPO / records authority                     | **PENDING CONFIRMATION** |
+| Hosting, backup frequency, RPO/RTO, disaster recovery owner, monitoring   | MIS / project owner                         | **PENDING CONFIRMATION** |
+| Actual dashboard/endpoint names and availability                          | Developers / MIS                            | **PROPOSED**             |
 
 ### A14. Change Register — MUST be maintained in THIS file
 
 > Add **one row per major change** (not one row per release). **Never delete prior entries.** Links/IDs are placeholders until a real ticket/PR/deployment exists. Keep a dated history so the document and system do not drift apart.
 
-| Change ID | Date (PHT) | Change and reason | Areas affected | Required approval | Documented sections | Status / evidence |
-| --- | --- | --- | --- | --- | --- | --- |
-| CHG-0001 | 2026-11-17 | Consolidated the two near-identical HRIS overview uploads; introduced mandatory production controls, manual first-HRMO-Head bootstrap process and change-documentation rule | Project governance, auth, DB, workflows, privacy, deployment | HRMO/MIS/DPO sign-off to be obtained | Part A (A1–A15); preserved original scope in Part B | **PROPOSED** — document created; no application code or production deployment claimed |
-| CHG-0002 | 2026-11-18 | Introduce fixed plantilla offices, role dashboard office context, and HRMO Head-managed account setup | Organization, UI, authentication | Municipal approval and release verification pending | A4-A6, A14 | **TESTED** - see change record below |
-| CHG-0003 | 2026-11-18 | Add HRMO Head employee spreadsheet preview/import and show existing departments alongside fixed offices | Employee records, organization directory, UI | Municipal approval and production release verification pending | A3-A4, A7, A14 | **IMPLEMENTED** - validation evidence pending |
-| CHG-0004 | 2026-11-18 | Allow HRMO Head to manage employee import workbook columns and show added fields on employee profiles | Employee records, schema, import workflow, UI | Municipal approval and production release verification pending | A3-A4, A7, A14 | **IMPLEMENTED** - validation pending |
+| Change ID | Date (PHT) | Change and reason                                                                                                                                                           | Areas affected                                               | Required approval                                              | Documented sections                                 | Status / evidence                                                                     |
+| --------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| CHG-0001  | 2026-11-17 | Consolidated the two near-identical HRIS overview uploads; introduced mandatory production controls, manual first-HRMO-Head bootstrap process and change-documentation rule | Project governance, auth, DB, workflows, privacy, deployment | HRMO/MIS/DPO sign-off to be obtained                           | Part A (A1–A15); preserved original scope in Part B | **PROPOSED** — document created; no application code or production deployment claimed |
+| CHG-0002  | 2026-11-18 | Introduce fixed plantilla offices, role dashboard office context, and HRMO Head-managed account setup                                                                       | Organization, UI, authentication                             | Municipal approval and release verification pending            | A4-A6, A14                                          | **TESTED** - see change record below                                                  |
+| CHG-0003  | 2026-11-18 | Add HRMO Head employee spreadsheet preview/import and show existing departments alongside fixed offices                                                                     | Employee records, organization directory, UI                 | Municipal approval and production release verification pending | A3-A4, A7, A14                                      | **IMPLEMENTED** - validation evidence pending                                         |
+| CHG-0004  | 2026-11-18 | Allow HRMO Head to manage employee import workbook columns and show added fields on employee profiles                                                                       | Employee records, schema, import workflow, UI                | Municipal approval and production release verification pending | A3-A4, A7, A14                                      | **IMPLEMENTED** - validation pending                                                  |
 
 #### CHG-0002 - Fixed offices and account setup
 
@@ -287,6 +287,7 @@ Copy the section below for each major change, place the completed record under t
 
 ```md
 #### CHG-XXXX — <clear title>
+
 - Date/time (Asia/Manila):
 - Author / owner:
 - Business approver(s) / technical reviewer(s):
@@ -1180,19 +1181,19 @@ These are proposed route names for planning. Actual routes may change during dev
 
 A dashboard should show the most important information for the user's work. It should not display every system feature at once.
 
-| User | Important dashboard information |
-| --- | --- |
-| Employee | Personal profile, attendance, leave credits, payslips, requests |
-| Department Head | Department employees, attendance, pending approvals, performance |
-| HR Officer | Employee records, incomplete 201 files, attendance issues, leave requests |
-| HRMO Head | Total employees, department statistics, pending HR transactions, reports |
-| Payroll Officer | Payroll period, payroll preparation, errors, deductions, payslips |
-| Accountant | Approved payroll, payroll totals, deductions, reconciliation |
-| Treasurer | Approved payroll, disbursement information, payment status |
-| Mayor | Employee totals, department staffing, vacancies, HR summaries |
-| MIS Administrator | User accounts, permissions, system health, backups, technical logs |
-| DPO | Privacy requests, access logs, privacy incidents |
-| Auditor | Audit records, transaction history, payroll evidence |
+| User              | Important dashboard information                                           |
+| ----------------- | ------------------------------------------------------------------------- |
+| Employee          | Personal profile, attendance, leave credits, payslips, requests           |
+| Department Head   | Department employees, attendance, pending approvals, performance          |
+| HR Officer        | Employee records, incomplete 201 files, attendance issues, leave requests |
+| HRMO Head         | Total employees, department statistics, pending HR transactions, reports  |
+| Payroll Officer   | Payroll period, payroll preparation, errors, deductions, payslips         |
+| Accountant        | Approved payroll, payroll totals, deductions, reconciliation              |
+| Treasurer         | Approved payroll, disbursement information, payment status                |
+| Mayor             | Employee totals, department staffing, vacancies, HR summaries             |
+| MIS Administrator | User accounts, permissions, system health, backups, technical logs        |
+| DPO               | Privacy requests, access logs, privacy incidents                          |
+| Auditor           | Audit records, transaction history, payroll evidence                      |
 
 #### Example: HRMO dashboard
 
@@ -1414,14 +1415,14 @@ System configuration: Allow authorized staff to update rules and settings withou
 
 The system should be built in stages rather than developing all modules at the same time.
 
-| Phase | Modules | Main goal |
-| --- | --- | --- |
-| 0 | Planning and requirements | Confirm rules, offices, forms, responsibilities and data |
-| 1 | Login, roles, organization, 201 files | Establish the system foundation |
-| 2 | Attendance and leave | Make attendance and leave processing digital |
-| 3 | Payroll | Prepare and validate payroll processing |
-| 4 | Recruitment and performance | Complete the wider HR functions |
-| 5 | Testing and deployment | Train users, test security and launch the system |
+| Phase | Modules                               | Main goal                                                |
+| ----- | ------------------------------------- | -------------------------------------------------------- |
+| 0     | Planning and requirements             | Confirm rules, offices, forms, responsibilities and data |
+| 1     | Login, roles, organization, 201 files | Establish the system foundation                          |
+| 2     | Attendance and leave                  | Make attendance and leave processing digital             |
+| 3     | Payroll                               | Prepare and validate payroll processing                  |
+| 4     | Recruitment and performance           | Complete the wider HR functions                          |
+| 5     | Testing and deployment                | Train users, test security and launch the system         |
 
 The strategic plan estimates a pilot after the foundation phase and a complete rollout over approximately 12–14 months. The actual timeline depends on approval, available resources, data preparation, and testing.
 
@@ -1453,19 +1454,19 @@ Test payroll against the existing manual process before using it for actual payr
 
 ### 11. The complete system in one simple view
 
-| Office / User | What they mainly do in the HRIS |
-| --- | --- |
-| Employee | View personal records, attendance, leave, payslips and submit requests |
-| Department Head | Monitor department employees and approve assigned requests |
-| HR Officer | Manage employee records, attendance and leave |
-| HRMO Head | Supervise HR operations and approve authorized HR transactions |
-| Payroll Officer | Prepare and check payroll |
-| Accountant | Review payroll and accounting outputs |
-| Treasurer | Handle authorized payroll disbursement information |
-| Mayor | Monitor overall workforce and management reports |
-| MIS Administrator | Maintain accounts, security, backups and technical operations |
-| DPO | Monitor privacy-related matters |
-| Auditor | Review authorized records and audit trails |
+| Office / User     | What they mainly do in the HRIS                                        |
+| ----------------- | ---------------------------------------------------------------------- |
+| Employee          | View personal records, attendance, leave, payslips and submit requests |
+| Department Head   | Monitor department employees and approve assigned requests             |
+| HR Officer        | Manage employee records, attendance and leave                          |
+| HRMO Head         | Supervise HR operations and approve authorized HR transactions         |
+| Payroll Officer   | Prepare and check payroll                                              |
+| Accountant        | Review payroll and accounting outputs                                  |
+| Treasurer         | Handle authorized payroll disbursement information                     |
+| Mayor             | Monitor overall workforce and management reports                       |
+| MIS Administrator | Maintain accounts, security, backups and technical operations          |
+| DPO               | Monitor privacy-related matters                                        |
+| Auditor           | Review authorized records and audit trails                             |
 
 The main idea: The HRIS serves as the central employee-management system of the municipality. HRMO manages personnel information, employees access their own permitted records, department heads supervise their staff, payroll processes approved information, management views summaries, and authorized offices review transactions.
 
