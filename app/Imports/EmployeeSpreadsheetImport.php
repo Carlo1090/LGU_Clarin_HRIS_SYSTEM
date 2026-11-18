@@ -70,8 +70,9 @@ class EmployeeSpreadsheetImport
                 $mappedHeaders[$index] = $field;
             }
         }
-        if (array_diff(['employee_number', 'first_name', 'last_name', 'employment_status'], array_values($mappedHeaders))) {
-            throw ValidationException::withMessages(['file' => 'Use the Employee workbook. Its EMPLOYEES sheet must include Employee Number.']);
+        $requiredKeys = array_diff(array_column($columns, 'key'), ['email']);
+        if (array_diff($requiredKeys, array_values($mappedHeaders))) {
+            throw ValidationException::withMessages(['file' => 'The workbook must include every configured column except Email.']);
         }
         $customKeys = array_filter(array_column($columns, 'key'), fn ($key) => str_starts_with($key, 'custom_'));
 
@@ -98,7 +99,7 @@ class EmployeeSpreadsheetImport
             }
 
             $errors = [];
-            foreach (['employee_number', 'first_name', 'last_name', 'employment_status'] as $field) {
+            foreach ($requiredKeys as $field) {
                 if (! $data[$field]) {
                     $errors[] = str_replace('_', ' ', ucfirst($field)).' is required.';
                 }
@@ -153,9 +154,9 @@ class EmployeeSpreadsheetImport
                 'gender' => ['nullable', 'string', 'max:255'], 'employment_status' => ['required', 'string', 'max:255'],
                 'department' => ['nullable', 'string', 'max:255'], 'position' => ['nullable', 'string', 'max:255'],
                 'age' => ['nullable', 'integer', 'min:0', 'max:150'], 'tin' => ['nullable', 'string', 'max:64'],
-                'appointment_status' => ['nullable', Rule::in(['P', 'E', 'T', 'S', 'CT', 'PA', 'FT'])],
-                'civil_service_eligibility' => ['nullable', 'string', 'max:255'], 'comment_annotation' => ['nullable', 'string', 'max:10000'],
-                'pwd' => ['nullable', Rule::in(['Y'])], 'indigenous_people' => ['nullable', Rule::in(['Y'])],
+                'appointment_status' => ['required', Rule::in(['P', 'E', 'T', 'S', 'CT', 'PA', 'FT'])],
+                'civil_service_eligibility' => ['required', 'string', 'max:255'], 'comment_annotation' => ['nullable', 'string', 'max:10000'],
+                'pwd' => ['nullable', Rule::in(['Y', 'N'])], 'indigenous_people' => ['nullable', Rule::in(['Y', 'N'])],
                 'solo_parent_id_number' => ['nullable', 'string', 'max:255'], 'gsis_bp_number' => ['nullable', 'string', 'max:100'],
             ]);
             if ($validator->fails()) {
@@ -169,7 +170,7 @@ class EmployeeSpreadsheetImport
                 'name' => trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')),
                 'department' => $department->name ?? '—', 'position' => $position->title ?? '—',
                 'status' => $data['employment_status'] ?? '—',
-                'action' => $existing ? 'Update profile' : 'Create employee account',
+                'action' => $existing ? 'Update profile' : 'Ready to create account',
                 'valid' => ! $errors, 'errors' => array_values(array_unique($errors)), 'data' => $data + ['present_fields' => array_values(array_unique($mappedHeaders))],
             ];
         }
@@ -185,9 +186,9 @@ class EmployeeSpreadsheetImport
      * @param  list<array<string, mixed>>  $rows
      * @return array{createdProfiles: int, updatedProfiles: int, createdAccounts: int, credentials: list<array<string, string>>, emailSetupSent: int}
      */
-    public function commit(array $rows, User $actor, string $approval): array
+    public function commit(array $rows, User $actor): array
     {
-        $result = DB::transaction(function () use ($rows, $actor, $approval): array {
+        $result = DB::transaction(function () use ($rows, $actor): array {
             $createdProfiles = $updatedProfiles = $createdAccounts = 0;
             $credentials = $emailUsers = [];
             $employeeRole = Role::query()->where('name', 'Employee')->where('guard_name', 'web')->firstOrFail();
@@ -230,7 +231,7 @@ class EmployeeSpreadsheetImport
 
             AuditLog::create([
                 'user_id' => $actor->id, 'action' => 'employee.spreadsheet_imported', 'model_type' => Employee::class,
-                'metadata' => json_encode(['created_profiles' => $createdProfiles, 'updated_profiles' => $updatedProfiles, 'created_accounts' => $createdAccounts, 'approval_reference' => $approval], JSON_THROW_ON_ERROR),
+                'metadata' => json_encode(['created_profiles' => $createdProfiles, 'updated_profiles' => $updatedProfiles, 'created_accounts' => $createdAccounts], JSON_THROW_ON_ERROR),
             ]);
 
             return compact('createdProfiles', 'updatedProfiles', 'createdAccounts', 'credentials', 'emailUsers');

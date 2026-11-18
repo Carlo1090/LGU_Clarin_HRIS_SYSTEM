@@ -118,8 +118,11 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $preview = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
             'Employee Number' => 'EMP-IMPORT-01', 'First Name' => 'Jordan', 'Middle Name' => 'A', 'Last Name' => 'Sample',
             'Gender' => 'female', 'Birth Date' => '1990-05-06', 'Department' => $department->name, 'Position' => 'Nurse I',
-            'Employment Status' => 'active', 'Date Hired' => '2015-04-03', 'Age' => '36', 'TIN' => '001-002-003',
-            'Appointment Status' => 'P', 'Civil Service Eligibility' => 'Career Service Professional', 'PWD' => 'Y', 'GSIS BP Number' => '0008',
+            'Suffix' => 'Jr.', 'Employment Status' => 'active', 'Date Hired' => '2015-04-03', 'Date Regularized' => '2017-04-03',
+            'Age' => '36', 'TIN' => '001-002-003', 'Date of Original Appointment' => '2015-04-03',
+            'Date of Last Promotion/Appointment' => '2020-04-03', 'Appointment Status' => 'P',
+            'Civil Service Eligibility' => 'Career Service Professional', 'Comment/Annotation' => 'Verified',
+            'PWD' => 'Y', 'Indigenous People' => 'N', 'Solo Parent ID Number' => 'N/A', 'GSIS BP Number' => '0008',
         ]])])->assertRedirect();
         $token = parse_url($preview->headers->get('Location'), PHP_URL_QUERY);
         parse_str((string) $token, $query);
@@ -130,7 +133,7 @@ class EmployeeSpreadsheetImportTest extends TestCase
         });
 
         $password = null;
-        $this->post(route('hris.employees.import.store'), ['token' => $token, 'approval_reference' => 'HRMO-EMP-1'])
+        $this->post(route('hris.employees.import.store'), ['token' => $token])
             ->assertOk()->assertInertia(function ($page) use (&$password): void {
                 $page->where('result.createdProfiles', 1)->where('result.createdAccounts', 1)->has('credentials', 1);
                 $password = $page->toArray()['props']['credentials'][0]['temporary_password'];

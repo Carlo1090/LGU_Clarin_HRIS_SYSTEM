@@ -72,14 +72,11 @@ class EmployeeImportController
     public function store(Request $request, EmployeeSpreadsheetImport $import): Response
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
-        $input = $request->validate([
-            'token' => ['required', 'string', 'size:64'],
-            'approval_reference' => ['required', 'string', 'max:100'],
-        ]);
+        $input = $request->validate(['token' => ['required', 'string', 'size:64']]);
         $rows = $request->session()->pull('employee_import.'.$input['token']);
         abort_unless(is_array($rows) && count($rows), 410, 'Import preview expired. Upload the workbook again.');
         abort_if(collect($rows)->contains(fn ($row) => ! $row['valid']), 422, 'Fix all spreadsheet row errors and preview the corrected workbook.');
-        $result = $import->commit(array_values($rows), $request->user(), $input['approval_reference']);
+        $result = $import->commit(array_values($rows), $request->user());
 
         return Inertia::render('hris/import-employees', [
             'result' => collect($result)->except('credentials')->all(),

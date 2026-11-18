@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+﻿import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import InputError from '@/components/input-error';
@@ -49,15 +49,12 @@ export default function ImportEmployees({
     const [previewed, setPreviewed] = useState(Boolean(token));
     const [editTemplate, setEditTemplate] = useState(false);
     const upload = useForm<{ file: File | null }>({ file: null });
-    const apply = useForm({ token: token ?? '', approval_reference: '' });
+    const apply = useForm({ token: token ?? '' });
     const templateForm = useForm({ columns, status_options: statusOptions });
     const [newColumn, setNewColumn] = useState('');
-    const requiredColumns = [
-        'employee_number',
-        'first_name',
-        'last_name',
-        'employment_status',
-    ];
+    const requiredColumns = columns
+        .filter((column) => column.key !== 'email')
+        .map((column) => column.key);
 
     function preview(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -178,9 +175,8 @@ export default function ImportEmployees({
                                     Employee import template
                                 </h2>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    Employee Number, First Name, Last Name, and
-                                    Employment Status are required. Email is
-                                    optional.
+                                    All configured spreadsheet columns are
+                                    required. Email is optional.
                                 </p>
                             </div>
                             <div className="flex gap-2">
@@ -211,10 +207,9 @@ export default function ImportEmployees({
                                 Required spreadsheet columns
                             </h2>
                             <p className="text-muted-foreground">
-                                Required: Employee Number, First Name, Last
-                                Name, and Employment Status. Use one employee
-                                per row and keep ID values as text. Email is
-                                optional.
+                                Fill in every configured column for each
+                                employee. Email is optional. Keep ID values as
+                                text.
                             </p>
                         </section>
                         {editTemplate && (
@@ -482,7 +477,7 @@ export default function ImportEmployees({
                             </p>
                             <Button disabled={upload.processing}>
                                 {upload.processing
-                                    ? 'Checking workbook…'
+                                    ? 'Checking workbookâ€¦'
                                     : 'Preview import'}
                             </Button>
                         </form>
@@ -572,31 +567,7 @@ export default function ImportEmployees({
                                         value={token}
                                         readOnly
                                     />
-                                    <div className="min-w-64 flex-1 space-y-2">
-                                        <Label htmlFor="approval-reference">
-                                            Approval reference
-                                        </Label>
-                                        <Input
-                                            id="approval-reference"
-                                            required
-                                            value={
-                                                apply.data.approval_reference
-                                            }
-                                            onChange={(event) =>
-                                                apply.setData(
-                                                    'approval_reference',
-                                                    event.target.value,
-                                                )
-                                            }
-                                        />
-                                        <InputError
-                                            message={
-                                                apply.errors
-                                                    .approval_reference ??
-                                                apply.errors.token
-                                            }
-                                        />
-                                    </div>
+                                    <InputError message={apply.errors.token} />
                                     <Button
                                         disabled={
                                             apply.processing ||
@@ -605,8 +576,8 @@ export default function ImportEmployees({
                                         }
                                     >
                                         {apply.processing
-                                            ? 'Applying…'
-                                            : 'Apply import'}
+                                            ? 'Applyingâ€¦'
+                                            : 'Create accounts'}
                                     </Button>
                                     {rows.some((row) => !row.valid) && (
                                         <p className="w-full text-sm text-destructive">
