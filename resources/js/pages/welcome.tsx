@@ -131,7 +131,7 @@ export default function Welcome() {
                             <div className="absolute size-[min(380px,100%)] rounded-full border border-[#8CE01F]/30" />
                             <div className="absolute size-[min(300px,80%)] rounded-full border border-[#8CE01F]/40" />
 
-                            {/* Cards Layer (Positioned behind the girl) */}
+                            {/* Decorative cards behind the hero image */}
                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                                 <div className="relative h-[340px] w-full max-w-[400px]">
                                     {/* Top-Left Blank Card */}
@@ -148,11 +148,12 @@ export default function Welcome() {
                                 </div>
                             </div>
 
-                            {/* Person Image with Removed Background (Positioned on top of the cards) */}
                             <div className="relative z-10 flex justify-center pt-6">
                                 <img
-                                    src="/images/hero_model_green.png"
-                                    alt="LGU Clarin HRIS User"
+                                    src="/images/clarin-officials.png"
+                                    alt="Three LGU Clarin officials in municipal uniforms"
+                                    width={1293}
+                                    height={1216}
                                     className="max-h-[600px] w-auto max-w-full object-contain drop-shadow-2xl"
                                 />
                             </div>
