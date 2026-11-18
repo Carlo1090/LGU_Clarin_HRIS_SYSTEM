@@ -1,4 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
 
 type Cell = string | number | null;
 
@@ -13,6 +14,7 @@ type Props = {
     } | null;
     profile?: Cell[] | null;
     missingEmployee?: boolean;
+    dtrPreviewUrl?: string | null;
     leaveTypes?: { id: number; name: string }[] | null;
 };
 
@@ -166,6 +168,7 @@ export default function PortalPage({
     records,
     profile,
     missingEmployee,
+    dtrPreviewUrl,
     leaveTypes,
 }: Props) {
     return (
@@ -179,6 +182,11 @@ export default function PortalPage({
             </header>
 
             {leaveTypes && <LeaveRequestForm types={leaveTypes} />}
+            {dtrPreviewUrl && (
+                <Button asChild variant="outline">
+                    <Link href={dtrPreviewUrl}>Preview DTR</Link>
+                </Button>
+            )}
 
             <section
                 aria-label={title}

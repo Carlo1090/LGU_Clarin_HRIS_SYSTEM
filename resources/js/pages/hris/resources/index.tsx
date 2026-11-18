@@ -69,7 +69,8 @@ export default function HrisResourceIndex({
 }: Props) {
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
-    const hasActions = canManage || Boolean(leaveReviewStage);
+    const isAttendance = resource === 'attendance';
+    const hasActions = canManage || Boolean(leaveReviewStage) || isAttendance;
 
     function reviewLeave(id: number, decision: 'advance' | 'reject') {
         if (
@@ -618,28 +619,37 @@ export default function HrisResourceIndex({
                                         )}
                                         {hasActions && !leaveReviewStage && (
                                             <td className="px-3 py-3 whitespace-nowrap">
-                                                {row.canManage !== false && (
-                                                    <>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                edit(row)
-                                                            }
-                                                            className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                remove(row)
-                                                            }
-                                                            className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </>
+                                                {isAttendance && (
+                                                    <Link
+                                                        href={`/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`}
+                                                        className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
+                                                    >
+                                                        Preview DTR
+                                                    </Link>
                                                 )}
+                                                {canManage &&
+                                                    row.canManage !== false && (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    edit(row)
+                                                                }
+                                                                className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    remove(row)
+                                                                }
+                                                                className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </>
+                                                    )}
                                             </td>
                                         )}
                                     </tr>

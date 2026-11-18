@@ -29,10 +29,52 @@ test('employee portal returns only the signed-in employee records', function () 
     $this->actingAs($user)->get('/hris/portal/my-attendance')
         ->assertInertia(fn (Assert $page) => $page
             ->component('hris/portal')
+            ->where('dtrPreviewUrl', "/hris/attendance/dtr/{$employee->id}")
             ->has('records.data', 1)
             ->where('records.data.0.0', '2026-11-03'));
 
     $this->get('/hris/portal/staffing')->assertForbidden();
+});
+
+test('DTR preview returns the selected cutoff and respects attendance access', function () {
+    $this->withoutVite();
+
+    $employeeRole = Role::factory()->create(['name' => 'Employee']);
+    $user = User::factory()->create(['role_id' => $employeeRole->id]);
+    $employee = Employee::factory()->create(['user_id' => $user->id]);
+    $user->forceFill(['employee_id' => $employee->id])->save();
+    $other = Employee::factory()->create();
+
+    foreach (['2026-10-15', '2026-10-16', '2026-11-01'] as $date) {
+        AttendanceRecord::factory()->create([
+            'employee_id' => $employee->id,
+            'attendance_date' => $date,
+            'time_in' => $date.' 07:35:21',
+            'time_out' => null,
+            'status' => 'on_leave',
+        ]);
+    }
+
+    $url = "/hris/attendance/dtr/{$employee->id}?month=2026-10&period=second";
+    $this->actingAs($user)->get($url)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('hris/daily-time-record')
+            ->where('periodLabel', 'October 16–31, 2026')
+            ->has('records', 1)
+            ->where('records.16.timeIn', '07:35')
+            ->where('records.16.timeOut', null)
+            ->where('records.16.remarks', 'On leave'));
+    $this->get("/hris/attendance/dtr/{$other->id}")->assertForbidden();
+
+    $departmentHeadRole = Role::factory()->create(['name' => 'Department Head']);
+    $head = User::factory()->create(['role_id' => $departmentHeadRole->id, 'employee_id' => $employee->id]);
+    $this->actingAs($head)->get($url)->assertOk();
+    $this->get("/hris/attendance/dtr/{$other->id}")->assertForbidden();
+
+    $hrRole = Role::factory()->create(['name' => 'HR Officer']);
+    $hr = User::factory()->create(['role_id' => $hrRole->id]);
+    $this->actingAs($hr)->get($url)->assertOk();
 });
 
 test('mayor staffing shows summary counts and employee pages are forbidden', function () {
