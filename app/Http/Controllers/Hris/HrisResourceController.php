@@ -370,6 +370,36 @@ class HrisResourceController extends Controller
         }
         $departmentHead = $request->user()->role?->name === 'Department Head';
         $departmentId = $request->user()->employee?->department_id;
+        if ($resource === 'attendance' && $request->query('view') !== 'entries') {
+            $records = Employee::query()
+                ->when($departmentHead, fn ($query) => $departmentId
+                    ? $query->where('department_id', $departmentId)
+                    : $query->whereRaw('1 = 0'))
+                ->with('department:id,name')
+                ->orderBy('last_name')->orderBy('first_name')->orderBy('id')
+                ->paginate(20, ['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id'])
+                ->through(fn (Employee $employee) => [
+                    'id' => $employee->id,
+                    'name' => trim("{$employee->last_name}, {$employee->first_name} {$employee->suffix}"),
+                    'employee_number' => $employee->employee_number,
+                    'department' => $employee->department?->name,
+                    'dtr_url' => route('hris.attendance.dtr', $employee, false),
+                ]);
+
+            return Inertia::render('hris/resources/index', [
+                'resource' => $resource,
+                'title' => $config['title'],
+                'attendanceDirectory' => true,
+                'canManage' => false,
+                'fields' => [
+                    ['name' => 'name', 'label' => 'Employee', 'type' => 'text'],
+                    ['name' => 'employee_number', 'label' => 'Employee number', 'type' => 'text'],
+                    ['name' => 'department', 'label' => 'Department', 'type' => 'text'],
+                ],
+                'records' => $records,
+            ]);
+        }
+
         $fields = $this->fieldsWithOptions($config['fields'], $departmentHead ? ($departmentId ?? 0) : null);
         $model = $config['model'];
         $query = $model::query();
@@ -572,7 +602,7 @@ class HrisResourceController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record created.']);
 
-        return to_route('hris.resources.index', ['resource' => $resource]);
+        return $this->resourceIndexAfterMutation($resource);
     }
 
     public function update(Request $request, string $resource, int $record): RedirectResponse
@@ -601,7 +631,7 @@ class HrisResourceController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record updated.']);
 
-        return to_route('hris.resources.index', ['resource' => $resource]);
+        return $this->resourceIndexAfterMutation($resource);
     }
 
     public function destroy(string $resource, int $record): RedirectResponse
@@ -614,7 +644,17 @@ class HrisResourceController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record deleted.']);
 
-        return to_route('hris.resources.index', ['resource' => $resource]);
+        return $this->resourceIndexAfterMutation($resource);
+    }
+
+    private function resourceIndexAfterMutation(string $resource): RedirectResponse
+    {
+        $parameters = ['resource' => $resource];
+        if ($resource === 'attendance') {
+            $parameters['view'] = 'entries';
+        }
+
+        return to_route('hris.resources.index', $parameters);
     }
 
     /** @return array{model: class-string<Model>, title: string, fields: list<array{name: string, label: string, type: string, required?: bool, options?: string}>, rules: array<string, string>, unique: list<string>} */

@@ -1,6 +1,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
+import { Button } from '@/components/ui/button';
 
 type Field = {
     name: string;
@@ -26,6 +27,7 @@ type Props = {
     leaveReviewStage?: [string, string, string] | null;
     canImport?: boolean;
     officeDirectory?: boolean;
+    attendanceDirectory?: boolean;
     statusSummary?: { status: string; total: number }[];
     createdAccountCredentials?: {
         employee_number: string;
@@ -63,6 +65,7 @@ export default function HrisResourceIndex({
     leaveReviewStage,
     canImport = false,
     officeDirectory = false,
+    attendanceDirectory = false,
     statusSummary = [],
     createdAccountCredentials = null,
     accountSetupEmailSent = null,
@@ -228,10 +231,45 @@ export default function HrisResourceIndex({
                 </header>
 
                 {isAttendance && (
-                    <DailyTimeRecordDialog
-                        url="/hris/attendance/dtr/demo"
-                        demo
-                    />
+                    <nav
+                        aria-label="Attendance views"
+                        className="flex flex-wrap gap-2"
+                    >
+                        <Button
+                            asChild
+                            variant={
+                                attendanceDirectory ? 'default' : 'outline'
+                            }
+                        >
+                            <Link
+                                href="/hris/attendance"
+                                aria-current={
+                                    attendanceDirectory ? 'page' : undefined
+                                }
+                            >
+                                Employees
+                            </Link>
+                        </Button>
+                        <Button
+                            asChild
+                            variant={
+                                attendanceDirectory ? 'outline' : 'default'
+                            }
+                        >
+                            <Link
+                                href="/hris/attendance?view=entries"
+                                aria-current={
+                                    attendanceDirectory ? undefined : 'page'
+                                }
+                            >
+                                Attendance entries
+                            </Link>
+                        </Button>
+                        <DailyTimeRecordDialog
+                            url="/hris/attendance/dtr/demo"
+                            demo
+                        />
+                    </nav>
                 )}
 
                 {resource === 'employees' && statusSummary.length > 0 && (
@@ -522,7 +560,7 @@ export default function HrisResourceIndex({
                             id="records-heading"
                             className="text-lg font-semibold tracking-tight"
                         >
-                            Records
+                            {attendanceDirectory ? 'Employees' : 'Records'}
                         </h2>
                         <span className="text-sm text-muted-foreground">
                             {records.data.length} on this page
@@ -532,9 +570,11 @@ export default function HrisResourceIndex({
                         <table className="w-full text-left text-sm">
                             <thead className="bg-muted text-muted-foreground">
                                 <tr>
-                                    <th className="px-3 py-3 font-medium">
-                                        ID
-                                    </th>
+                                    {!attendanceDirectory && (
+                                        <th className="px-3 py-3 font-medium">
+                                            ID
+                                        </th>
+                                    )}
                                     {fields.map((field) => (
                                         <th
                                             key={field.name}
@@ -545,7 +585,9 @@ export default function HrisResourceIndex({
                                     ))}
                                     {hasActions && (
                                         <th className="px-3 py-3 font-medium">
-                                            Actions
+                                            {attendanceDirectory
+                                                ? 'DTR'
+                                                : 'Actions'}
                                         </th>
                                     )}
                                 </tr>
@@ -556,7 +598,11 @@ export default function HrisResourceIndex({
                                         key={row.id}
                                         className="border-t transition-colors hover:bg-muted/60"
                                     >
-                                        <td className="px-3 py-3">{row.id}</td>
+                                        {!attendanceDirectory && (
+                                            <td className="px-3 py-3">
+                                                {row.id}
+                                            </td>
+                                        )}
                                         {fields.map((field) => (
                                             <td
                                                 key={field.name}
@@ -630,7 +676,12 @@ export default function HrisResourceIndex({
                                                 {isAttendance && (
                                                     <span className="mr-2">
                                                         <DailyTimeRecordDialog
-                                                            url={`/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`}
+                                                            url={
+                                                                typeof row.dtr_url ===
+                                                                'string'
+                                                                    ? row.dtr_url
+                                                                    : `/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`
+                                                            }
                                                         />
                                                     </span>
                                                 )}
@@ -666,11 +717,14 @@ export default function HrisResourceIndex({
                                         <td
                                             colSpan={
                                                 fields.length +
-                                                (hasActions ? 2 : 1)
+                                                Number(!attendanceDirectory) +
+                                                Number(hasActions)
                                             }
                                             className="px-3 py-8 text-center text-muted-foreground"
                                         >
-                                            No records found.
+                                            {attendanceDirectory
+                                                ? 'No employees found.'
+                                                : 'No records found.'}
                                         </td>
                                     </tr>
                                 )}

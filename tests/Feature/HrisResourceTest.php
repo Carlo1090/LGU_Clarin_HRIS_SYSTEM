@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AttendanceRecord;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Role;
@@ -19,6 +20,59 @@ class HrisResourceTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+    }
+
+    public function test_attendance_lists_employees_once_with_dtr_links_and_respects_department_scope(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create(['first_name' => 'Alex', 'last_name' => 'Adams', 'suffix' => null]);
+        $withoutEntries = Employee::factory()->create(['last_name' => 'Zulu']);
+        AttendanceRecord::factory()->count(2)->for($employee)->create();
+
+        $this->actingAs($hr)->get('/hris/attendance')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('hris/resources/index')
+                ->where('attendanceDirectory', true)
+                ->has('records.data', 2)
+                ->where('records.data.0.name', 'Adams, Alex')
+                ->where('records.data.0.dtr_url', "/hris/attendance/dtr/{$employee->id}")
+                ->where('records.data.1.dtr_url', "/hris/attendance/dtr/{$withoutEntries->id}"));
+
+        $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create(['employee_id' => $employee->id]);
+        $this->actingAs($head)->get('/hris/attendance')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('records.data', 1)
+                ->where('records.data.0.id', $employee->id));
+        $this->getJson("/hris/attendance/dtr/{$withoutEntries->id}")->assertForbidden();
+    }
+
+    public function test_attendance_entries_can_still_be_managed_from_the_entries_view(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create();
+        $entriesUrl = '/hris/attendance?view=entries';
+        $data = [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-10-19',
+            'total_hours' => 8,
+            'status' => 'present',
+            'source' => 'manual',
+            'overtime_hours' => 0,
+        ];
+
+        $this->actingAs($hr)->post('/hris/attendance', $data)->assertRedirect($entriesUrl);
+        $entry = AttendanceRecord::query()->sole();
+        $this->get($entriesUrl)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('canManage', true)
+                ->where('records.data.0.id', $entry->id));
+        $entryUrl = "/hris/attendance/{$entry->id}";
+        $this->put($entryUrl, ['total_hours' => 7] + $data)->assertRedirect($entriesUrl);
+        $this->delete($entryUrl)->assertRedirect($entriesUrl);
+        $this->assertModelMissing($entry);
     }
 
     public function test_hr_officer_can_view_but_cannot_create_a_department(): void
