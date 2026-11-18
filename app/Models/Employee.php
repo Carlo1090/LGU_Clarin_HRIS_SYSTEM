@@ -27,7 +27,7 @@ class Employee extends Model
 
     protected function casts(): array
     {
-        return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'custom_fields' => 'array'];
+        return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'biometric_id' => 'integer', 'custom_fields' => 'array'];
     }
 
     /** @return BelongsTo<User, $this> */
@@ -112,6 +112,12 @@ class Employee extends Model
     public function attendanceRecords(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class);
+    }
+
+    /** @return HasMany<AttendancePunch, $this> */
+    public function attendancePunches(): HasMany
+    {
+        return $this->hasMany(AttendancePunch::class, 'biometric_id', 'biometric_id');
     }
 
     /** @return HasMany<AttendanceCorrection, $this> */
