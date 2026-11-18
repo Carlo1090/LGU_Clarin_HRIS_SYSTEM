@@ -1,4 +1,5 @@
-import { FileText, ShieldCheck } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { ArrowLeft, FileText, ShieldCheck } from 'lucide-react';
 import PublicHeader from '@/components/public-header';
 import {
     Card,
@@ -6,6 +7,7 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card';
+import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
 export default function AuthSimpleLayout({
@@ -13,6 +15,8 @@ export default function AuthSimpleLayout({
     title,
     description,
 }: AuthLayoutProps) {
+    const isLogin = usePage().component === 'auth/login';
+
     return (
         <div className="public-surface flex min-h-svh flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
             <a
@@ -27,13 +31,15 @@ export default function AuthSimpleLayout({
                 className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-2 lg:gap-16 lg:px-10"
             >
                 <div className="mx-auto w-full max-w-md min-w-0">
-                    {/* <Link
-                        href={home()}
-                        className="mb-6 inline-flex items-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-                    >
-                        <ArrowLeft aria-hidden="true" className="size-4" /> Back
-                        to home
-                    </Link> */}
+                    {isLogin && (
+                        <Link
+                            href={home()}
+                            className="mb-4 inline-flex items-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                        >
+                            <ArrowLeft aria-hidden="true" className="size-4" />
+                            Back to home
+                        </Link>
+                    )}
                     <Card className="gap-6 rounded-3xl border-border/80 py-7 shadow-xl shadow-[#142014]/[0.04] sm:py-9">
                         <CardHeader className="gap-3 px-6 sm:px-8">
                             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">

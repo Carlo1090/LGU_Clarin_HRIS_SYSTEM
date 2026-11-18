@@ -1,5 +1,5 @@
-import { Form, Head, Link } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { Form, Head } from '@inertiajs/react';
+import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import PasskeyVerify from '@/components/passkey-verify';
 import PasswordInput from '@/components/password-input';
@@ -9,7 +9,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { home } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
@@ -19,12 +18,6 @@ export default function Login({ status, canResetPassword }: Props) {
     return (
         <>
             <Head title="Log in" />
-            <Button asChild variant="ghost" size="sm" className="mb-4">
-                <Link href={home()}>
-                    <ArrowLeft aria-hidden="true" />
-                    Back to home
-                </Link>
-            </Button>
             {status && (
                 <div
                     role="status"
