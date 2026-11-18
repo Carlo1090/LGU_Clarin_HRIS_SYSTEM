@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
 use App\Models\Employee;
+use App\Services\WorkCalendar;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
@@ -52,6 +53,7 @@ class DailyTimeRecordController extends Controller
             : $calendar->format('F')." {$firstDay}–{$lastDay}, ".$calendar->year;
         $startDate = $calendar->day($firstDay)->toDateString();
         $endDate = $calendar->day($lastDay)->toDateString();
+        $workCalendar = new WorkCalendar(collect([$employee]), $startDate, $endDate);
         $records = $attendance
             ->whereBetween('attendance_date', [$startDate, $endDate])
             ->latest('id')
@@ -63,6 +65,7 @@ class DailyTimeRecordController extends Controller
                 'pmOut' => $record->time_out ? Date::parse($record->time_out)->format('H:i') : null,
                 'remarks' => $record->status === 'present' ? null : ucfirst(str_replace('_', ' ', $record->status)),
             ]);
+        $manualDays = $records->keys();
 
         $punchTimes = $punches->whereBetween('punched_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->orderBy('punched_at')->pluck('punched_at')
@@ -79,6 +82,44 @@ class DailyTimeRecordController extends Controller
                 : ['remarks' => "Review {$count} punch(es)"];
         }
 
+        $officialHours = [];
+        for ($day = $firstDay; $day <= $lastDay; $day++) {
+            $date = $calendar->day($day)->toDateString();
+            $schedule = $workCalendar->scheduleOn($employee, $date);
+            $holiday = $workCalendar->holidayOn($date);
+            $scheduled = $schedule !== null && $workCalendar->isWorkday($schedule, $date);
+            if ($scheduled) {
+                $officialHours[$schedule->hours()] = true;
+            }
+            if ($holiday !== null || ($schedule !== null && ! $scheduled) || $workCalendar->approvedLeaveOn($employee, $date)) {
+                $remark = $holiday ? 'Holiday · '.$holiday : ($schedule !== null && ! $scheduled ? 'Rest day' : 'Approved leave');
+                $row = $records->get($day, []);
+                $row['remarks'] = empty($row['remarks']) ? $remark : $row['remarks'].' · '.$remark;
+                $records[$day] = $row;
+
+                continue;
+            }
+            if (! $scheduled || ! $workCalendar->hasEnded($employee, $schedule, $date)) {
+                continue;
+            }
+            if (! $records->has($day)) {
+                $records[$day] = ['remarks' => 'Missing log'];
+            } elseif (! $manualDays->contains($day) && $punchTimes->has($day)) {
+                $row = $records[$day];
+                $variance = $schedule->variances($punchTimes[$day]);
+                if ($variance !== null) {
+                    if ($variance['undertime'] > 0) {
+                        $row['undertimeHours'] = intdiv($variance['undertime'], 60);
+                        $row['undertimeMinutes'] = $variance['undertime'] % 60;
+                    }
+                    $row['remarks'] = $variance['late'] > 0 ? "Late {$variance['late']} min" : null;
+                } elseif (count($punchTimes[$day]) === AttendancePunch::DTR_PUNCH_COUNT) {
+                    $row = ['remarks' => 'Review punch order'];
+                }
+                $records[$day] = $row;
+            }
+        }
+
         $givenNames = implode(' ', array_filter([$employee->first_name, $employee->middle_name, $employee->suffix]));
 
         $preview = [
@@ -86,6 +127,7 @@ class DailyTimeRecordController extends Controller
             'month' => $calendar->format('Y-m'),
             'period' => $period,
             'periodLabel' => $periodLabel,
+            'officialHours' => count($officialHours) > 1 ? 'Varies by workday' : array_key_first($officialHours),
             'records' => (object) $records->all(),
             'punchTimes' => (object) $punchTimes->all(),
             'previewUrl' => route('hris.attendance.dtr', $employee, false),

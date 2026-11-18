@@ -68,9 +68,13 @@ const emptyValue = (field: Field): string | number | boolean | null =>
 function AttendanceBadge({
     complete,
     review,
+    missing,
+    perfect,
 }: {
     complete: number;
     review: number;
+    missing: number;
+    perfect: boolean;
 }) {
     return (
         <div className="space-y-1">
@@ -80,7 +84,7 @@ function AttendanceBadge({
                 </Badge>
             ) : complete > 0 ? (
                 <Badge className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-                    Complete logs
+                    {perfect ? 'Perfect on scheduled days' : 'Complete logs'}
                 </Badge>
             ) : (
                 <Badge variant="secondary">No work logs</Badge>
@@ -88,6 +92,7 @@ function AttendanceBadge({
             {complete + review > 0 && (
                 <p className="text-xs text-muted-foreground tabular-nums">
                     {complete} complete · {review} to review
+                    {missing > 0 && ` (${missing} missing)`}
                 </p>
             )}
         </div>
@@ -329,11 +334,18 @@ export default function HrisResourceIndex({
                             demo
                         />
                         {canManageAttendance && (
-                            <Button asChild variant="outline">
-                                <Link href="/hris/attendance/logs">
-                                    Import Attendance Logs
-                                </Link>
-                            </Button>
+                            <>
+                                <Button asChild variant="outline">
+                                    <Link href="/hris/attendance/logs">
+                                        Import Attendance Logs
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link href="/hris/attendance/work-calendar">
+                                        Work Calendar
+                                    </Link>
+                                </Button>
+                            </>
                         )}
                     </nav>
                 )}
@@ -358,7 +370,8 @@ export default function HrisResourceIndex({
                             Show month
                         </Button>
                         <p className="basis-full text-sm text-muted-foreground">
-                            Badges summarize recorded workdays for this month.
+                            Badges use recorded logs and completed workdays
+                            covered by the work calendar.
                         </p>
                     </Form>
                 )}
@@ -745,6 +758,14 @@ export default function HrisResourceIndex({
                                                             row.attendance_review_days ??
                                                                 0,
                                                         )}
+                                                        missing={Number(
+                                                            row.attendance_missing_days ??
+                                                                0,
+                                                        )}
+                                                        perfect={
+                                                            row.attendance_perfect ===
+                                                            true
+                                                        }
                                                     />
                                                 ) : resource === 'employees' &&
                                                   field.name ===

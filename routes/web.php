@@ -10,6 +10,7 @@ use App\Http\Controllers\Hris\EmployeeImportController;
 use App\Http\Controllers\Hris\HrisResourceController;
 use App\Http\Controllers\Hris\LeaveReviewController;
 use App\Http\Controllers\Hris\PortalController;
+use App\Http\Controllers\Hris\WorkCalendarController;
 use App\Http\Middleware\EnsureHrisAccountReady;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,11 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
         Route::post('leave-applications/{leave}/review', LeaveReviewController::class)->name('leave.review');
         Route::get('attendance/logs', [AttendanceLogImportController::class, 'index'])->name('attendance-logs.index');
         Route::post('attendance/logs', [AttendanceLogImportController::class, 'store'])->name('attendance-logs.store');
+        Route::get('attendance/work-calendar', [WorkCalendarController::class, 'index'])->name('work-calendar.index');
+        Route::post('attendance/work-calendar/schedules', [WorkCalendarController::class, 'saveSchedule'])->name('work-calendar.schedules.store');
+        Route::delete('attendance/work-calendar/schedules/{schedule}', [WorkCalendarController::class, 'deleteSchedule'])->whereNumber('schedule')->name('work-calendar.schedules.destroy');
+        Route::post('attendance/work-calendar/holidays', [WorkCalendarController::class, 'saveHoliday'])->name('work-calendar.holidays.store');
+        Route::delete('attendance/work-calendar/holidays/{holiday}', [WorkCalendarController::class, 'deleteHoliday'])->whereNumber('holiday')->name('work-calendar.holidays.destroy');
         Route::put('employees/{employee}/biometric-id', BiometricLinkController::class)->whereNumber('employee')->name('employees.biometric-id.update');
         Route::get('attendance/dtr/demo', [DailyTimeRecordController::class, 'demo'])->name('attendance.dtr.demo');
         Route::get('attendance/dtr/{employee}', DailyTimeRecordController::class)->whereNumber('employee')->name('attendance.dtr');

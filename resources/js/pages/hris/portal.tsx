@@ -86,13 +86,13 @@ function LeaveRequestForm({
                         [
                             ['start_date', 'Start date'],
                             ['end_date', 'End date'],
-                            ['days_requested', 'Requested workdays'],
+                            ['days_requested', 'Requested workdays (optional)'],
                         ] as const
                     ).map(([name, label]) => (
                         <label key={name} className="grid gap-1 text-sm">
                             {label}
                             <input
-                                required
+                                required={name !== 'days_requested'}
                                 type={
                                     name === 'days_requested'
                                         ? 'number'
@@ -111,6 +111,12 @@ function LeaveRequestForm({
                                     form.setData(name, event.target.value)
                                 }
                             />
+                            {name === 'days_requested' && (
+                                <span className="text-xs text-muted-foreground">
+                                    Your assigned work calendar can count these
+                                    days.
+                                </span>
+                            )}
                             {form.errors[name] && (
                                 <span className="text-destructive">
                                     {form.errors[name]}
