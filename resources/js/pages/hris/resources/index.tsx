@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { hrisResourceIcon } from '@/lib/hris-icons';
 
 type Field = {
     name: string;
@@ -135,16 +136,21 @@ export default function HrisResourceIndex({
                 </header>
 
                 <nav aria-label="HRIS modules" className="flex flex-wrap gap-2">
-                    {resources.map((item) => (
-                        <Link
-                            key={item.key}
-                            href={`/hris/${item.key}`}
-                            aria-current={resource === item.key ? 'page' : undefined}
-                            className="rounded-full border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground"
-                        >
-                            {item.title}
-                        </Link>
-                    ))}
+                    {resources.map((item) => {
+                        const Icon = hrisResourceIcon(item.key);
+
+                        return (
+                            <Link
+                                key={item.key}
+                                href={`/hris/${item.key}`}
+                                aria-current={resource === item.key ? 'page' : undefined}
+                                className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground"
+                            >
+                                <Icon aria-hidden="true" className="size-4 shrink-0" />
+                                {item.title}
+                            </Link>
+                        );
+                    })}
                 </nav>
 
                 {canManage && (

@@ -13,6 +13,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { hrisResourceIcon } from '@/lib/hris-icons';
 
 type DashboardCard = {
     label: string;
@@ -68,19 +69,6 @@ const cardIcons: Record<string, LucideIcon> = {
     'Payroll gross total': Wallet,
     'Payroll net total': Wallet,
 };
-
-function iconForLink(href: string): LucideIcon {
-    if (href.includes('employee')) return Users;
-    if (href.includes('department') || href.includes('vacanc'))
-        return Building2;
-    if (href.includes('attendance')) return CalendarCheck;
-    if (href.includes('payroll')) return Wallet;
-    if (href.includes('leave') || href.includes('privacy'))
-        return ClipboardList;
-    if (href.includes('performance')) return ClipboardCheck;
-
-    return FileText;
-}
 
 export default function Dashboard({ role, cards, links }: Props) {
     const isHrmo = role === 'HRMO Head' || role === 'HR Officer';
@@ -211,7 +199,7 @@ export default function Dashboard({ role, cards, links }: Props) {
                                 >
                                     <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground transition group-hover:bg-primary group-hover:text-primary-foreground">
                                         {(() => {
-                                            const Icon = iconForLink(link.href);
+                                            const Icon = hrisResourceIcon(link.href.replace('/hris/', ''));
 
                                             return (
                                                 <Icon
