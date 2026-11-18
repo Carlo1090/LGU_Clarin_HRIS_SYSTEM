@@ -231,3 +231,28 @@
     --sidebar-border: #2b3c2e;
     --sidebar-ring: #a6eb20;
 }
+
+@media print {
+    body:has(> [data-dtr-preview][data-state='open'])
+        > :not([data-dtr-preview]) {
+        display: none !important;
+    }
+
+    [data-dtr-preview][data-state='open'] {
+        position: static;
+        display: block;
+        max-width: none;
+        max-height: none;
+        overflow: visible;
+        translate: none;
+        animation: none;
+        border: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    [data-dtr-preview] > [data-slot='dialog-title'],
+    [data-dtr-preview] > button {
+        display: none;
+    }
+}

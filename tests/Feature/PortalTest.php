@@ -66,7 +66,16 @@ test('DTR preview returns the selected cutoff and respects attendance access', f
             ->where('records.16.amIn', '07:35')
             ->where('records.16.pmOut', null)
             ->where('records.16.remarks', 'On leave'));
+    $this->getJson($url)
+        ->assertOk()
+        ->assertJsonPath('period', 'second')
+        ->assertJsonCount(1, 'records')
+        ->assertJsonPath('records.16.amIn', '07:35');
+    $this->getJson("/hris/attendance/dtr/{$employee->id}?period=invalid")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('period');
     $this->get("/hris/attendance/dtr/{$other->id}")->assertForbidden();
+    $this->getJson("/hris/attendance/dtr/{$other->id}")->assertForbidden();
 
     $departmentHeadRole = Role::factory()->create(['name' => 'Department Head']);
     $head = User::factory()->create(['role_id' => $departmentHeadRole->id, 'employee_id' => $employee->id]);
@@ -94,9 +103,13 @@ test('DTR demo shows a sample workday, undertime and leave without creating atte
             ->where('records.21.remarks', 'PM vacation leave')
             ->missing('records.21.pmIn'));
     $this->assertDatabaseCount('attendance_records', 0);
+    $this->getJson('/hris/attendance/dtr/demo')
+        ->assertOk()
+        ->assertJsonPath('demo', true)
+        ->assertJsonPath('records.20.undertimeMinutes', 20);
 
     $other = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'Accountant'])->id]);
-    $this->actingAs($other)->get('/hris/attendance/dtr/demo')->assertForbidden();
+    $this->actingAs($other)->getJson('/hris/attendance/dtr/demo')->assertForbidden();
 });
 
 test('mayor staffing shows summary counts and employee pages are forbidden', function () {

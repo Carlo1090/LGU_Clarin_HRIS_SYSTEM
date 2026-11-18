@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Hris;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
 use App\Models\Employee;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
@@ -13,7 +14,7 @@ use Inertia\Response;
 
 class DailyTimeRecordController extends Controller
 {
-    public function __invoke(Request $request, Employee $employee): Response
+    public function __invoke(Request $request, Employee $employee): Response|JsonResponse
     {
         $user = $request->user();
         $selfService = $user->role?->name === 'Employee';
@@ -57,7 +58,7 @@ class DailyTimeRecordController extends Controller
 
         $givenNames = implode(' ', array_filter([$employee->first_name, $employee->middle_name, $employee->suffix]));
 
-        return Inertia::render('hris/daily-time-record', [
+        $preview = [
             'name' => "{$employee->last_name}, {$givenNames}",
             'month' => $calendar->format('Y-m'),
             'period' => $period,
@@ -67,17 +68,21 @@ class DailyTimeRecordController extends Controller
             'backUrl' => $selfService
                 ? route('hris.portal', 'my-attendance', false)
                 : route('hris.resources.index', 'attendance', false),
-        ]);
+        ];
+
+        return $request->wantsJson()
+            ? response()->json($preview)->header('Cache-Control', 'private, no-store')->header('Vary', 'Accept')
+            : Inertia::render('hris/daily-time-record', $preview);
     }
 
-    public function demo(Request $request): Response
+    public function demo(Request $request): Response|JsonResponse
     {
         $selfService = $request->user()->role?->name === 'Employee';
         if (! $selfService) {
             Gate::authorize('view-hris-resource', 'attendance');
         }
 
-        return Inertia::render('hris/daily-time-record', [
+        $preview = [
             'demo' => true,
             'name' => 'Reyes, Alex M.',
             'periodLabel' => 'October 16–31, 2026',
@@ -93,6 +98,10 @@ class DailyTimeRecordController extends Controller
             'backUrl' => $selfService
                 ? route('hris.portal', 'my-attendance', false)
                 : route('hris.resources.index', 'attendance', false),
-        ]);
+        ];
+
+        return $request->wantsJson()
+            ? response()->json($preview)->header('Cache-Control', 'private, no-store')->header('Vary', 'Accept')
+            : Inertia::render('hris/daily-time-record', $preview);
     }
 }

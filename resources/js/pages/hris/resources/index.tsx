@@ -1,6 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 
 type Field = {
     name: string;
@@ -228,11 +228,10 @@ export default function HrisResourceIndex({
                 </header>
 
                 {isAttendance && (
-                    <Button asChild variant="outline">
-                        <Link href="/hris/attendance/dtr/demo">
-                            View DTR demo
-                        </Link>
-                    </Button>
+                    <DailyTimeRecordDialog
+                        url="/hris/attendance/dtr/demo"
+                        demo
+                    />
                 )}
 
                 {resource === 'employees' && statusSummary.length > 0 && (
@@ -629,12 +628,11 @@ export default function HrisResourceIndex({
                                         {hasActions && !leaveReviewStage && (
                                             <td className="px-3 py-3 whitespace-nowrap">
                                                 {isAttendance && (
-                                                    <Link
-                                                        href={`/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`}
-                                                        className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
-                                                    >
-                                                        Preview DTR
-                                                    </Link>
+                                                    <span className="mr-2">
+                                                        <DailyTimeRecordDialog
+                                                            url={`/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`}
+                                                        />
+                                                    </span>
                                                 )}
                                                 {canManage &&
                                                     row.canManage !== false && (

@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
+import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 
 type Cell = string | number | null;
 
@@ -187,13 +187,9 @@ export default function PortalPage({
             {dtrDemoUrl && (
                 <div className="flex flex-wrap gap-2">
                     {dtrPreviewUrl && (
-                        <Button asChild variant="outline">
-                            <Link href={dtrPreviewUrl}>Preview DTR</Link>
-                        </Button>
+                        <DailyTimeRecordDialog url={dtrPreviewUrl} />
                     )}
-                    <Button asChild variant="outline">
-                        <Link href={dtrDemoUrl}>View DTR demo</Link>
-                    </Button>
+                    <DailyTimeRecordDialog url={dtrDemoUrl} demo />
                 </div>
             )}
 
