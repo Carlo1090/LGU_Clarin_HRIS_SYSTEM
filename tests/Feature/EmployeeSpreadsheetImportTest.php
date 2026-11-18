@@ -148,6 +148,9 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $this->assertDatabaseCount('plantilla_items', 0);
         $this->assertNotNull($password);
         $employeeUser = User::query()->where('employee_id', $employee->id)->firstOrFail();
+        auth()->logout();
+        $this->post('/login', ['email' => $employee->employee_number, 'password' => $password])->assertRedirect();
+        $this->assertAuthenticatedAs($employeeUser);
         $employeeUser->forceFill(['must_change_password' => false, 'requires_mfa' => false])->save();
         $this->actingAs($employeeUser)->get(route('hris.my-profile'))->assertOk()->assertInertia(fn ($page) => $page
             ->where('employee.department', $department->name)
@@ -159,12 +162,14 @@ class EmployeeSpreadsheetImportTest extends TestCase
     public function test_employee_workbook_requires_every_field_except_email(): void
     {
         $this->seed();
+        $department = Department::query()->where('code', 'HEALTH')->firstOrFail();
+        $position = Position::query()->create(['department_id' => $department->id, 'title' => 'Nurse I', 'code' => 'NURSE-I']);
         $actor = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
         $response = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
-            'Employee Number' => 'EMP-IMPORT-02', 'First Name' => 'Jordan', 'Last Name' => 'Sample',
-            'Gender' => 'female', 'Birth Date' => '1990-05-06', 'Department' => 'Health', 'Position' => 'Nurse I',
+            'Employee Number' => 'EMP-IMPORT-02', 'First Name' => 'Jordan', 'Last Name' => 'Sample', 'Suffix' => 'Jr.',
+            'Gender' => 'female', 'Birth Date' => '1990-05-06', 'Department' => $department->name, 'Position' => $position->title,
             'Employment Status' => 'active', 'Date Hired' => '2015-04-03', 'Date Regularized' => '2017-04-03',
-            'Age' => '36', 'TIN' => '001-002-003', 'Date of Original Appointment' => '2015-04-03',
+            'Age' => '0', 'TIN' => '001-002-003', 'Date of Original Appointment' => '2015-04-03',
             'Date of Last Promotion/Appointment' => '2020-04-03', 'Appointment Status' => 'P',
             'Civil Service Eligibility' => 'Career Service Professional', 'Comment/Annotation' => 'Verified',
             'PWD' => 'Y', 'Indigenous People' => 'N', 'Solo Parent ID Number' => 'N/A', 'GSIS BP Number' => '0008',
@@ -173,7 +178,41 @@ class EmployeeSpreadsheetImportTest extends TestCase
 
         $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $query['token']]))->assertOk()
             ->assertInertia(fn ($page) => $page->where('rows.0.valid', false)
-                ->where('rows.0.errors.0', 'Middle name is required.'));
+                ->where('rows.0.errors.0', 'Middle name is required.')
+                ->has('rows.0.errors', 1));
+    }
+
+    public function test_employee_import_creates_account_for_existing_employee_number(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+        $department = Department::query()->where('code', 'HEALTH')->firstOrFail();
+        $position = Position::query()->create(['department_id' => $department->id, 'title' => 'Nurse I', 'code' => 'NURSE-I']);
+        $employee = Employee::factory()->create([
+            'employee_number' => 'EMP-EXISTING-01', 'department_id' => $department->id, 'position_id' => $position->id,
+        ]);
+        $actor = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
+        $response = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
+            'Employee Number' => $employee->employee_number, 'First Name' => $employee->first_name, 'Middle Name' => 'A',
+            'Last Name' => $employee->last_name, 'Suffix' => 'Jr.', 'Gender' => 'female', 'Birth Date' => '1990-05-06',
+            'Department' => $department->name, 'Position' => $position->title, 'Employment Status' => 'active',
+            'Date Hired' => '2015-04-03', 'Date Regularized' => '2017-04-03', 'Age' => '36', 'TIN' => '001-002-003',
+            'Date of Original Appointment' => '2015-04-03', 'Date of Last Promotion/Appointment' => '2020-04-03',
+            'Appointment Status' => 'P', 'Civil Service Eligibility' => 'Career Service Professional',
+            'Comment/Annotation' => 'Verified', 'PWD' => 'Y', 'Indigenous People' => 'N',
+            'Solo Parent ID Number' => 'N/A', 'GSIS BP Number' => '0008',
+        ]])])->assertRedirect();
+        parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $query['token']]))->assertOk()
+            ->assertInertia(fn ($page) => $page->where('rows.0.valid', true)
+                ->where('rows.0.profile_action', 'Update profile')->where('rows.0.account_action', 'Create account'));
+        $token = $query['token'];
+
+        $this->actingAs($actor)->post(route('hris.employees.import.store'), ['token' => $token])->assertOk()
+            ->assertInertia(fn ($page) => $page->where('result.createdProfiles', 0)
+                ->where('result.updatedProfiles', 1)->where('result.createdAccounts', 1));
+        $this->assertSame(1, Employee::query()->where('employee_number', $employee->employee_number)->count());
+        $this->assertDatabaseHas('users', ['employee_id' => $employee->id, 'email' => null]);
     }
 
     private function workbook(array $rows): UploadedFile

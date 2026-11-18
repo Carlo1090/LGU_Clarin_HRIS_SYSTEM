@@ -100,7 +100,7 @@ class EmployeeSpreadsheetImport
 
             $errors = [];
             foreach ($requiredKeys as $field) {
-                if (! $data[$field]) {
+                if ($data[$field] === null || trim((string) $data[$field]) === '') {
                     $errors[] = str_replace('_', ' ', ucfirst($field)).' is required.';
                 }
             }

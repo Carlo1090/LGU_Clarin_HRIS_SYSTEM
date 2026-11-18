@@ -110,15 +110,16 @@ export default function ImportEmployees({
                         {credentials.length > 0 && (
                             <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
                                 <h3 className="font-medium">
-                                    One-time credentials for employees without
-                                    email
+                                    One-time temporary credentials
                                 </h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Copy these now and share them with each
-                                    employee privately. They must change the
-                                    temporary password and set up two-factor
-                                    authentication at first sign-in. These
-                                    passwords are not saved for later viewing.
+                                    These are shown for employees without email
+                                    and when email setup delivery fails. Copy
+                                    them now and share them privately. Each
+                                    employee must change the temporary password
+                                    and set up two-factor authentication at
+                                    first sign-in. These passwords are not saved
+                                    for later viewing.
                                 </p>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
@@ -435,12 +436,13 @@ export default function ImportEmployees({
                                         type="file"
                                         accept=".xlsx"
                                         required
-                                        onChange={(event) =>
+                                        onChange={(event) => {
+                                            setPreviewed(false);
                                             upload.setData(
                                                 'file',
                                                 event.target.files?.[0] ?? null,
-                                            )
-                                        }
+                                            );
+                                        }}
                                     />
                                     {upload.data.file && (
                                         <div className="flex items-center gap-3 text-sm">
@@ -452,6 +454,7 @@ export default function ImportEmployees({
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => {
+                                                    setPreviewed(false);
                                                     upload.setData(
                                                         'file',
                                                         null,
