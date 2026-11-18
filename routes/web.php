@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\GoogleLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Hris\AccountInvitationController;
 use App\Http\Controllers\Hris\AttendanceCorrectionController;
@@ -11,6 +12,11 @@ use App\Http\Middleware\EnsureHrisAccountReady;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
+    Route::get('auth/google', [GoogleLoginController::class, 'redirect'])->name('google.redirect');
+    Route::get('auth/google/callback', [GoogleLoginController::class, 'callback'])->name('google.callback');
+});
 
 Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
