@@ -128,7 +128,8 @@ class EmployeeSpreadsheetImportTest extends TestCase
         parse_str((string) $token, $query);
         $token = $query['token'] ?? null;
         $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $token]))->assertOk()->assertInertia(function ($page) use (&$token): void {
-            $page->component('hris/import-employees')->has('rows', 1)->where('rows.0.valid', true)->where('rows.0.status', 'active');
+            $page->component('hris/import-employees')->has('rows', 1)->where('rows.0.valid', true)->where('rows.0.status', 'active')
+                ->where('rows.0.profile_action', 'Create profile')->where('rows.0.account_action', 'Create account');
             $token = $page->toArray()['props']['token'];
         });
 
@@ -153,6 +154,26 @@ class EmployeeSpreadsheetImportTest extends TestCase
             ->where('employee.position_title', 'Nurse I')
             ->where('employee.employment_status', 'active')
             ->where('employee.civil_service_eligibility', 'Career Service Professional'));
+    }
+
+    public function test_employee_workbook_requires_every_field_except_email(): void
+    {
+        $this->seed();
+        $actor = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
+        $response = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
+            'Employee Number' => 'EMP-IMPORT-02', 'First Name' => 'Jordan', 'Last Name' => 'Sample',
+            'Gender' => 'female', 'Birth Date' => '1990-05-06', 'Department' => 'Health', 'Position' => 'Nurse I',
+            'Employment Status' => 'active', 'Date Hired' => '2015-04-03', 'Date Regularized' => '2017-04-03',
+            'Age' => '36', 'TIN' => '001-002-003', 'Date of Original Appointment' => '2015-04-03',
+            'Date of Last Promotion/Appointment' => '2020-04-03', 'Appointment Status' => 'P',
+            'Civil Service Eligibility' => 'Career Service Professional', 'Comment/Annotation' => 'Verified',
+            'PWD' => 'Y', 'Indigenous People' => 'N', 'Solo Parent ID Number' => 'N/A', 'GSIS BP Number' => '0008',
+        ]])])->assertRedirect();
+        parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+
+        $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $query['token']]))->assertOk()
+            ->assertInertia(fn ($page) => $page->where('rows.0.valid', false)
+                ->where('rows.0.errors.0', 'Middle name is required.'));
     }
 
     private function workbook(array $rows): UploadedFile

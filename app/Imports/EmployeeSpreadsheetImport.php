@@ -151,7 +151,7 @@ class EmployeeSpreadsheetImport
                 'employee_number' => ['required', 'string', 'max:255'],
                 'first_name' => ['required', 'string', 'max:255'], 'middle_name' => ['nullable', 'string', 'max:255'],
                 'last_name' => ['required', 'string', 'max:255'], 'suffix' => ['nullable', 'string', 'max:255'],
-                'gender' => ['nullable', 'string', 'max:255'], 'employment_status' => ['required', 'string', 'max:255'],
+                'gender' => ['required', 'string', 'max:255'], 'employment_status' => ['required', 'string', 'max:255', Rule::in($this->template->statuses())],
                 'department' => ['nullable', 'string', 'max:255'], 'position' => ['nullable', 'string', 'max:255'],
                 'age' => ['nullable', 'integer', 'min:0', 'max:150'], 'tin' => ['nullable', 'string', 'max:64'],
                 'appointment_status' => ['required', Rule::in(['P', 'E', 'T', 'S', 'CT', 'PA', 'FT'])],
@@ -170,7 +170,8 @@ class EmployeeSpreadsheetImport
                 'name' => trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')),
                 'department' => $department->name ?? '—', 'position' => $position->title ?? '—',
                 'status' => $data['employment_status'] ?? '—',
-                'action' => $existing ? 'Update profile' : 'Ready to create account',
+                'profile_action' => $existing ? 'Update profile' : 'Create profile',
+                'account_action' => $user ? 'Account exists' : 'Create account',
                 'valid' => ! $errors, 'errors' => array_values(array_unique($errors)), 'data' => $data + ['present_fields' => array_values(array_unique($mappedHeaders))],
             ];
         }

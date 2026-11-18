@@ -14,7 +14,8 @@ type PreviewRow = {
     department: string;
     position: string;
     status: string;
-    action: string;
+    profile_action: string;
+    account_action: string;
     valid: boolean;
     errors: string[];
 };
@@ -489,8 +490,21 @@ export default function ImportEmployees({
                                             Review {rows.length} rows
                                         </h2>
                                         <p className="text-sm text-muted-foreground">
-                                            No records are changed until you
-                                            apply this preview.
+                                            {
+                                                rows.filter(
+                                                    (row) =>
+                                                        row.valid &&
+                                                        row.account_action ===
+                                                            'Create account',
+                                                ).length
+                                            }{' '}
+                                            accounts ready to create;{' '}
+                                            {
+                                                rows.filter((row) => !row.valid)
+                                                    .length
+                                            }{' '}
+                                            rows need correction. No records
+                                            change until you continue.
                                         </p>
                                     </div>
                                     <div className="overflow-x-auto rounded-xl border">
@@ -504,7 +518,8 @@ export default function ImportEmployees({
                                                         'Department',
                                                         'Position',
                                                         'Employment Status',
-                                                        'Action',
+                                                        'Employee profile',
+                                                        'Login account',
                                                         'Validation',
                                                     ].map((heading) => (
                                                         <th
@@ -543,7 +558,10 @@ export default function ImportEmployees({
                                                             {row.status}
                                                         </td>
                                                         <td className="p-3">
-                                                            {row.action}
+                                                            {row.profile_action}
+                                                        </td>
+                                                        <td className="p-3">
+                                                            {row.account_action}
                                                         </td>
                                                         <td className="p-3">
                                                             {row.valid
