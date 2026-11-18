@@ -29,12 +29,26 @@ test('employee portal returns only the signed-in employee records', function () 
     $this->actingAs($user)->get('/hris/portal/my-attendance')
         ->assertInertia(fn (Assert $page) => $page
             ->component('hris/portal')
+            ->where('hrisNavigation.0.href', '/hris/portal/my-attendance')
+            ->where('hrisNavigation.1.href', '/hris/portal/my-leave-requests')
             ->where('dtrPreviewUrl', "/hris/attendance/dtr/{$employee->id}")
             ->where('dtrDemoUrl', '/hris/attendance/dtr/demo')
             ->has('records.data', 1)
             ->where('records.data.0.0', '2026-11-03'));
 
     $this->get('/hris/portal/staffing')->assertForbidden();
+});
+
+test('HR navigation puts daily work before attendance corrections', function () {
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+
+    $this->actingAs($hr)->get('/hris/attendance')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('hrisNavigation.0.href', '/hris/attendance')
+            ->where('hrisNavigation.1.href', '/hris/employees')
+            ->where('hrisNavigation.2.href', '/hris/leave-applications')
+            ->where('hrisNavigation.3.href', '/hris/attendance-corrections'));
 });
 
 test('DTR preview returns the selected cutoff and respects attendance access', function () {
