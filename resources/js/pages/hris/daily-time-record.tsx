@@ -3,21 +3,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 type Props = {
+    demo?: boolean;
     name: string;
-    month: string;
-    period: 'full' | 'first' | 'second';
+    month?: string;
+    period?: 'full' | 'first' | 'second';
     periodLabel: string;
+    officialHours?: string;
     records: Partial<
         Record<
             number,
             {
-                timeIn: string | null;
-                timeOut: string | null;
-                remarks: string | null;
+                amIn?: string | null;
+                amOut?: string;
+                pmIn?: string;
+                pmOut?: string | null;
+                undertimeHours?: number;
+                undertimeMinutes?: number;
+                remarks?: string | null;
             }
         >
     >;
-    previewUrl: string;
+    previewUrl?: string;
     backUrl: string;
 };
 
@@ -33,10 +39,12 @@ const columns = [
 ];
 
 export default function DailyTimeRecord({
+    demo = false,
     name,
     month,
     period,
     periodLabel,
+    officialHours,
     records,
     previewUrl,
     backUrl,
@@ -45,7 +53,13 @@ export default function DailyTimeRecord({
 
     return (
         <main className="mx-auto max-w-3xl space-y-5 p-4 sm:p-8 print:max-w-none print:space-y-0 print:p-0">
-            <Head title="Daily Time Record Preview" />
+            <Head
+                title={
+                    demo
+                        ? 'Daily Time Record Demo'
+                        : 'Daily Time Record Preview'
+                }
+            />
             <header className="space-y-4 print:hidden">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <Button asChild variant="outline">
@@ -55,54 +69,63 @@ export default function DailyTimeRecord({
                         Print DTR
                     </Button>
                 </div>
-                <Form
-                    action={previewUrl}
-                    method="get"
-                    key={`${month}-${period}`}
-                    className="flex flex-wrap items-end gap-3"
-                >
-                    <label className="space-y-1 text-sm font-medium">
-                        <span>Month</span>
-                        <Input
-                            type="month"
-                            name="month"
-                            defaultValue={month}
-                            required
-                        />
-                    </label>
-                    <label className="space-y-1 text-sm font-medium">
-                        <span>Period</span>
-                        <select
-                            name="period"
-                            defaultValue={period}
-                            className="block h-9 rounded-md border border-input bg-background px-3"
-                        >
-                            <option value="full">Full month</option>
-                            <option value="first">1–15</option>
-                            <option value="second">16–End of month</option>
-                        </select>
-                    </label>
-                    <Button type="submit" variant="outline">
-                        Update preview
-                    </Button>
-                    {(errors.month || errors.period) && (
-                        <p
-                            role="alert"
-                            className="basis-full text-sm text-destructive"
-                        >
-                            {errors.month || errors.period}
-                        </p>
-                    )}
-                </Form>
-                <p className="text-sm text-muted-foreground">
-                    Each daily record supplies one arrival and one departure,
-                    shown in AM In and PM Out.
-                </p>
+                {previewUrl && (
+                    <Form
+                        action={previewUrl}
+                        method="get"
+                        key={`${month}-${period}`}
+                        className="flex flex-wrap items-end gap-3"
+                    >
+                        <label className="space-y-1 text-sm font-medium">
+                            <span>Month</span>
+                            <Input
+                                type="month"
+                                name="month"
+                                defaultValue={month}
+                                required
+                            />
+                        </label>
+                        <label className="space-y-1 text-sm font-medium">
+                            <span>Period</span>
+                            <select
+                                name="period"
+                                defaultValue={period}
+                                className="block h-9 rounded-md border border-input bg-background px-3"
+                            >
+                                <option value="full">Full month</option>
+                                <option value="first">1–15</option>
+                                <option value="second">16–End of month</option>
+                            </select>
+                        </label>
+                        <Button type="submit" variant="outline">
+                            Update preview
+                        </Button>
+                        {(errors.month || errors.period) && (
+                            <p
+                                role="alert"
+                                className="basis-full text-sm text-destructive"
+                            >
+                                {errors.month || errors.period}
+                            </p>
+                        )}
+                    </Form>
+                )}
+                {!demo && (
+                    <p className="text-sm text-muted-foreground">
+                        Each daily record supplies one arrival and one
+                        departure, shown in AM In and PM Out.
+                    </p>
+                )}
             </header>
 
             <div className="overflow-x-auto print:overflow-visible">
                 <article className="mx-auto max-w-xl min-w-[29rem] border bg-white px-5 py-7 font-[Arial,sans-serif] text-sm leading-tight text-black sm:px-8 print:max-w-[150mm] print:min-w-0 print:border-0 print:p-0 print:text-[10pt]">
-                    <p className="text-right">Civil Service Form No. 48</p>
+                    <div className="flex justify-between gap-2">
+                        {demo && (
+                            <p className="font-bold">Demo · Fictional data</p>
+                        )}
+                        <p className="ml-auto">Civil Service Form No. 48</p>
+                    </div>
                     <h1 className="my-4 text-center text-xl font-bold">
                         DAILY TIME RECORD
                     </h1>
@@ -121,7 +144,9 @@ export default function DailyTimeRecord({
                         </div>
                         <div className="flex gap-2">
                             <dt>Official hours for arrival and departure</dt>
-                            <dd className="w-24 border-b" />
+                            <dd className="min-w-24 border-b px-1">
+                                {officialHours}
+                            </dd>
                         </div>
                     </dl>
                     <table
@@ -134,6 +159,13 @@ export default function DailyTimeRecord({
                                     <th
                                         key={column}
                                         scope="col"
+                                        aria-label={
+                                            column === 'Under'
+                                                ? 'Undertime hours'
+                                                : column === 'time'
+                                                  ? 'Undertime minutes'
+                                                  : undefined
+                                        }
                                         className={
                                             column === 'Day'
                                                 ? 'w-[7%] py-1'
@@ -157,12 +189,12 @@ export default function DailyTimeRecord({
                                         <th scope="row" className="font-normal">
                                             {day}
                                         </th>
-                                        <td>{record?.timeIn}</td>
-                                        <td />
-                                        <td />
-                                        <td>{record?.timeOut}</td>
-                                        <td />
-                                        <td />
+                                        <td>{record?.amIn}</td>
+                                        <td>{record?.amOut}</td>
+                                        <td>{record?.pmIn}</td>
+                                        <td>{record?.pmOut}</td>
+                                        <td>{record?.undertimeHours}</td>
+                                        <td>{record?.undertimeMinutes}</td>
                                         <td className="break-words">
                                             {record?.remarks}
                                         </td>

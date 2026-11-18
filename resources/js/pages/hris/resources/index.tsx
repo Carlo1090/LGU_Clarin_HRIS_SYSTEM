@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 type Field = {
     name: string;
@@ -225,6 +226,14 @@ export default function HrisResourceIndex({
                             'Manage HRIS records and their linked data.'}
                     </p>
                 </header>
+
+                {isAttendance && (
+                    <Button asChild variant="outline">
+                        <Link href="/hris/attendance/dtr/demo">
+                            View DTR demo
+                        </Link>
+                    </Button>
+                )}
 
                 {resource === 'employees' && statusSummary.length > 0 && (
                     <section

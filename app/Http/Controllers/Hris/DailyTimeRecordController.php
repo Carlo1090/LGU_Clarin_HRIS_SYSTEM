@@ -50,8 +50,8 @@ class DailyTimeRecordController extends Controller
             ->unique('attendance_date')
             ->keyBy(fn (AttendanceRecord $record) => (int) substr($record->attendance_date, -2))
             ->map(fn (AttendanceRecord $record) => [
-                'timeIn' => $record->time_in ? Date::parse($record->time_in)->format('H:i') : null,
-                'timeOut' => $record->time_out ? Date::parse($record->time_out)->format('H:i') : null,
+                'amIn' => $record->time_in ? Date::parse($record->time_in)->format('H:i') : null,
+                'pmOut' => $record->time_out ? Date::parse($record->time_out)->format('H:i') : null,
                 'remarks' => $record->status === 'present' ? null : ucfirst(str_replace('_', ' ', $record->status)),
             ]);
 
@@ -64,6 +64,32 @@ class DailyTimeRecordController extends Controller
             'periodLabel' => $periodLabel,
             'records' => (object) $records->all(),
             'previewUrl' => route('hris.attendance.dtr', $employee, false),
+            'backUrl' => $selfService
+                ? route('hris.portal', 'my-attendance', false)
+                : route('hris.resources.index', 'attendance', false),
+        ]);
+    }
+
+    public function demo(Request $request): Response
+    {
+        $selfService = $request->user()->role?->name === 'Employee';
+        if (! $selfService) {
+            Gate::authorize('view-hris-resource', 'attendance');
+        }
+
+        return Inertia::render('hris/daily-time-record', [
+            'demo' => true,
+            'name' => 'Reyes, Alex M.',
+            'periodLabel' => 'October 16–31, 2026',
+            'officialHours' => '08:00–12:00 / 13:00–17:00',
+            'records' => [
+                17 => ['remarks' => 'Saturday'],
+                18 => ['remarks' => 'Sunday'],
+                19 => ['amIn' => '07:55', 'amOut' => '12:02', 'pmIn' => '12:58', 'pmOut' => '17:05'],
+                20 => ['amIn' => '07:57', 'amOut' => '12:00', 'pmIn' => '12:59', 'pmOut' => '16:40', 'undertimeHours' => 0, 'undertimeMinutes' => 20],
+                21 => ['amIn' => '07:56', 'amOut' => '12:00', 'remarks' => 'PM vacation leave'],
+                22 => ['remarks' => 'Sick leave'],
+            ],
             'backUrl' => $selfService
                 ? route('hris.portal', 'my-attendance', false)
                 : route('hris.resources.index', 'attendance', false),

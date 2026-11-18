@@ -30,6 +30,7 @@ test('employee portal returns only the signed-in employee records', function () 
         ->assertInertia(fn (Assert $page) => $page
             ->component('hris/portal')
             ->where('dtrPreviewUrl', "/hris/attendance/dtr/{$employee->id}")
+            ->where('dtrDemoUrl', '/hris/attendance/dtr/demo')
             ->has('records.data', 1)
             ->where('records.data.0.0', '2026-11-03'));
 
@@ -62,8 +63,8 @@ test('DTR preview returns the selected cutoff and respects attendance access', f
             ->component('hris/daily-time-record')
             ->where('periodLabel', 'October 16–31, 2026')
             ->has('records', 1)
-            ->where('records.16.timeIn', '07:35')
-            ->where('records.16.timeOut', null)
+            ->where('records.16.amIn', '07:35')
+            ->where('records.16.pmOut', null)
             ->where('records.16.remarks', 'On leave'));
     $this->get("/hris/attendance/dtr/{$other->id}")->assertForbidden();
 
@@ -75,6 +76,27 @@ test('DTR preview returns the selected cutoff and respects attendance access', f
     $hrRole = Role::factory()->create(['name' => 'HR Officer']);
     $hr = User::factory()->create(['role_id' => $hrRole->id]);
     $this->actingAs($hr)->get($url)->assertOk();
+});
+
+test('DTR demo shows a sample workday, undertime and leave without creating attendance', function () {
+    $this->withoutVite();
+    $hr = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'HR Officer'])->id]);
+
+    $this->actingAs($hr)->get('/hris/attendance/dtr/demo')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('hris/daily-time-record')
+            ->where('demo', true)
+            ->where('officialHours', '08:00–12:00 / 13:00–17:00')
+            ->where('records.19', ['amIn' => '07:55', 'amOut' => '12:02', 'pmIn' => '12:58', 'pmOut' => '17:05'])
+            ->where('records.20.undertimeHours', 0)
+            ->where('records.20.undertimeMinutes', 20)
+            ->where('records.21.remarks', 'PM vacation leave')
+            ->missing('records.21.pmIn'));
+    $this->assertDatabaseCount('attendance_records', 0);
+
+    $other = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'Accountant'])->id]);
+    $this->actingAs($other)->get('/hris/attendance/dtr/demo')->assertForbidden();
 });
 
 test('mayor staffing shows summary counts and employee pages are forbidden', function () {

@@ -15,6 +15,7 @@ type Props = {
     profile?: Cell[] | null;
     missingEmployee?: boolean;
     dtrPreviewUrl?: string | null;
+    dtrDemoUrl?: string | null;
     leaveTypes?: { id: number; name: string }[] | null;
 };
 
@@ -169,6 +170,7 @@ export default function PortalPage({
     profile,
     missingEmployee,
     dtrPreviewUrl,
+    dtrDemoUrl,
     leaveTypes,
 }: Props) {
     return (
@@ -182,10 +184,17 @@ export default function PortalPage({
             </header>
 
             {leaveTypes && <LeaveRequestForm types={leaveTypes} />}
-            {dtrPreviewUrl && (
-                <Button asChild variant="outline">
-                    <Link href={dtrPreviewUrl}>Preview DTR</Link>
-                </Button>
+            {dtrDemoUrl && (
+                <div className="flex flex-wrap gap-2">
+                    {dtrPreviewUrl && (
+                        <Button asChild variant="outline">
+                            <Link href={dtrPreviewUrl}>Preview DTR</Link>
+                        </Button>
+                    )}
+                    <Button asChild variant="outline">
+                        <Link href={dtrDemoUrl}>View DTR demo</Link>
+                    </Button>
+                </div>
             )}
 
             <section
