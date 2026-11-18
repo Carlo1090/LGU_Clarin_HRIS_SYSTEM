@@ -37,6 +37,13 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class HrisResourceController extends Controller
 {
+    private const APPOINTMENT_STATUS_OPTIONS = [
+        'P' => 'Permanent', 'E' => 'Elected', 'T' => 'Temporary', 'S' => 'Substitute',
+        'CT' => 'Coterminous', 'PA' => 'Presidential Appointee', 'FT' => 'Fixed Term',
+    ];
+
+    public function __construct(private EmployeeImportTemplate $employeeTemplate) {}
+
     private const PLANTILLA_FIELDS = [
         ['name' => 'organizational_unit', 'label' => 'Organizational Unit'],
         ['name' => 'item_number', 'label' => 'Item Number'],
@@ -134,8 +141,8 @@ class HrisResourceController extends Controller
                 ['name' => 'birth_date', 'label' => 'Birth date', 'type' => 'date'],
                 ['name' => 'department_id', 'label' => 'Department', 'type' => 'select', 'options' => 'departments'],
                 ['name' => 'position_id', 'label' => 'Position', 'type' => 'select', 'options' => 'positions'],
-                ['name' => 'employment_status', 'label' => 'Employment status', 'type' => 'text', 'required' => true],
-                ['name' => 'appointment_status', 'label' => 'Appointment status', 'type' => 'text'],
+                ['name' => 'employment_status', 'label' => 'Employment status', 'type' => 'select', 'required' => true, 'options' => 'employment-statuses'],
+                ['name' => 'appointment_status', 'label' => 'Appointment status', 'type' => 'select', 'options' => 'appointment-statuses'],
                 ['name' => 'date_hired', 'label' => 'Date hired', 'type' => 'date'],
                 ['name' => 'date_regularized', 'label' => 'Date regularized', 'type' => 'date'],
             ],
@@ -684,6 +691,11 @@ class HrisResourceController extends Controller
     {
         $rules = $config['rules'];
 
+        if ($config['model'] === Employee::class) {
+            $rules['employment_status'] = 'required|string|in:'.implode(',', $this->employeeTemplate->statuses());
+            $rules['appointment_status'] = 'nullable|in:'.implode(',', array_keys(self::APPOINTMENT_STATUS_OPTIONS));
+        }
+
         foreach ($config['unique'] as $field) {
             $rules[$field] = [
                 ...explode('|', $config['rules'][$field]),
@@ -711,6 +723,8 @@ class HrisResourceController extends Controller
             'vacancies' => Vacancy::query()->orderBy('title')->pluck('title', 'id'),
             'evaluation-periods' => EvaluationPeriod::query()->orderByDesc('start_date')->pluck('name', 'id'),
             'users' => User::query()->when($departmentId !== null, fn ($query) => $query->whereHas('employee', fn ($employee) => $employee->where('department_id', $departmentId)))->orderBy('name')->pluck('name', 'id'),
+            'employment-statuses' => collect($this->employeeTemplate->statuses())->mapWithKeys(fn (string $status) => [$status => ucfirst($status)]),
+            'appointment-statuses' => collect(self::APPOINTMENT_STATUS_OPTIONS),
         ];
 
         return array_map(function (array $field) use ($optionQueries): array {

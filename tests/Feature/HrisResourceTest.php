@@ -277,4 +277,41 @@ class HrisResourceTest extends TestCase
             ->where('statusSummary.0.total', 1)
             );
     }
+
+    public function test_employee_record_form_uses_the_excel_status_dropdown_choices(): void
+    {
+        $this->seed();
+        $user = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
+
+        $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))
+            ->assertOk()->assertInertia(fn ($page) => $page
+            ->where('fields.9.type', 'select')
+            ->has('fields.9.options', 4)
+            ->where('fields.9.options.0.value', 'active')
+            ->where('fields.9.options.0.label', 'Active')
+            ->where('fields.9.options.3.value', 'terminated')
+            ->where('fields.10.type', 'select')
+            ->where('fields.10.options.0.value', 'P')
+            ->where('fields.10.options.0.label', 'Permanent')
+            ->where('fields.10.options.4.label', 'Coterminous')
+            ->where('fields.10.options.5.label', 'Presidential Appointee')
+            ->where('fields.10.options.6.value', 'FT')
+            ->has('fields.10.options', 7));
+    }
+
+    public function test_manual_employee_creation_rejects_status_values_outside_the_dropdowns(): void
+    {
+        $this->seed();
+        $user = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
+        $url = route('hris.resources.store', ['resource' => 'employees']);
+        $record = [
+            'employee_number' => 'EMP-MANUAL-01', 'first_name' => 'Jordan', 'last_name' => 'Sample',
+            'employment_status' => 'unknown', 'appointment_status' => 'unknown',
+        ];
+
+        $this->actingAs($user)->post($url, $record)->assertSessionHasErrors(['employment_status', 'appointment_status']);
+        $this->actingAs($user)->post($url, array_merge($record, ['employment_status' => 'active', 'appointment_status' => 'CT']))
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('employees', ['employee_number' => 'EMP-MANUAL-01', 'appointment_status' => 'CT']);
+    }
 }

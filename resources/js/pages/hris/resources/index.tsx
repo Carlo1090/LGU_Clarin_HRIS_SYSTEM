@@ -6,7 +6,7 @@ type Field = {
     label: string;
     type: string;
     required?: boolean;
-    options?: { value: number; label: string }[];
+    options?: { value: string | number; label: string }[];
 };
 
 type HrisValue = string | number | boolean | null | undefined;
@@ -168,8 +168,8 @@ export default function HrisResourceIndex({
                         E: 'Elected',
                         T: 'Temporary',
                         S: 'Substitute',
-                        CT: 'Casual Temporary',
-                        PA: 'Permanent Acting',
+                        CT: 'Coterminous',
+                        PA: 'Presidential Appointee',
                         FT: 'Fixed Term',
                     } as Record<string, string>
                 )[String(value)] ?? String(value)
@@ -230,6 +230,30 @@ export default function HrisResourceIndex({
                         <h2 className="mb-4 text-lg font-medium">
                             {editingId ? 'Edit record' : 'Add record'}
                         </h2>
+                        {resource === 'employees' && (
+                            <div className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                                <p>
+                                    This form creates an employee profile only;
+                                    it does not create a login account or
+                                    credentials.
+                                </p>
+                                {canImport && (
+                                    <p className="mt-1">
+                                        To create accounts, use{' '}
+                                        <Link
+                                            href="/hris/employees/import"
+                                            className="font-medium text-foreground underline underline-offset-4"
+                                        >
+                                            employee bulk import
+                                        </Link>
+                                        . Email users receive a setup link. For
+                                        employees without email, the employee
+                                        number is the username and the temporary
+                                        password appears once after import.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         <form
                             onSubmit={submit}
                             className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
@@ -255,12 +279,13 @@ export default function HrisResourceIndex({
                                             onChange={(event) =>
                                                 form.setData(
                                                     field.name,
-                                                    event.target.value
-                                                        ? Number(
-                                                              event.target
-                                                                  .value,
-                                                          )
-                                                        : null,
+                                                    field.options?.find(
+                                                        (option) =>
+                                                            String(
+                                                                option.value,
+                                                            ) ===
+                                                            event.target.value,
+                                                    )?.value ?? null,
                                                 )
                                             }
                                             required={field.required}
