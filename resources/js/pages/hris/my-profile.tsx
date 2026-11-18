@@ -1,0 +1,42 @@
+import { Head, Link } from "@inertiajs/react";
+
+type EmployeeProfile = Record<string, string | number | null>;
+
+const sections = [
+    { title: "Personal information", fields: [["employee_number", "Employee Number"], ["first_name", "First Name"], ["middle_name", "Middle Name"], ["last_name", "Last Name"], ["suffix", "Suffix"], ["gender", "Sex"], ["birth_date", "Date of Birth"], ["employment_status", "Employment Status"], ["date_hired", "Date Hired"], ["date_regularized", "Date Regularized"], ["age", "Age"], ["tin", "TIN"]] },
+    { title: "Appointment and eligibility", fields: [["date_of_original_appointment", "Date of Original Appointment"], ["date_of_last_promotion_appointment", "Date of Last Promotion/Appointment"], ["appointment_status", "Status"], ["civil_service_eligibility", "Civil Service Eligibility"], ["comment_annotation", "Comment/Annotation"]] },
+    { title: "Position and office", fields: [["department", "Department"], ["organizational_unit", "Organizational Unit"], ["item_number", "Item Number"], ["position_title", "Position Title"], ["salary_grade", "Salary Grade"], ["authorized_annual_salary", "Authorized Annual Salary"], ["actual_annual_salary", "Actual Annual Salary"], ["step", "Step"], ["area_code", "Area Code"], ["area_type", "Area Type"], ["level", "Level"], ["position_classification", "Position Classification"], ["abolished", "Abolished"], ["dissolved", "Dissolved"]] },
+    { title: "Additional information", fields: [["pwd", "Person with Disability"], ["indigenous_people", "Indigenous People"], ["solo_parent_id_number", "Solo Parent ID Number"], ["gsis_bp_number", "GSIS BP Number"]] },
+] as const;
+
+export default function MyProfile({ employee, customFields = [] }: { employee: EmployeeProfile; customFields?: { label: string; value: string | null }[] }) {
+    return (
+        <>
+            <Head title="My HR Profile" />
+            <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
+                <header>
+                    <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline">← Dashboard</Link>
+                    <h1 className="mt-3 text-2xl font-semibold">My HR Profile</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Employee information maintained by HRMO.</p>
+                </header>
+                {sections.map((section) => (
+                    <section key={section.title} className="space-y-4 rounded-xl border bg-card p-5">
+                        <h2 className="font-semibold">{section.title}</h2>
+                        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {section.fields.map(([key, label]) => <div key={key} className="min-w-0">
+                                <dt className="text-xs text-muted-foreground">{label}</dt>
+                                <dd className="mt-1 break-words text-sm">{employee[key] === null || employee[key] === "" ? "—" : String(employee[key])}</dd>
+                            </div>)}
+                        </dl>
+                    </section>
+                ))}
+                {customFields.length > 0 && <section className="space-y-4 rounded-xl border bg-card p-5">
+                    <h2 className="font-semibold">Additional HR information</h2>
+                    <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {customFields.map((field) => <div key={field.label} className="min-w-0"><dt className="text-xs text-muted-foreground">{field.label}</dt><dd className="mt-1 break-words text-sm">{field.value || "—"}</dd></div>)}
+                    </dl>
+                </section>}
+            </main>
+        </>
+    );
+}

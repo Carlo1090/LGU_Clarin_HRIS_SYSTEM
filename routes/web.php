@@ -1,13 +1,28 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Hris\AccountInvitationController;
+use App\Http\Controllers\Hris\EmployeeImportController;
 use App\Http\Controllers\Hris\HrisResourceController;
+use App\Http\Middleware\EnsureHrisAccountReady;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('hris/my-profile', [HrisResourceController::class, 'myProfile'])->name('hris.my-profile');
+    Route::get('hris/plantilla-items/template', [HrisResourceController::class, 'downloadPlantillaWorkbook'])->name('hris.plantilla.template');
+
+    Route::get('hris/account-invitations', [AccountInvitationController::class, 'create'])
+        ->middleware('password.confirm')->name('hris.invitations.create');
+    Route::post('hris/account-invitations', [AccountInvitationController::class, 'store'])
+        ->middleware(['password.confirm', 'throttle:6,1'])->name('hris.invitations.store');
+    Route::get('hris/employees/import', [EmployeeImportController::class, 'create'])->name('hris.employees.import');
+    Route::get('hris/employees/import/template', [EmployeeImportController::class, 'downloadTemplate'])->name('hris.employees.import.template');
+    Route::put('hris/employees/import/template', [EmployeeImportController::class, 'updateTemplate'])->name('hris.employees.import.template.update');
+    Route::post('hris/employees/import/preview', [EmployeeImportController::class, 'preview'])->name('hris.employees.import.preview');
+    Route::post('hris/employees/import', [EmployeeImportController::class, 'store'])->name('hris.employees.import.store');
 
     Route::prefix('hris')->name('hris.')->group(function () {
         Route::redirect('/', '/hris/departments')->name('index');

@@ -12,7 +12,12 @@ class Employee extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'department_id', 'position_id', 'employee_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'gender', 'birth_date', 'employment_status', 'date_hired', 'date_regularized', 'photo_path'];
+    protected $fillable = ['user_id', 'department_id', 'position_id', 'employee_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'gender', 'birth_date', 'employment_status', 'date_hired', 'date_regularized', 'photo_path', 'age', 'tin', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status', 'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number', 'gsis_bp_number', 'custom_fields'];
+
+    protected function casts(): array
+    {
+        return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'custom_fields' => 'array'];
+    }
 
     public function user(): BelongsTo
     {
@@ -32,6 +37,11 @@ class Employee extends Model
     public function userProfile(): HasOne
     {
         return $this->hasOne(User::class, 'employee_id');
+    }
+
+    public function plantillaItem(): HasOne
+    {
+        return $this->hasOne(PlantillaItem::class);
     }
 
     public function educations(): HasMany

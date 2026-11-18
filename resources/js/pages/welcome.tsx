@@ -1,7 +1,7 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import { useEffect } from 'react';
-import AOS from 'aos';
-import 'aos/dist/aos.css';
+import { Head, Link, usePage } from "@inertiajs/react";
+import { useEffect } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
 import {
     ArrowUpRight,
     CheckCircle2,
@@ -11,9 +11,9 @@ import {
     ShieldCheck,
     TrendingUp,
     UserCheck,
-} from 'lucide-react';
-import PublicHeader from '@/components/public-header';
-import { dashboard, login, register } from '@/routes';
+} from "lucide-react";
+import PublicHeader from "@/components/public-header";
+import { dashboard, login } from "@/routes";
 
 export default function Welcome() {
     const { auth } = usePage().props;
@@ -21,11 +21,10 @@ export default function Welcome() {
     useEffect(() => {
         AOS.init({
             duration: 700,
-            easing: 'ease-out-cubic',
+            easing: "ease-out-cubic",
             once: true,
             offset: 60,
-            disable: window.matchMedia('(prefers-reduced-motion: reduce)')
-                .matches,
+            disable: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
         });
     }, []);
 
@@ -49,13 +48,9 @@ export default function Welcome() {
                             <h1 className="text-4xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-5xl lg:text-[54px]">
                                 Our people.
                                 <br />
-                                <span className="text-accent-foreground">
-                                    Our public
-                                </span>
+                                <span className="text-accent-foreground">Our public</span>
                                 <br />
-                                <span className="text-accent-foreground">
-                                    service.
-                                </span>
+                                <span className="text-accent-foreground">service.</span>
                             </h1>
 
                             <p
@@ -63,9 +58,8 @@ export default function Welcome() {
                                 data-aos-delay="100"
                                 className="mt-5 max-w-md text-xs leading-5 text-muted-foreground sm:text-sm"
                             >
-                                Welcome to the LGU Clarin HRIS. Sign in to
-                                access your workspace, manage 201 files, and
-                                streamline municipal HR administration —
+                                Welcome to the LGU Clarin HRIS. Sign in to access your workspace,
+                                manage 201 files, and streamline municipal HR administration —
                                 effortlessly.
                             </p>
 
@@ -79,9 +73,7 @@ export default function Welcome() {
                                     href={auth.user ? dashboard() : login()}
                                     className="rounded-full bg-[#A6EB20] px-6 py-3 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-[#95d818]"
                                 >
-                                    {auth.user
-                                        ? 'Open your dashboard'
-                                        : 'Sign in to HRIS'}
+                                    {auth.user ? "Open your dashboard" : "Sign in to HRIS"}
                                 </Link>
 
                                 <a
@@ -103,12 +95,12 @@ export default function Welcome() {
                             >
                                 <div className="flex flex-wrap gap-2">
                                     {[
-                                        '201 Files',
-                                        'Leave Credits',
-                                        'Service Records',
-                                        'DTR Logs',
-                                        'Payroll Sync',
-                                        'HRMO Support',
+                                        "201 Files",
+                                        "Leave Credits",
+                                        "Service Records",
+                                        "DTR Logs",
+                                        "Payroll Sync",
+                                        "HRMO Support",
                                     ].map((tag) => (
                                         <span
                                             key={tag}
@@ -169,9 +161,7 @@ export default function Welcome() {
                             Municipal Offices &amp; Divisions
                         </p>
                         <div className="mt-6 flex flex-wrap items-center justify-center gap-10 text-muted-foreground sm:gap-16">
-                            <span className="text-lg font-extrabold tracking-tight">
-                                HRMO
-                            </span>
+                            <span className="text-lg font-extrabold tracking-tight">HRMO</span>
                             <span className="flex items-center -space-x-2">
                                 <span className="size-6 rounded-full bg-neutral-400" />
                                 <span className="size-6 rounded-full bg-neutral-300" />
@@ -180,23 +170,16 @@ export default function Welcome() {
                                 <LayoutGrid className="size-4" />
                                 MIS CLARIN
                             </span>
-                            <span className="font-serif text-lg font-bold">
-                                Treasury
-                            </span>
+                            <span className="font-serif text-lg font-bold">Treasury</span>
                             <span className="text-lg font-extrabold tracking-tight">
                                 Mayor&apos;s Office
-                                <span className="text-accent-foreground">
-                                    .
-                                </span>
+                                <span className="text-accent-foreground">.</span>
                             </span>
                         </div>
                     </section>
 
                     {/* Features Section */}
-                    <section
-                        id="features"
-                        className="mx-auto max-w-6xl px-6 py-20 lg:px-10"
-                    >
+                    <section id="features" className="mx-auto max-w-6xl px-6 py-20 lg:px-10">
                         <div
                             data-aos="fade-up"
                             className="flex flex-wrap items-center justify-between gap-4"
@@ -214,17 +197,12 @@ export default function Welcome() {
                             data-aos-delay="100"
                             className="mt-6 max-w-3xl text-3xl leading-[1.2] font-semibold tracking-tight text-foreground sm:text-4xl"
                         >
-                            Achieve{' '}
-                            <span className="text-accent-foreground">
-                                administrative clarity
-                            </span>{' '}
-                            and take control of municipal records with tools
-                            designed to simplify, streamline, and personalize
-                            your{' '}
-                            <span className="text-accent-foreground">
-                                workforce management
-                            </span>{' '}
-                            — all in one secure platform.
+                            Achieve{" "}
+                            <span className="text-accent-foreground">administrative clarity</span>{" "}
+                            and take control of municipal records with tools designed to simplify,
+                            streamline, and personalize your{" "}
+                            <span className="text-accent-foreground">workforce management</span> —
+                            all in one secure platform.
                         </h2>
 
                         {/* 4 Feature Cards */}
@@ -242,10 +220,7 @@ export default function Welcome() {
                                 </div>
                                 <div className="relative z-10 my-auto flex justify-center">
                                     <div className="flex size-24 items-center justify-center rounded-2xl bg-[#1C4722] text-[#A6EB20] shadow-xl transition group-hover:scale-105">
-                                        <Landmark
-                                            className="size-11"
-                                            strokeWidth={1.6}
-                                        />
+                                        <Landmark className="size-11" strokeWidth={1.6} />
                                     </div>
                                 </div>
                                 <p className="relative z-10 text-xs font-medium text-[#142014]/80">
@@ -268,9 +243,8 @@ export default function Welcome() {
                                     strokeWidth={2.5}
                                 />
                                 <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
-                                    Maintain updated employee service records
-                                    and get real-time alerts on step increments
-                                    and documents.
+                                    Maintain updated employee service records and get real-time
+                                    alerts on step increments and documents.
                                 </p>
                             </div>
 
@@ -291,9 +265,8 @@ export default function Welcome() {
                                     <span className="size-32 rounded-full bg-[#86CC14]/35" />
                                 </div>
                                 <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
-                                    View all municipal offices, leave credits,
-                                    and personnel statuses in one intuitive
-                                    interface.
+                                    View all municipal offices, leave credits, and personnel
+                                    statuses in one intuitive interface.
                                 </p>
                             </div>
 
@@ -313,9 +286,8 @@ export default function Welcome() {
                                     §
                                 </span>
                                 <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
-                                    Access role-specific HR tools and reports
-                                    tailored to employees, department heads, and
-                                    HRMO admins.
+                                    Access role-specific HR tools and reports tailored to employees,
+                                    department heads, and HRMO admins.
                                 </p>
                             </div>
                         </div>
@@ -384,8 +356,7 @@ export default function Welcome() {
                             {/* Right 3 Easy Steps List */}
                             <div data-aos="fade-up" data-aos-delay="150">
                                 <h2 className="text-3xl leading-tight font-semibold tracking-tight text-[#142014] sm:text-4xl">
-                                    Start Managing Your HR Records in 3 Easy
-                                    Steps
+                                    Start Managing Your HR Records in 3 Easy Steps
                                 </h2>
 
                                 <div className="mt-8 space-y-6">
@@ -396,10 +367,9 @@ export default function Welcome() {
                                         <p className="text-xs leading-relaxed font-medium text-[#142014]/90 sm:text-sm">
                                             <strong className="font-bold">
                                                 Sign In to Your Workspace.
-                                            </strong>{' '}
-                                            Log in using your official LGU
-                                            Clarin credentials or register an
-                                            account for HRMO verification.
+                                            </strong>{" "}
+                                            Log in using your official LGU Clarin credentials.
+                                            Contact HRMO for an account invitation.
                                         </p>
                                     </div>
 
@@ -409,12 +379,10 @@ export default function Welcome() {
                                         </span>
                                         <p className="text-xs leading-relaxed font-medium text-[#142014]/90 sm:text-sm">
                                             <strong className="font-bold">
-                                                Access Role-Based HR
-                                                Information.
-                                            </strong>{' '}
-                                            View your personal service records,
-                                            attendance summaries, and leave
-                                            balances anytime.
+                                                Access Role-Based HR Information.
+                                            </strong>{" "}
+                                            View your personal service records, attendance
+                                            summaries, and leave balances anytime.
                                         </p>
                                     </div>
 
@@ -424,12 +392,10 @@ export default function Welcome() {
                                         </span>
                                         <p className="text-xs leading-relaxed font-medium text-[#142014]/90 sm:text-sm">
                                             <strong className="font-bold">
-                                                Submit &amp; Track Requests
-                                                Seamlessly.
-                                            </strong>{' '}
-                                            Coordinate directly with the Human
-                                            Resource Management Office with
-                                            transparent status updates.
+                                                Submit &amp; Track Requests Seamlessly.
+                                            </strong>{" "}
+                                            Coordinate directly with the Human Resource Management
+                                            Office with transparent status updates.
                                         </p>
                                     </div>
                                 </div>
@@ -456,13 +422,12 @@ export default function Welcome() {
                             id="contact"
                             className="mt-5 max-w-2xl text-sm leading-relaxed text-muted-foreground"
                         >
-                            Supporting the people who serve our community. Need
-                            help with your account or role permissions? Contact
-                            the{' '}
+                            Supporting the people who serve our community. Need help with your
+                            account or role permissions? Contact the{" "}
                             <strong className="font-semibold text-foreground">
                                 Human Resource Management Office (HRMO)
-                            </strong>{' '}
-                            or your{' '}
+                            </strong>{" "}
+                            or your{" "}
                             <strong className="font-semibold text-foreground">
                                 MIS Administrator
                             </strong>
@@ -472,19 +437,15 @@ export default function Welcome() {
                 </main>
 
                 {/* Creative Custom Footer Styled Like Reference Layout */}
-                <footer
-                    className="mx-auto max-w-6xl px-6 pb-16 lg:px-10"
-                    data-aos="fade-up"
-                >
+                <footer className="mx-auto max-w-6xl px-6 pb-16 lg:px-10" data-aos="fade-up">
                     <div className="relative overflow-hidden rounded-[3rem] border border-border/80 bg-muted px-6 pt-16 pb-12 text-foreground shadow-sm sm:px-10 lg:px-14">
                         {/* Top Info & Navigation Row */}
                         <div className="grid items-start gap-12 border-b border-border pb-16 lg:grid-cols-[1.5fr_1fr_1fr_1.5fr]">
                             {/* Col 1: Bio / Tagline */}
                             <div>
                                 <p className="text-base leading-relaxed font-normal text-muted-foreground">
-                                    LGU Clarin is dedicated to progressive
-                                    public service, administrative transparency,
-                                    and empowered workforce management.
+                                    LGU Clarin is dedicated to progressive public service,
+                                    administrative transparency, and empowered workforce management.
                                 </p>
                             </div>
 
@@ -531,18 +492,8 @@ export default function Welcome() {
                                         href={auth.user ? dashboard() : login()}
                                         className="text-muted-foreground hover:text-accent-foreground"
                                     >
-                                        {auth.user
-                                            ? 'Dashboard'
-                                            : 'Log in to HRIS'}
+                                        {auth.user ? "Dashboard" : "Log in to HRIS"}
                                     </Link>
-                                    {!auth.user && (
-                                        <Link
-                                            href={register()}
-                                            className="text-muted-foreground hover:text-accent-foreground"
-                                        >
-                                            Create an account
-                                        </Link>
-                                    )}
                                     <a
                                         href="#contact"
                                         className="text-muted-foreground hover:text-accent-foreground"

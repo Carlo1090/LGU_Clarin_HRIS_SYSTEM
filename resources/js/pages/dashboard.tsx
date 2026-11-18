@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link } from "@inertiajs/react";
 import {
     ArrowUpRight,
     Building2,
@@ -11,8 +11,8 @@ import {
     ShieldCheck,
     Users,
     Wallet,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type DashboardCard = {
     label: string;
@@ -26,63 +26,62 @@ type DashboardLink = {
 
 type Props = {
     role: string;
+    office: string | null;
     cards: DashboardCard[];
     links: DashboardLink[];
 };
 
 const cardIcons: Record<string, LucideIcon> = {
-    'Attendance this month': CalendarCheck,
-    'Available leave days': CalendarDays,
+    "Attendance this month": CalendarCheck,
+    "Available leave days": CalendarDays,
     Payslips: Wallet,
-    'Pending leave requests': ClipboardList,
-    'Department employees': Users,
-    'Total employees': Users,
-    'Active employees': Users,
+    "Pending leave requests": ClipboardList,
+    "Department employees": Users,
+    "Total employees": Users,
+    "Active employees": Users,
     Departments: Building2,
-    'Attendance issues': CalendarCheck,
-    'Pending leave approvals': ClipboardCheck,
-    'Pending HR transactions': ClipboardList,
-    'Incomplete 201 files': FileText,
-    'Performance reviews': ClipboardCheck,
-    'Open vacancies': Building2,
-    'Draft payroll periods': CalendarDays,
-    'Payrolls in preparation': ClipboardList,
-    'Payroll errors': ClipboardCheck,
-    'Recorded deductions': Wallet,
-    'Approved payrolls': ClipboardCheck,
-    'Approved gross total': Wallet,
-    'Approved net total': Wallet,
-    'All recorded deductions': Wallet,
-    'Payrolls awaiting disbursement': Wallet,
-    'Net amount awaiting disbursement': Wallet,
-    'Payrolls marked paid': ClipboardCheck,
-    'User accounts': Users,
-    'Inactive accounts': Users,
-    'Audit log entries': ClipboardList,
-    'Failed logins': ShieldCheck,
-    'System settings': LayoutDashboard,
-    'Pending privacy requests': ClipboardList,
-    'Open privacy incidents': ShieldCheck,
-    'Access log entries': ClipboardList,
-    'Payroll records': FileText,
-    'Payroll gross total': Wallet,
-    'Payroll net total': Wallet,
+    "Attendance issues": CalendarCheck,
+    "Pending leave approvals": ClipboardCheck,
+    "Pending HR transactions": ClipboardList,
+    "Incomplete 201 files": FileText,
+    "Performance reviews": ClipboardCheck,
+    "Open vacancies": Building2,
+    "Draft payroll periods": CalendarDays,
+    "Payrolls in preparation": ClipboardList,
+    "Payroll errors": ClipboardCheck,
+    "Recorded deductions": Wallet,
+    "Approved payrolls": ClipboardCheck,
+    "Approved gross total": Wallet,
+    "Approved net total": Wallet,
+    "All recorded deductions": Wallet,
+    "Payrolls awaiting disbursement": Wallet,
+    "Net amount awaiting disbursement": Wallet,
+    "Payrolls marked paid": ClipboardCheck,
+    "User accounts": Users,
+    "Inactive accounts": Users,
+    "Audit log entries": ClipboardList,
+    "Failed logins": ShieldCheck,
+    "System settings": LayoutDashboard,
+    "Pending privacy requests": ClipboardList,
+    "Open privacy incidents": ShieldCheck,
+    "Access log entries": ClipboardList,
+    "Payroll records": FileText,
+    "Payroll gross total": Wallet,
+    "Payroll net total": Wallet,
 };
 
 function iconForLink(href: string): LucideIcon {
-    if (href.includes('employee')) return Users;
-    if (href.includes('department') || href.includes('vacanc'))
-        return Building2;
-    if (href.includes('attendance')) return CalendarCheck;
-    if (href.includes('payroll')) return Wallet;
-    if (href.includes('leave') || href.includes('privacy'))
-        return ClipboardList;
-    if (href.includes('performance')) return ClipboardCheck;
+        if (href.includes("employee")) return Users;
+    if (href.includes("department") || href.includes("vacanc")) return Building2;
+    if (href.includes("attendance")) return CalendarCheck;
+    if (href.includes("payroll")) return Wallet;
+    if (href.includes("leave") || href.includes("privacy")) return ClipboardList;
+    if (href.includes("performance")) return ClipboardCheck;
 
     return FileText;
 }
 
-export default function Dashboard({ role, cards, links }: Props) {
+export default function Dashboard({ role, office, cards, links }: Props) {
     return (
         <>
             <Head title={`${role} Dashboard`} />
@@ -95,33 +94,25 @@ export default function Dashboard({ role, cards, links }: Props) {
                             <LayoutDashboard className="size-3.5" />
                             LGU CLARIN · HUMAN RESOURCE INFORMATION SYSTEM
                         </div>
-                        <p className="text-sm font-medium text-teal-200">
-                            Your workspace
-                        </p>
+                        <p className="text-sm font-medium text-teal-200">Your workspace</p>
                         <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
                             {role} Dashboard
                         </h1>
-                        <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100/80 sm:text-base">
-                            A clear overview of the HR information and tasks
-                            relevant to your role.
-                        </p>
+                        {office && <p className="mt-3 text-sm text-blue-100">{office}</p>}
                     </div>
                 </header>
 
                 {cards.length > 0 ? (
                     <section aria-label="Key information" className="space-y-4">
                         <div>
-                            <h2 className="text-lg font-semibold tracking-tight">
-                                At a glance
-                            </h2>
+                            <h2 className="text-lg font-semibold tracking-tight">At a glance</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
                                 Current information for your HRIS workspace
                             </p>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             {cards.map((card, index) => {
-                                const Icon =
-                                    cardIcons[card.label] ?? LayoutDashboard;
+                                const Icon = cardIcons[card.label] ?? LayoutDashboard;
 
                                 return (
                                     <article
@@ -135,16 +126,13 @@ export default function Dashboard({ role, cards, links }: Props) {
                                             <span
                                                 className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
                                                     index % 3 === 0
-                                                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                                                        ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                                                         : index % 3 === 1
-                                                          ? 'bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300'
-                                                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                          ? "bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300"
+                                                          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                                                 }`}
                                             >
-                                                <Icon
-                                                    aria-hidden="true"
-                                                    className="size-5"
-                                                />
+                                                <Icon aria-hidden="true" className="size-5" />
                                             </span>
                                         </div>
                                         <p className="mt-5 text-3xl font-semibold tracking-tight tabular-nums">
@@ -159,18 +147,15 @@ export default function Dashboard({ role, cards, links }: Props) {
                     <section className="rounded-2xl border bg-card p-6">
                         <div className="flex gap-4">
                             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                                <ShieldCheck
-                                    aria-hidden="true"
-                                    className="size-5"
-                                />
+                                <ShieldCheck aria-hidden="true" className="size-5" />
                             </span>
                             <div>
                                 <h2 className="font-semibold">
                                     No role is assigned to this account
                                 </h2>
                                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                    Contact the MIS Administrator or HRMO to
-                                    have your account assigned the correct role.
+                                    Contact the MIS Administrator or HRMO to have your account
+                                    assigned the correct role.
                                 </p>
                             </div>
                         </div>
@@ -180,9 +165,7 @@ export default function Dashboard({ role, cards, links }: Props) {
                 {links.length > 0 && (
                     <section className="space-y-4">
                         <div>
-                            <h2 className="text-lg font-semibold tracking-tight">
-                                Quick access
-                            </h2>
+                            <h2 className="text-lg font-semibold tracking-tight">Quick access</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
                                 Go directly to the tools available for your role
                             </p>
@@ -198,18 +181,11 @@ export default function Dashboard({ role, cards, links }: Props) {
                                         {(() => {
                                             const Icon = iconForLink(link.href);
 
-                                            return (
-                                                <Icon
-                                                    aria-hidden="true"
-                                                    className="size-5"
-                                                />
-                                            );
+                                            return <Icon aria-hidden="true" className="size-5" />;
                                         })()}
                                     </span>
                                     <span className="min-w-0 flex-1">
-                                        <span className="block font-medium">
-                                            {link.label}
-                                        </span>
+                                        <span className="block font-medium">{link.label}</span>
                                         <span className="mt-0.5 block text-xs text-muted-foreground">
                                             Open {link.label.toLowerCase()}
                                         </span>

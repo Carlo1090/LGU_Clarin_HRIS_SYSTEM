@@ -248,6 +248,36 @@ A change is **MAJOR** if it affects any of the following, even when the code dif
 | Change ID | Date (PHT) | Change and reason | Areas affected | Required approval | Documented sections | Status / evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | CHG-0001 | 2026-11-17 | Consolidated the two near-identical HRIS overview uploads; introduced mandatory production controls, manual first-HRMO-Head bootstrap process and change-documentation rule | Project governance, auth, DB, workflows, privacy, deployment | HRMO/MIS/DPO sign-off to be obtained | Part A (A1–A15); preserved original scope in Part B | **PROPOSED** — document created; no application code or production deployment claimed |
+| CHG-0002 | 2026-11-18 | Introduce fixed plantilla offices, role dashboard office context, and HRMO Head-managed account setup | Organization, UI, authentication | Municipal approval and release verification pending | A4-A6, A14 | **TESTED** - see change record below |
+| CHG-0003 | 2026-11-18 | Add HRMO Head employee spreadsheet preview/import and show existing departments alongside fixed offices | Employee records, organization directory, UI | Municipal approval and production release verification pending | A3-A4, A7, A14 | **IMPLEMENTED** - validation evidence pending |
+| CHG-0004 | 2026-11-18 | Allow HRMO Head to manage employee import workbook columns and show added fields on employee profiles | Employee records, schema, import workflow, UI | Municipal approval and production release verification pending | A3-A4, A7, A14 | **IMPLEMENTED** - validation pending |
+
+#### CHG-0002 - Fixed offices and account setup
+
+- The project owner selected the 14 plantilla office headings and the existing 11 application roles. A user's office comes from their linked employee record. The 11 initial dashboards share the existing dashboard component.
+- `DatabaseSeeder` upserts the 14 approved department codes and 11 web roles. It creates no accounts or demo records. The directory exposes the approved offices and generic role and department writes are denied. Legacy department records and linked personnel data are preserved. Review and reconcile legacy records before inviting affected employees.
+- Public registration is disabled. The verified, password-confirmed, MFA-enrolled HRMO Head provisioned through bootstrap can access `/hris/account-invitations`. Invitations require an approved role, an existing unlinked employee in an approved office, a work email, and an approval reference. The extra HRMO Head role is outside the web invitation allowlist.
+- The invitation transaction creates the user, links the existing user/employee foreign keys in both directions, and writes an audit record containing the actor, role, and approval reference. The password broker emails a short-lived setup link after commit. The recipient sets a password, verifies email, and confirms MFA before entering the HRIS. Use Forgot password to recover an expired or undelivered setup email.
+- The `users.requires_mfa` boolean defaults to false for existing accounts and is true for newly provisioned accounts. Existing account enrollment and legacy sample account disposition require rollout review. Inactive accounts are denied access to the HRIS.
+- Bootstrap requires written approval and a verified recipient. An authorized shell operator runs `php artisan hris:bootstrap-head <email> --name=<name> --approval=<reference> --operator=<operator>` for preflight, then repeats it with `--execute` after approval. The command refuses a second governed HRMO Head. Limit production shell access to approved operators. Record recovery ownership and verify MFA and audit evidence before release.
+- Deploy the additive migration and idempotent reference seeder in a reviewed environment. Verify mail delivery and test the account flow before inviting personnel. App rollback should retain the additive column, employee links, and audit records until the release owner approves a backout. Prior registration must remain disabled for an invite-only deployment.
+- The full suite passed 56 tests using synthetic records. The frontend production build passed. Municipal sign-off, real mail delivery and deployment verification are pending.
+
+#### CHG-0003 - Employee spreadsheet import and department directory
+
+- HRMO Head can download and upload the `EMPLOYEES` workbook at `/hris/employees/import`. It supports up to 5,000 rows / 10 MB. Employee Number, First Name, Last Name, and Employment Status are required; Department, Position, and other Employee profile fields are optional and resolved against existing HRIS records. Email is optional.
+- Import matches employees by employee number, previews row errors and create/update actions, requires an approval reference, validates department/position relationships, and commits employee profiles and new accounts transactionally with an audit record. New accounts with email receive a setup link; without email, HRMO receives a one-time temporary password that must be shared privately. New users must change it and enroll in MFA.
+- Employee import operates on `employees` and does not create or modify Plantilla positions. The Employees directory summarizes and sorts by employment status, followed by employee name. HRMO can add, rename, and remove employee workbook columns; the four required identity/status columns cannot be removed. Added column values are stored in `employees.custom_fields` and shown on employee profiles. Existing columns can be renamed without changing their mapped field. Imports only update fields present in the workbook, preserving fields omitted after removal. HRMO can also edit Employment Status dropdown choices. The Plantilla page displays existing position records and linked employee numbers in a read-only table.
+- The department page now shows persisted department records (including legacy HRMO/MTO records) plus any missing offices from the fixed 14-office directory. Existing database rows are read-only there; general department editing remains disabled.
+- HRMO approval, privacy review, real mail delivery, and deployment verification remain pending.
+
+#### CHG-0004 - Employee import workbook columns
+
+- Status: IMPLEMENTED; validation and production rollout pending.
+- HRMO Head manages employee import spreadsheet columns from the employee import page. Required columns are Employee Number, First Name, Last Name, and Employment Status. Optional standard columns retain their existing mapping when renamed; custom columns are stored with employee data and rendered on the profile.
+- An additive JSON custom_fields column was added to employees. Backout should retain this column and stored employee information until a reviewed data migration is approved.
+- Imports only update fields present in the uploaded workbook, preventing omitted columns from clearing existing employee data. Removing a custom column hides it from the template/profile but leaves its prior values stored.
+- Review authorization, privacy classification, focused import tests, TypeScript checks, and deployment/rollback evidence before production release.
 
 **Versioning:** `MAJOR.MINOR.PATCH` for this guide. MAJOR = changed business/security/data contract; MINOR = added approved functionality or policy; PATCH = clarification/formatting. Align each deployed release to the corresponding document Git commit and change IDs. The version does not imply the application uses that version.
 
@@ -1349,6 +1379,12 @@ HRMPSB processes the selection workflow.
 The selected applicant proceeds through the appropriate appointment process.
 
 ### 8. Important system features
+
+#### Plantilla and employee profile data
+
+The HRMO Plantilla form follows `TEMPLATE_HRMO-AND-PLANTILLA.xlsx`: each position record stores the office and position details, and the employee-specific columns are saved on the matched `employees` record by employee number. Leave employee number blank for a vacant position. Employee email remains optional. The self-service My HR Profile page reads the signed-in user's linked employee record, so employees see their HRMO-maintained Plantilla details without editing them.
+
+The Employees page provides an HRMO-only download and preview/apply flow for the `EMPLOYEES` workbook. Its columns follow the Employee form and profile: employee identity, department/position names, employment status, dates, and eligibility/profile details. It matches by employee number, updates `employees`, creates a login account for a newly imported employee, and never creates or modifies a Plantilla position. Email remains optional. The employee directory shows status counts and sorts by employment status, then employee name. The Plantilla page displays the full saved position records with linked employee numbers. The page has no add/edit form or workbook download button. Civil Service Eligibility uses the workbook lookup dropdown in the employee template. Keep identifier columns as text to preserve leading zeroes. The Plantilla source workbook remains privately stored at `storage/app/private/TEMPLATE_HRMO-AND-PLANTILLA-IMPORT.xlsx`; the employee import workbook is versioned at `resources/templates/EMPLOYEE-BULK-IMPORT-TEMPLATE.xlsx`.
 
 Aside from the main modules, the HRIS should include these supporting functions:
 

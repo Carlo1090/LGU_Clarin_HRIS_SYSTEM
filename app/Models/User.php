@@ -19,7 +19,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 /**
  * @property int $id
  * @property string $name
- * @property string $email
+ * @property string|null $email
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -36,6 +36,11 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email === null || $this->email_verified_at !== null;
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -47,6 +52,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'must_change_password' => 'boolean',
+            'requires_mfa' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 

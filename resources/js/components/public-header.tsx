@@ -1,14 +1,10 @@
-import { Link, usePage } from '@inertiajs/react';
-import AppLogo from '@/components/app-logo';
-import AppearanceToggle from '@/components/appearance-toggle';
-import { Button } from '@/components/ui/button';
-import { dashboard, home, login, register } from '@/routes';
+import { Link, usePage } from "@inertiajs/react";
+import AppLogo from "@/components/app-logo";
+import AppearanceToggle from "@/components/appearance-toggle";
+import { Button } from "@/components/ui/button";
+import { dashboard, home, login } from "@/routes";
 
-export default function PublicHeader({
-    showNavigation = false,
-}: {
-    showNavigation?: boolean;
-}) {
+export default function PublicHeader({ showNavigation = false }: { showNavigation?: boolean }) {
     const { auth } = usePage().props;
 
     return (
@@ -26,28 +22,16 @@ export default function PublicHeader({
                 </Link>
                 {showNavigation && (
                     <div className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
-                        <a
-                            href="#features"
-                            className="transition-colors hover:text-foreground"
-                        >
+                        <a href="#features" className="transition-colors hover:text-foreground">
                             Features
                         </a>
-                        <a
-                            href="#how-it-works"
-                            className="transition-colors hover:text-foreground"
-                        >
+                        <a href="#how-it-works" className="transition-colors hover:text-foreground">
                             How it works
                         </a>
-                        <a
-                            href="#departments"
-                            className="transition-colors hover:text-foreground"
-                        >
+                        <a href="#departments" className="transition-colors hover:text-foreground">
                             Offices
                         </a>
-                        <a
-                            href="#about"
-                            className="transition-colors hover:text-foreground"
-                        >
+                        <a href="#about" className="transition-colors hover:text-foreground">
                             About
                         </a>
                     </div>
@@ -66,13 +50,6 @@ export default function PublicHeader({
                                 className="rounded-full px-3 text-xs sm:text-sm"
                             >
                                 <Link href={login()}>Log in</Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="rounded-full border-primary bg-accent px-3 text-xs text-accent-foreground hover:bg-primary hover:text-primary-foreground sm:px-4 sm:text-sm"
-                            >
-                                <Link href={register()}>Get started</Link>
                             </Button>
                         </>
                     )}

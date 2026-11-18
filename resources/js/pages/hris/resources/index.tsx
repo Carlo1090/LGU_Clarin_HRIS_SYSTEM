@@ -1,5 +1,5 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Head, Link, router, useForm } from "@inertiajs/react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Field = {
     name: string;
@@ -9,10 +9,11 @@ type Field = {
     options?: { value: number; label: string }[];
 };
 
-type HrisValue = string | number | boolean | null;
+type HrisValue = string | number | boolean | null | undefined;
 
 type HrisRow = {
-    id: number;
+    id: number | string;
+    canManage?: boolean;
     [key: string]: HrisValue;
 };
 
@@ -22,6 +23,9 @@ type Props = {
     resources: { key: string; title: string }[];
     fields: Field[];
     canManage: boolean;
+    canImport?: boolean;
+    officeDirectory?: boolean;
+    statusSummary?: { status: string; total: number }[];
     records: {
         data: HrisRow[];
         links: { url: string | null; label: string; active: boolean }[];
@@ -31,7 +35,7 @@ type Props = {
 type FormData = Record<string, string | number | boolean | null>;
 
 const emptyValue = (field: Field): string | number | boolean | null =>
-    field.type === 'checkbox' ? false : '';
+    field.type === "checkbox" ? false : "";
 
 export default function HrisResourceIndex({
     resource,
@@ -39,14 +43,15 @@ export default function HrisResourceIndex({
     resources,
     fields,
     canManage,
+    canImport = false,
+    officeDirectory = false,
+    statusSummary = [],
     records,
 }: Props) {
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<number | string | null>(null);
     const initialData = useMemo(
         () =>
-            Object.fromEntries(
-                fields.map((field) => [field.name, emptyValue(field)]),
-            ) as FormData,
+            Object.fromEntries(fields.map((field) => [field.name, emptyValue(field)])) as FormData,
         [fields],
     );
     const form = useForm<FormData>(initialData);
@@ -99,14 +104,17 @@ export default function HrisResourceIndex({
     };
 
     const displayValue = (field: Field, value: HrisValue | undefined) => {
-        if (value === null || value === undefined || value === '') return '—';
-        if (field.type === 'checkbox') return value ? 'Yes' : 'No';
+        if (value === null || value === undefined || value === "") return "—";
+        if (field.type === "checkbox") return value ? "Yes" : "No";
         if (field.options)
             return (
-                field.options.find(
-                    (option) => String(option.value) === String(value),
-                )?.label ?? String(value)
+                field.options.find((option) => String(option.value) === String(value))?.label ??
+                String(value)
             );
+        if (resource === "employees" && field.name === "appointment_status") {
+            return ({ P: "Permanent", E: "Elected", T: "Temporary", S: "Substitute", CT: "Casual Temporary", PA: "Permanent Acting", FT: "Fixed Term" } as Record<string, string>)[String(value)] ?? String(value);
+        }
+        if (resource === "employees" && field.name === "employment_status") return String(value).replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
         return value;
     };
 
@@ -126,17 +134,28 @@ export default function HrisResourceIndex({
                         <Link
                             key={item.key}
                             href={`/hris/${item.key}`}
-                            className={`rounded-md border px-3 py-2 text-sm ${resource === item.key ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                            className={`rounded-md border px-3 py-2 text-sm ${resource === item.key ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                         >
                             {item.title}
                         </Link>
                     ))}
                 </nav>
 
+                {resource === "employees" && statusSummary.length > 0 && (
+                    <section aria-label="Employees by status" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {statusSummary.map(({ status, total }) => (
+                            <div key={status} className="rounded-lg border p-4">
+                                <p className="text-sm capitalize text-muted-foreground">{status.replaceAll("_", " ")}</p>
+                                <p className="mt-1 text-2xl font-semibold">{total}</p>
+                            </div>
+                        ))}
+                    </section>
+                )}
+
                 {canManage && (
                     <section className="rounded-lg border p-4">
                         <h2 className="mb-4 text-lg font-medium">
-                            {editingId ? 'Edit record' : 'Add record'}
+                            {editingId ? "Edit record" : "Add record"}
                         </h2>
                         <form
                             onSubmit={submit}
@@ -145,29 +164,24 @@ export default function HrisResourceIndex({
                             {fields.map((field) => (
                                 <label
                                     key={field.name}
-                                    className={`space-y-1 text-sm ${field.type === 'textarea' ? 'sm:col-span-2 lg:col-span-3' : ''}`}
+                                    className={`space-y-1 text-sm ${field.type === "textarea" ? "sm:col-span-2 lg:col-span-3" : ""}`}
                                 >
                                     <span>
                                         {field.label}
-                                        {field.required ? ' *' : ''}
+                                        {field.required ? " *" : ""}
                                     </span>
-                                    {field.type === 'select' ? (
+                                    {field.type === "select" ? (
                                         <select
                                             value={
                                                 form.data[field.name] == null
-                                                    ? ''
-                                                    : String(
-                                                          form.data[field.name],
-                                                      )
+                                                    ? ""
+                                                    : String(form.data[field.name])
                                             }
                                             onChange={(event) =>
                                                 form.setData(
                                                     field.name,
                                                     event.target.value
-                                                        ? Number(
-                                                              event.target
-                                                                  .value,
-                                                          )
+                                                        ? Number(event.target.value)
                                                         : null,
                                                 )
                                             }
@@ -176,73 +190,48 @@ export default function HrisResourceIndex({
                                         >
                                             <option value="">Select…</option>
                                             {field.options?.map((option) => (
-                                                <option
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
+                                                <option key={option.value} value={option.value}>
                                                     {option.label}
                                                 </option>
                                             ))}
                                         </select>
-                                    ) : field.type === 'textarea' ? (
+                                    ) : field.type === "textarea" ? (
                                         <textarea
-                                            value={String(
-                                                form.data[field.name] ?? '',
-                                            )}
+                                            value={String(form.data[field.name] ?? "")}
                                             onChange={(event) =>
-                                                form.setData(
-                                                    field.name,
-                                                    event.target.value,
-                                                )
+                                                form.setData(field.name, event.target.value)
                                             }
                                             required={field.required}
                                             className="min-h-24 w-full rounded-md border bg-background px-3 py-2"
                                         />
-                                    ) : field.type === 'checkbox' ? (
+                                    ) : field.type === "checkbox" ? (
                                         <input
                                             type="checkbox"
-                                            checked={Boolean(
-                                                form.data[field.name],
-                                            )}
+                                            checked={Boolean(form.data[field.name])}
                                             onChange={(event) =>
-                                                form.setData(
-                                                    field.name,
-                                                    event.target.checked,
-                                                )
+                                                form.setData(field.name, event.target.checked)
                                             }
                                             className="ml-2 size-4 align-middle"
                                         />
                                     ) : (
                                         <input
                                             type={field.type}
-                                            step={
-                                                field.type === 'number'
-                                                    ? 'any'
-                                                    : undefined
-                                            }
+                                            step={field.type === "number" ? "any" : undefined}
                                             value={(() => {
-                                                const value =
-                                                    form.data[field.name];
+                                                const value = form.data[field.name];
 
-                                                return field.type ===
-                                                    'datetime-local' &&
-                                                    typeof value === 'string'
-                                                    ? value
-                                                          .replace(' ', 'T')
-                                                          .slice(0, 16)
-                                                    : String(value ?? '');
+                                                return field.type === "datetime-local" &&
+                                                    typeof value === "string"
+                                                    ? value.replace(" ", "T").slice(0, 16)
+                                                    : String(value ?? "");
                                             })()}
                                             onChange={(event) =>
                                                 form.setData(
                                                     field.name,
-                                                    field.type === 'number'
-                                                        ? event.target.value ===
-                                                          ''
-                                                            ? ''
-                                                            : Number(
-                                                                  event.target
-                                                                      .value,
-                                                              )
+                                                    field.type === "number"
+                                                        ? event.target.value === ""
+                                                            ? ""
+                                                            : Number(event.target.value)
                                                         : event.target.value,
                                                 )
                                             }
@@ -264,10 +253,10 @@ export default function HrisResourceIndex({
                                     className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
                                 >
                                     {form.processing
-                                        ? 'Saving…'
+                                        ? "Saving…"
                                         : editingId
-                                          ? 'Save changes'
-                                          : 'Create record'}
+                                          ? "Save changes"
+                                          : "Create record"}
                                 </button>
                                 {editingId && (
                                     <button
@@ -283,26 +272,34 @@ export default function HrisResourceIndex({
                     </section>
                 )}
 
+                {resource === "employees" && canImport && (
+                    <Link
+                        href="/hris/employees/import"
+                        className="inline-flex rounded-md border px-3 py-2 text-sm hover:bg-muted"
+                    >
+                        Bulk import Plantilla Excel
+                    </Link>
+                )}
+
+                {officeDirectory && (
+                    <p className="text-sm text-muted-foreground">
+                        Fixed municipal offices from the approved 2025 plantilla.
+                    </p>
+                )}
+
                 <section className="overflow-hidden rounded-lg border">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-muted/50">
                                 <tr>
-                                    <th className="px-3 py-3 font-medium">
-                                        ID
-                                    </th>
+                                    <th className="px-3 py-3 font-medium">ID</th>
                                     {fields.map((field) => (
-                                        <th
-                                            key={field.name}
-                                            className="px-3 py-3 font-medium"
-                                        >
+                                        <th key={field.name} className="px-3 py-3 font-medium">
                                             {field.label}
                                         </th>
                                     ))}
                                     {canManage && (
-                                        <th className="px-3 py-3 font-medium">
-                                            Actions
-                                        </th>
+                                        <th className="px-3 py-3 font-medium">Actions</th>
                                     )}
                                 </tr>
                             </thead>
@@ -315,13 +312,12 @@ export default function HrisResourceIndex({
                                                 key={field.name}
                                                 className="max-w-64 truncate px-3 py-3"
                                             >
-                                                {displayValue(
-                                                    field,
-                                                    row[field.name],
-                                                )}
+                                                {resource === "employees" && field.name === "employment_status" ? (
+                                                    <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">{displayValue(field, row[field.name])}</span>
+                                                ) : displayValue(field, row[field.name])}
                                             </td>
                                         ))}
-                                        {canManage && (
+                                        {canManage && row.canManage !== false && (
                                             <td className="px-3 py-3 whitespace-nowrap">
                                                 <button
                                                     type="button"
@@ -344,10 +340,7 @@ export default function HrisResourceIndex({
                                 {records.data.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={
-                                                fields.length +
-                                                (canManage ? 2 : 1)
-                                            }
+                                            colSpan={fields.length + (canManage ? 2 : 1)}
                                             className="px-3 py-8 text-center text-muted-foreground"
                                         >
                                             No records found.
@@ -361,13 +354,11 @@ export default function HrisResourceIndex({
                         {records.links.map((link, index) => (
                             <Link
                                 key={`${link.label}-${index}`}
-                                href={link.url ?? '#'}
+                                href={link.url ?? "#"}
                                 preserveScroll
-                                className={`rounded border px-3 py-1 text-sm ${link.active ? 'bg-primary text-primary-foreground' : ''} ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
+                                className={`rounded border px-3 py-1 text-sm ${link.active ? "bg-primary text-primary-foreground" : ""} ${!link.url ? "pointer-events-none opacity-50" : ""}`}
                             >
-                                {link.label
-                                    .replace(/&laquo;|&raquo;/g, '')
-                                    .trim()}
+                                {link.label.replace(/&laquo;|&raquo;/g, "").trim()}
                             </Link>
                         ))}
                     </div>

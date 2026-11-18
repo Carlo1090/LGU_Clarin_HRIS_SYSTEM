@@ -22,16 +22,59 @@ use App\Models\Role;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Vacancy;
+use App\Support\EmployeeImportTemplate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class HrisResourceController extends Controller
 {
+    private const PLANTILLA_FIELDS = [
+        ['name' => 'organizational_unit', 'label' => 'Organizational Unit'],
+        ['name' => 'item_number', 'label' => 'Item Number'],
+        ['name' => 'position_title', 'label' => 'Position Title'],
+        ['name' => 'salary_grade', 'label' => 'Salary Grade'],
+        ['name' => 'authorized_annual_salary', 'label' => 'Authorized Annual Salary'],
+        ['name' => 'actual_annual_salary', 'label' => 'Actual Annual Salary'],
+        ['name' => 'step', 'label' => 'Step'],
+        ['name' => 'area_code', 'label' => 'Area Code'],
+        ['name' => 'area_type', 'label' => 'Area Type'],
+        ['name' => 'level', 'label' => 'Level'],
+        ['name' => 'last_name', 'label' => 'Last Name'],
+        ['name' => 'first_name', 'label' => 'First Name'],
+        ['name' => 'middle_name', 'label' => 'Middle Name'],
+        ['name' => 'sex', 'label' => 'Sex'],
+        ['name' => 'date_of_birth', 'label' => 'Date of Birth'],
+        ['name' => 'age', 'label' => 'Age'],
+        ['name' => 'tin', 'label' => 'TIN'],
+        ['name' => 'date_of_original_appointment', 'label' => 'Date of Original Appointment'],
+        ['name' => 'date_of_last_promotion_appointment', 'label' => 'Date of Last Promotion/Appointment'],
+        ['name' => 'appointment_status', 'label' => 'Status'],
+        ['name' => 'civil_service_eligibility', 'label' => 'Civil Service Eligibility'],
+        ['name' => 'comment_annotation', 'label' => 'Comment/Annotation'],
+        ['name' => 'pwd', 'label' => 'PWD (Y)'],
+        ['name' => 'indigenous_people', 'label' => 'Indigenous People (Y)'],
+        ['name' => 'solo_parent_id_number', 'label' => 'Solo Parent (ID Number)'],
+        ['name' => 'abolished', 'label' => 'Abolished'],
+        ['name' => 'dissolved', 'label' => 'Dissolved'],
+        ['name' => 'gsis_bp_number', 'label' => 'GSIS BP Number'],
+        ['name' => 'position_classification', 'label' => 'Position Classification'],
+    ];
+
+    private const PLANTILLA_CHOICES = [
+        'areaType' => [['value' => 'R', 'label' => 'R — Region'], ['value' => 'P', 'label' => 'P — Province'], ['value' => 'D', 'label' => 'D — District'], ['value' => 'M', 'label' => 'M — Municipality'], ['value' => 'F', 'label' => 'F — Foreign Post']],
+        'level' => [['value' => 'K', 'label' => 'K — Key positions'], ['value' => 'A', 'label' => 'A — Administrative positions'], ['value' => 'S', 'label' => 'S — Support to Key positions'], ['value' => 'T', 'label' => 'T — Technical positions']],
+        'sex' => [['value' => 'M', 'label' => 'M — Male'], ['value' => 'F', 'label' => 'F — Female']],
+        'appointmentStatus' => [['value' => 'P', 'label' => 'P — Permanent'], ['value' => 'E', 'label' => 'E — Elected'], ['value' => 'T', 'label' => 'T — Temporary'], ['value' => 'S', 'label' => 'S — Substitute'], ['value' => 'CT', 'label' => 'CT — Co-terminous'], ['value' => 'PA', 'label' => 'PA — Presidential Appointee'], ['value' => 'FT', 'label' => 'FT — Fixed-Term']],
+        'positionClassification' => [['value' => '1st Level', 'label' => '1st Level'], ['value' => '2nd Level', 'label' => '2nd Level'], ['value' => 'Executive/Managerial (appointment by authorities other than the President)', 'label' => 'Executive/Managerial (appointment by authorities other than the President)'], ['value' => '3rd Level (appointment by the President)', 'label' => '3rd Level (appointment by the President)']],
+    ];
+
     private const RESOURCES = [
         'roles' => [
             'title' => 'Roles',
@@ -98,10 +141,11 @@ class HrisResourceController extends Controller
                 ['name' => 'department_id', 'label' => 'Department', 'type' => 'select', 'options' => 'departments'],
                 ['name' => 'position_id', 'label' => 'Position', 'type' => 'select', 'options' => 'positions'],
                 ['name' => 'employment_status', 'label' => 'Employment status', 'type' => 'text', 'required' => true],
+                ['name' => 'appointment_status', 'label' => 'Appointment status', 'type' => 'text'],
                 ['name' => 'date_hired', 'label' => 'Date hired', 'type' => 'date'],
                 ['name' => 'date_regularized', 'label' => 'Date regularized', 'type' => 'date'],
             ],
-            'rules' => ['employee_number' => 'required|string|max:255', 'first_name' => 'required|string|max:255', 'middle_name' => 'nullable|string|max:255', 'last_name' => 'required|string|max:255', 'suffix' => 'nullable|string|max:255', 'gender' => 'nullable|string|max:255', 'birth_date' => 'nullable|date', 'department_id' => 'nullable|exists:departments,id', 'position_id' => 'nullable|exists:positions,id', 'employment_status' => 'required|string|max:255', 'date_hired' => 'nullable|date', 'date_regularized' => 'nullable|date'],
+            'rules' => ['employee_number' => 'required|string|max:255', 'first_name' => 'required|string|max:255', 'middle_name' => 'nullable|string|max:255', 'last_name' => 'required|string|max:255', 'suffix' => 'nullable|string|max:255', 'gender' => 'nullable|string|max:255', 'birth_date' => 'nullable|date', 'department_id' => 'nullable|exists:departments,id', 'position_id' => 'nullable|exists:positions,id', 'appointment_status' => 'nullable|in:P,E,T,S,CT,PA,FT', 'employment_status' => 'required|string|max:255', 'date_hired' => 'nullable|date', 'date_regularized' => 'nullable|date'],
             'unique' => ['employee_number'],
         ],
         'attendance' => [
@@ -305,12 +349,49 @@ class HrisResourceController extends Controller
     {
         Gate::authorize('view-hris-resource', $resource);
         $config = $this->resourceConfig($resource);
-        $fields = $this->fieldsWithOptions($config['fields']);
+        if ($resource === 'plantilla-items') {
+            $records = PlantillaItem::query()->with(['department', 'employee'])->orderBy('item_number')->orderBy('id')->paginate(20)->through(
+                fn (PlantillaItem $record) => ['id' => $record->id, 'department_code' => $record->department_code ?? $record->department?->code,
+                    'department_name' => $record->department_name ?? $record->department?->name,
+                    'employee_number' => $record->employee?->employee_number]
+                    + collect(self::PLANTILLA_FIELDS)->mapWithKeys(fn (array $field) => [$field['name'] => $this->plantillaValue($record, $field['name'])])->all(),
+            );
+
+            return Inertia::render('hris/plantilla-items', [
+                'title' => $config['title'],
+                'resources' => collect(self::RESOURCES)->filter(fn (array $item, string $key) => Gate::allows('view-hris-resource', $key))->map(fn (array $item, string $key) => ['key' => $key, 'title' => $item['title']])->values(),
+                'fields' => self::PLANTILLA_FIELDS,
+                'records' => $records,
+            ]);
+        }
+        $departmentHead = $request->user()->role?->name === 'Department Head';
+        $departmentId = $request->user()->employee?->department_id;
+        $fields = $this->fieldsWithOptions($config['fields'], $departmentHead ? ($departmentId ?? 0) : null);
         $model = $config['model'];
         $query = $model::query();
 
-        if ($request->user()->role?->name === 'Department Head') {
-            $departmentId = $request->user()->employee?->department_id;
+        if ($resource === 'departments') {
+            $records = Department::query()->orderBy('name')->get()->map(fn (Department $department) => [
+                'id' => $department->id, 'name' => $department->name, 'code' => $department->code,
+                'parent_department_id' => $department->parent_department_id, 'description' => $department->description,
+                'canManage' => in_array($department->code, array_keys(Department::PLANTILLA_OFFICES), true),
+            ]);
+            $codes = $records->pluck('code');
+            $records = $records->concat(collect(Department::PLANTILLA_OFFICES)
+                ->reject(fn ($name, $code) => $codes->contains($code))
+                ->map(fn ($name, $code) => ['id' => $code, 'name' => $name, 'code' => $code, 'parent_department_id' => null, 'description' => null, 'canManage' => false])
+                ->values())->values();
+
+            return Inertia::render('hris/resources/index', [
+                'resource' => $resource, 'title' => $config['title'],
+                'resources' => collect(self::RESOURCES)->filter(fn (array $item, string $key) => Gate::allows('view-hris-resource', $key))->map(fn (array $item, string $key) => ['key' => $key, 'title' => $item['title']])->values(),
+                'canManage' => false, 'fields' => $config['fields'],
+                'records' => ['data' => $records, 'links' => []], 'editing' => null,
+                'officeDirectory' => true,
+            ]);
+        }
+
+        if ($departmentHead) {
 
             if (! $departmentId) {
                 $query->whereRaw('1 = 0');
@@ -321,7 +402,17 @@ class HrisResourceController extends Controller
             }
         }
 
-        $records = $query->latest('id')->paginate(20)->withQueryString();
+        $statusSummary = $resource === 'employees'
+            ? (clone $query)->select('employment_status', DB::raw('count(*) as total'))->groupBy('employment_status')->orderByRaw("CASE LOWER(employment_status) WHEN 'active' THEN 1 WHEN 'on leave' THEN 2 WHEN 'inactive' THEN 3 WHEN 'terminated' THEN 4 ELSE 5 END")->orderBy('employment_status')->get()
+                ->map(fn ($status) => ['status' => $status->employment_status, 'total' => $status->total])->values()
+            : [];
+
+        if ($resource === 'employees') {
+            $query->orderByRaw("CASE LOWER(employment_status) WHEN 'active' THEN 1 WHEN 'on leave' THEN 2 WHEN 'inactive' THEN 3 WHEN 'terminated' THEN 4 ELSE 5 END")
+                ->orderBy('employment_status')->orderBy('last_name')->orderBy('first_name');
+        }
+
+        $records = ($resource === 'employees' ? $query : $query->latest('id'))->paginate(20)->withQueryString();
 
         return Inertia::render('hris/resources/index', [
             'resource' => $resource,
@@ -331,6 +422,8 @@ class HrisResourceController extends Controller
                 ->map(fn (array $item, string $key) => ['key' => $key, 'title' => $item['title']])
                 ->values(),
             'canManage' => Gate::allows('manage-hris-resource', $resource),
+            'canImport' => $resource === 'employees' && $request->user()->role?->name === 'HRMO Head',
+            'statusSummary' => $statusSummary,
             'fields' => $fields,
             'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()] + collect($config['fields'])->mapWithKeys(
                 fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])]
@@ -339,9 +432,82 @@ class HrisResourceController extends Controller
         ]);
     }
 
+    public function myProfile(Request $request): Response
+    {
+        $employee = $request->user()->employee;
+        abort_unless($employee, 404);
+        $employee->load(['department', 'plantillaItem.department']);
+        $item = $employee->plantillaItem;
+
+        return Inertia::render('hris/my-profile', [
+            'employee' => [
+                'employee_number' => $employee->employee_number,
+                'first_name' => $employee->first_name,
+                'middle_name' => $employee->middle_name,
+                'last_name' => $employee->last_name,
+                'suffix' => $employee->suffix,
+                'gender' => $employee->gender,
+                'birth_date' => $employee->birth_date?->format('Y-m-d'),
+                'date_hired' => $employee->date_hired?->format('Y-m-d'),
+                'date_regularized' => $employee->date_regularized?->format('Y-m-d'),
+                'age' => $employee->age,
+                'tin' => $employee->tin,
+                'date_of_original_appointment' => $employee->date_of_original_appointment?->format('Y-m-d'),
+                'date_of_last_promotion_appointment' => $employee->date_of_last_promotion_appointment?->format('Y-m-d'),
+                'appointment_status' => $employee->appointment_status,
+                'employment_status' => $employee->employment_status,
+                'civil_service_eligibility' => $employee->civil_service_eligibility,
+                'comment_annotation' => $employee->comment_annotation,
+                'pwd' => $employee->pwd,
+                'indigenous_people' => $employee->indigenous_people,
+                'solo_parent_id_number' => $employee->solo_parent_id_number,
+                'gsis_bp_number' => $employee->gsis_bp_number,
+                'department' => $item?->department_name ?? $item?->department?->name ?? $employee->department?->name,
+                'organizational_unit' => $item?->organizational_unit,
+                'item_number' => $item?->item_number,
+                'position_title' => $item?->position_title ?? $employee->position?->title,
+                'salary_grade' => $item?->salary_grade,
+                'authorized_annual_salary' => $item?->authorized_annual_salary,
+                'actual_annual_salary' => $item?->actual_annual_salary,
+                'step' => $item?->step,
+                'area_code' => $item?->area_code,
+                'area_type' => $item?->area_type,
+                'level' => $item?->level,
+                'abolished' => $item?->abolished,
+                'dissolved' => $item?->dissolved,
+                'position_classification' => $item?->position_classification,
+            ],
+            'customFields' => collect(app(EmployeeImportTemplate::class)->columns())
+                ->filter(fn ($column) => str_starts_with($column['key'], 'custom_'))
+                ->map(fn ($column) => ['label' => $column['label'], 'value' => $employee->custom_fields[$column['key']] ?? null])
+                ->values(),
+        ]);
+    }
+
+    public function downloadPlantillaWorkbook(): BinaryFileResponse
+    {
+        Gate::authorize('view-hris-resource', 'plantilla-items');
+        $path = storage_path('app/private/TEMPLATE_HRMO-AND-PLANTILLA-IMPORT.xlsx');
+        abort_unless(is_file($path), 404, 'The Plantilla workbook has not been uploaded to storage.');
+
+        return response()->download($path, 'TEMPLATE_HRMO-AND-PLANTILLA-IMPORT.xlsx');
+    }
+
     public function store(Request $request, string $resource): RedirectResponse
     {
         Gate::authorize('manage-hris-resource', $resource);
+        if ($resource === 'plantilla-items') {
+            DB::transaction(function () use ($request): void {
+                $data = $this->validatedPlantillaData($request);
+                $employee = $this->resolvePlantillaEmployee($data);
+                $this->savePlantillaEmployee($employee, $request->all());
+                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) unset($data[$field]);
+                PlantillaItem::query()->create($data + ['employee_id' => $employee?->id]);
+            });
+            Inertia::flash('toast', ['type' => 'success', 'message' => 'Plantilla position record created.']);
+
+            return to_route('hris.resources.index', ['resource' => $resource]);
+        }
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
         $model::query()->create($request->validate($this->validationRules($config)));
@@ -354,6 +520,19 @@ class HrisResourceController extends Controller
     public function update(Request $request, string $resource, int $record): RedirectResponse
     {
         Gate::authorize('manage-hris-resource', $resource);
+        if ($resource === 'plantilla-items') {
+            $item = PlantillaItem::query()->findOrFail($record);
+            DB::transaction(function () use ($request, $item): void {
+                $data = $this->validatedPlantillaData($request, $item);
+                $employee = $this->resolvePlantillaEmployee($data, $item);
+                $this->savePlantillaEmployee($employee, $request->all());
+                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) unset($data[$field]);
+                $item->update($data + ['employee_id' => $employee?->id]);
+            });
+            Inertia::flash('toast', ['type' => 'success', 'message' => 'Plantilla position record updated.']);
+
+            return to_route('hris.resources.index', ['resource' => $resource]);
+        }
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
         $entry = $model::query()->findOrFail($record);
@@ -383,6 +562,118 @@ class HrisResourceController extends Controller
         return self::RESOURCES[$resource];
     }
 
+    private function plantillaDepartments(): \Illuminate\Support\Collection
+    {
+        return collect(Department::PLANTILLA_OFFICES)->union(
+            Department::query()->whereNotIn('code', array_keys(Department::PLANTILLA_OFFICES))->orderBy('name')->pluck('name', 'code'),
+        );
+    }
+
+    private function validatedPlantillaData(Request $request, ?PlantillaItem $record = null): array
+    {
+        $departmentOptions = $this->plantillaDepartments();
+        $data = $request->validate([
+            'department_code' => ['required', 'string', Rule::in($departmentOptions->keys()->all())],
+            'employee_number' => ['nullable', 'string', 'exists:employees,employee_number'],
+            'organizational_unit' => ['required', 'string', 'max:255'],
+            'item_number' => ['nullable', 'string', 'max:255', Rule::unique('plantilla_items', 'item_number')
+                ->where(fn ($query) => $query->where('department_code', $request->input('department_code')))
+                ->ignore($record?->id)],
+            'position_title' => ['required', 'string', 'max:255'],
+            'salary_grade' => ['nullable', 'numeric', 'min:0', 'max:31'],
+            'authorized_annual_salary' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
+            'actual_annual_salary' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
+            'step' => ['nullable', 'numeric', 'min:0', 'max:8'],
+            'area_code' => ['nullable', 'string', 'max:50'],
+            'area_type' => ['nullable', Rule::in(['R', 'P', 'D', 'M', 'F'])],
+            'level' => ['nullable', Rule::in(['K', 'A', 'S', 'T'])],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'sex' => ['nullable', Rule::in(['M', 'F'])],
+            'date_of_birth' => ['nullable', 'date'],
+            'age' => ['nullable', 'integer', 'min:0', 'max:150'],
+            'tin' => ['nullable', 'string', 'max:64'],
+            'date_of_original_appointment' => ['nullable', 'date'],
+            'date_of_last_promotion_appointment' => ['nullable', 'date'],
+            'appointment_status' => ['required', Rule::in(['P', 'E', 'T', 'S', 'CT', 'PA', 'FT'])],
+            'civil_service_eligibility' => ['required', 'string', 'max:255'],
+            'comment_annotation' => ['nullable', 'string', 'max:10000'],
+            'pwd' => ['nullable', Rule::in(['Y'])],
+            'indigenous_people' => ['nullable', Rule::in(['Y'])],
+            'solo_parent_id_number' => ['nullable', 'string', 'max:255'],
+            'abolished' => ['nullable', 'string', 'max:255'],
+            'dissolved' => ['nullable', 'string', 'max:255'],
+            'gsis_bp_number' => ['nullable', 'string', 'max:100'],
+            'position_classification' => ['nullable', Rule::in(['1st Level', '2nd Level', 'Executive/Managerial (appointment by authorities other than the President)', '3rd Level (appointment by the President)'])],
+        ]);
+        foreach ($this->employeePlantillaFields() as $field) {
+            $data[$field] = $data[$field] ?? null;
+        }
+        $data['department_name'] = $departmentOptions[$data['department_code']];
+        $data['department_id'] = Department::query()->where('code', $data['department_code'])->value('id');
+
+        return $data;
+    }
+
+    private function employeePlantillaFields(): array
+    {
+        return ['last_name', 'first_name', 'middle_name', 'sex', 'date_of_birth', 'age', 'tin', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status', 'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number', 'gsis_bp_number'];
+    }
+
+    private function resolvePlantillaEmployee(array $data, ?PlantillaItem $record = null): ?Employee
+    {
+        $number = $data['employee_number'] ?? null;
+        if (! $number) {
+            return null;
+        }
+
+        $employee = Employee::query()->where('employee_number', $number)->firstOrFail();
+        abort_if(PlantillaItem::query()->where('employee_id', $employee->id)->when($record, fn ($query) => $query->whereKeyNot($record->id))->exists(), 422, 'This employee is already linked to another Plantilla position.');
+
+        return $employee;
+    }
+
+    private function savePlantillaEmployee(?Employee $employee, array $input): void
+    {
+        if (! $employee) {
+            return;
+        }
+
+        $employee->fill([
+            'last_name' => $input['last_name'] ?? null,
+            'first_name' => $input['first_name'] ?? null,
+            'middle_name' => $input['middle_name'] ?? null,
+            'gender' => $input['sex'] ?? null,
+            'birth_date' => $input['date_of_birth'] ?? null,
+            'age' => $input['age'] ?? null,
+            'tin' => $input['tin'] ?? null,
+            'date_of_original_appointment' => $input['date_of_original_appointment'] ?? null,
+            'date_of_last_promotion_appointment' => $input['date_of_last_promotion_appointment'] ?? null,
+            'appointment_status' => $input['appointment_status'] ?? null,
+            'civil_service_eligibility' => $input['civil_service_eligibility'] ?? null,
+            'comment_annotation' => $input['comment_annotation'] ?? null,
+            'pwd' => $input['pwd'] ?? null,
+            'indigenous_people' => $input['indigenous_people'] ?? null,
+            'solo_parent_id_number' => $input['solo_parent_id_number'] ?? null,
+            'gsis_bp_number' => $input['gsis_bp_number'] ?? null,
+        ])->save();
+    }
+
+    private function plantillaValue(PlantillaItem $record, string $field): mixed
+    {
+        return match ($field) {
+            'employee_number' => $record->employee?->employee_number,
+            'last_name' => $record->employee?->last_name,
+            'first_name' => $record->employee?->first_name,
+            'middle_name' => $record->employee?->middle_name,
+            'sex' => $record->employee?->gender,
+            'date_of_birth' => $record->employee?->birth_date?->format('Y-m-d'),
+            'age', 'tin', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status', 'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number', 'gsis_bp_number' => $record->employee?->getAttribute($field),
+            default => $record->getAttribute($field),
+        };
+    }
+
     private function validationRules(array $config, ?Model $record = null): array
     {
         $rules = $config['rules'];
@@ -397,19 +688,19 @@ class HrisResourceController extends Controller
         return $rules;
     }
 
-    private function fieldsWithOptions(array $fields): array
+    private function fieldsWithOptions(array $fields, ?int $departmentId): array
     {
         $optionQueries = [
             'departments' => Department::query()->orderBy('name')->pluck('name', 'id'),
             'positions' => Position::query()->orderBy('title')->pluck('title', 'id'),
-            'employees' => Employee::query()->orderBy('employee_number')->get()->mapWithKeys(fn (Employee $employee) => [
+            'employees' => Employee::query()->when($departmentId !== null, fn ($query) => $query->where('department_id', $departmentId))->orderBy('employee_number')->get()->mapWithKeys(fn (Employee $employee) => [
                 $employee->id => $employee->employee_number.' — '.$employee->first_name.' '.$employee->last_name,
             ]),
             'leave-types' => LeaveType::query()->orderBy('name')->pluck('name', 'id'),
             'payroll-periods' => PayrollPeriod::query()->orderByDesc('start_date')->pluck('code', 'id'),
             'vacancies' => Vacancy::query()->orderBy('title')->pluck('title', 'id'),
             'evaluation-periods' => EvaluationPeriod::query()->orderByDesc('start_date')->pluck('name', 'id'),
-            'users' => User::query()->orderBy('name')->pluck('name', 'id'),
+            'users' => User::query()->when($departmentId !== null, fn ($query) => $query->whereHas('employee', fn ($employee) => $employee->where('department_id', $departmentId)))->orderBy('name')->pluck('name', 'id'),
         ];
 
         return array_map(function (array $field) use ($optionQueries): array {
