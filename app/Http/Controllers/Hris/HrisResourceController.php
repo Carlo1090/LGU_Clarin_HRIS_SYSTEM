@@ -370,6 +370,8 @@ class HrisResourceController extends Controller
         }
         $departmentHead = $request->user()->role?->name === 'Department Head';
         $departmentId = $request->user()->employee?->department_id;
+        $canManageAttendance = in_array($resource, ['attendance', 'employees'], true) && Gate::allows('manage-hris-resource', 'attendance');
+        $canLinkBiometricIds = $resource === 'employees' && $canManageAttendance;
         if ($resource === 'attendance' && $request->query('view') !== 'entries') {
             $records = Employee::query()
                 ->when($departmentHead, fn ($query) => $departmentId
@@ -390,6 +392,7 @@ class HrisResourceController extends Controller
                 'resource' => $resource,
                 'title' => $config['title'],
                 'attendanceDirectory' => true,
+                'canManageAttendance' => $canManageAttendance,
                 'canManage' => false,
                 'fields' => [
                     ['name' => 'name', 'label' => 'Employee', 'type' => 'text'],
@@ -453,13 +456,15 @@ class HrisResourceController extends Controller
             'canManage' => $resource !== 'leave-applications' && Gate::allows('manage-hris-resource', $resource),
             'leaveReviewStage' => $resource === 'leave-applications' ? LeaveReviewController::stage($request->user()) : null,
             'canImport' => $resource === 'employees' && $request->user()->role?->name === 'HRMO Head',
+            'canManageAttendance' => $canManageAttendance,
+            'canLinkBiometricIds' => $canLinkBiometricIds,
             'statusSummary' => $statusSummary,
             'createdAccountCredentials' => $resource === 'employees' ? $request->session()->get('createdAccountCredentials') : null,
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'fields' => $fields,
-            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()] + collect($config['fields'])->mapWithKeys(
-                fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])]
-            )->all()),
+            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()]
+                + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note']) : [])
+                + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
             'editing' => $request->integer('edit') ?: null,
         ]);
     }

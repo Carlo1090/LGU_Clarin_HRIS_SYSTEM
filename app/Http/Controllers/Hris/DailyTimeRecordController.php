@@ -35,17 +35,24 @@ class DailyTimeRecordController extends Controller
         ]);
 
         $attendance = $employee->attendanceRecords();
+        $punches = $employee->attendancePunches();
         $month = $filters['month'] ?? null;
         $period = $filters['period'] ?? 'full';
-        $latestDate = $month === null ? (clone $attendance)->max('attendance_date') : null;
+        $latestDate = null;
+        if ($month === null) {
+            $lastPunch = (clone $punches)->max('punched_at');
+            $latestDate = max((clone $attendance)->max('attendance_date'), $lastPunch ? substr($lastPunch, 0, 10) : null);
+        }
         $calendar = Date::parse($month ? $month.'-01' : ($latestDate ?? now()))->startOfMonth();
         $firstDay = $period === 'second' ? 16 : 1;
         $lastDay = $period === 'first' ? 15 : $calendar->daysInMonth;
         $periodLabel = $period === 'full'
             ? $calendar->format('F Y')
             : $calendar->format('F')." {$firstDay}–{$lastDay}, ".$calendar->year;
+        $startDate = $calendar->day($firstDay)->toDateString();
+        $endDate = $calendar->day($lastDay)->toDateString();
         $records = $attendance
-            ->whereBetween('attendance_date', [$calendar->day($firstDay)->toDateString(), $calendar->day($lastDay)->toDateString()])
+            ->whereBetween('attendance_date', [$startDate, $endDate])
             ->latest('id')
             ->get(['attendance_date', 'time_in', 'time_out', 'status'])
             ->unique('attendance_date')
@@ -56,6 +63,21 @@ class DailyTimeRecordController extends Controller
                 'remarks' => $record->status === 'present' ? null : ucfirst(str_replace('_', ' ', $record->status)),
             ]);
 
+        $punchTimes = $punches->whereBetween('punched_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
+            ->orderBy('punched_at')->pluck('punched_at')
+            ->groupBy(fn (string $time) => (int) substr($time, 8, 2))
+            ->map(fn ($times) => $times->map(fn (string $time) => substr($time, 11))->all());
+        foreach ($punchTimes as $day => $times) {
+            if ($records->has($day)) {
+                continue;
+            }
+            $count = count($times);
+            // Four ordered punches fill the four slots. Other counts need HR review.
+            $records[$day] = $count === 4
+                ? array_combine(['amIn', 'amOut', 'pmIn', 'pmOut'], array_map(fn (string $time) => substr($time, 0, 5), $times))
+                : ['remarks' => "Review {$count} punch(es)"];
+        }
+
         $givenNames = implode(' ', array_filter([$employee->first_name, $employee->middle_name, $employee->suffix]));
 
         $preview = [
@@ -64,6 +86,7 @@ class DailyTimeRecordController extends Controller
             'period' => $period,
             'periodLabel' => $periodLabel,
             'records' => (object) $records->all(),
+            'punchTimes' => (object) $punchTimes->all(),
             'previewUrl' => route('hris.attendance.dtr', $employee, false),
             'backUrl' => $selfService
                 ? route('hris.portal', 'my-attendance', false)

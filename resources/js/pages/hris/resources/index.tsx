@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import BiometricIdField from '@/components/biometric-id-field';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import { Button } from '@/components/ui/button';
 
@@ -28,6 +29,8 @@ type Props = {
     canImport?: boolean;
     officeDirectory?: boolean;
     attendanceDirectory?: boolean;
+    canManageAttendance?: boolean;
+    canLinkBiometricIds?: boolean;
     statusSummary?: { status: string; total: number }[];
     createdAccountCredentials?: {
         employee_number: string;
@@ -66,6 +69,8 @@ export default function HrisResourceIndex({
     canImport = false,
     officeDirectory = false,
     attendanceDirectory = false,
+    canManageAttendance = false,
+    canLinkBiometricIds = false,
     statusSummary = [],
     createdAccountCredentials = null,
     accountSetupEmailSent = null,
@@ -269,6 +274,13 @@ export default function HrisResourceIndex({
                             url="/hris/attendance/dtr/demo"
                             demo
                         />
+                        {canManageAttendance && (
+                            <Button asChild variant="outline">
+                                <Link href="/hris/attendance/logs">
+                                    Import Attendance Logs
+                                </Link>
+                            </Button>
+                        )}
                     </nav>
                 )}
 
@@ -546,6 +558,13 @@ export default function HrisResourceIndex({
                     </p>
                 )}
 
+                {canLinkBiometricIds && (
+                    <p className="text-sm text-muted-foreground">
+                        Enter the Biometric ID from the machine’s enrollment
+                        records. To remove a link, clear the field and save.
+                    </p>
+                )}
+
                 {reviewError && (
                     <p role="alert" className="text-sm text-destructive">
                         {reviewError}
@@ -570,6 +589,14 @@ export default function HrisResourceIndex({
                         <table className="w-full text-left text-sm">
                             <thead className="bg-muted text-muted-foreground">
                                 <tr>
+                                    {canLinkBiometricIds && (
+                                        <th
+                                            scope="col"
+                                            className="px-3 py-3 font-medium"
+                                        >
+                                            Biometric ID
+                                        </th>
+                                    )}
                                     {!attendanceDirectory && (
                                         <th className="px-3 py-3 font-medium">
                                             ID
@@ -598,6 +625,35 @@ export default function HrisResourceIndex({
                                         key={row.id}
                                         className="border-t transition-colors hover:bg-muted/60"
                                     >
+                                        {canLinkBiometricIds &&
+                                            typeof row.id === 'number' && (
+                                                <td className="px-3 py-3">
+                                                    <BiometricIdField
+                                                        key={`${row.id}-${row.biometric_id ?? ''}`}
+                                                        employeeId={row.id}
+                                                        employeeNumber={String(
+                                                            row.employee_number,
+                                                        )}
+                                                        link={{
+                                                            id:
+                                                                typeof row.biometric_id ===
+                                                                'number'
+                                                                    ? row.biometric_id
+                                                                    : null,
+                                                            status:
+                                                                row.biometric_status ===
+                                                                'verified'
+                                                                    ? 'verified'
+                                                                    : 'pending',
+                                                            note:
+                                                                typeof row.biometric_note ===
+                                                                'string'
+                                                                    ? row.biometric_note
+                                                                    : null,
+                                                        }}
+                                                    />
+                                                </td>
+                                            )}
                                         {!attendanceDirectory && (
                                             <td className="px-3 py-3">
                                                 {row.id}
@@ -718,6 +774,7 @@ export default function HrisResourceIndex({
                                             colSpan={
                                                 fields.length +
                                                 Number(!attendanceDirectory) +
+                                                Number(canLinkBiometricIds) +
                                                 Number(hasActions)
                                             }
                                             className="px-3 py-8 text-center text-muted-foreground"

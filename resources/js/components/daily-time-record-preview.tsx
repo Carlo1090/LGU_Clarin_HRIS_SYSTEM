@@ -10,6 +10,7 @@ export type DailyTimeRecordData = {
     period?: 'full' | 'first' | 'second';
     periodLabel: string;
     officialHours?: string;
+    punchTimes?: Record<string, string[]>;
     records: Partial<
         Record<
             number,
@@ -46,6 +47,7 @@ export default function DailyTimeRecordPreview({
     period,
     periodLabel,
     officialHours,
+    punchTimes,
     records,
     previewUrl,
     backUrl,
@@ -142,8 +144,9 @@ export default function DailyTimeRecordPreview({
                 )}
                 {!demo && (
                     <p className="text-sm text-muted-foreground">
-                        Each daily record supplies one arrival and one
-                        departure, shown in AM In and PM Out.
+                        Manual entries show the recorded arrival and departure.
+                        Imported days with four punches fill the four time slots
+                        in order. Review days with other punch counts.
                     </p>
                 )}
             </header>
@@ -250,6 +253,23 @@ export default function DailyTimeRecordPreview({
                     </footer>
                 </article>
             </div>
+            {punchTimes && Object.keys(punchTimes).length > 0 && (
+                <details className="rounded-lg border p-3 text-sm print:hidden">
+                    <summary className="cursor-pointer font-medium">
+                        Imported punches for this period
+                    </summary>
+                    <dl className="mt-2 space-y-1">
+                        {Object.entries(punchTimes).map(([day, times]) => (
+                            <div key={day} className="flex flex-wrap gap-2">
+                                <dt className="font-medium">Day {day}</dt>
+                                <dd className="tabular-nums">
+                                    {times.join(', ')}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                </details>
+            )}
         </div>
     );
 }
