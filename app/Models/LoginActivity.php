@@ -11,6 +11,7 @@ class LoginActivity extends Model
 
     protected $fillable = ['user_id', 'login_at', 'ip_address', 'user_agent', 'status', 'session_id'];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

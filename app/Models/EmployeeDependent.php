@@ -11,6 +11,7 @@ class EmployeeDependent extends Model
 
     protected $fillable = ['employee_id', 'full_name', 'relationship', 'birth_date'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

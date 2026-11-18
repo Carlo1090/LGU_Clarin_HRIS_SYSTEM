@@ -11,11 +11,13 @@ class ApplicantEvaluation extends Model
 
     protected $fillable = ['applicant_id', 'evaluator_id', 'rating', 'remarks', 'evaluation_date'];
 
+    /** @return BelongsTo<Applicant, $this> */
     public function applicant(): BelongsTo
     {
         return $this->belongsTo(Applicant::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function evaluator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'evaluator_id');

@@ -11,6 +11,7 @@ class EmployeeSalaryHistory extends Model
 
     protected $fillable = ['employee_id', 'salary_grade', 'monthly_salary', 'effectivity_date', 'remarks'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

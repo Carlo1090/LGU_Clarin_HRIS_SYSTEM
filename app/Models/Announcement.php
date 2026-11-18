@@ -11,6 +11,7 @@ class Announcement extends Model
 
     protected $fillable = ['title', 'content', 'posted_by', 'audience', 'starts_at', 'ends_at', 'is_published'];
 
+    /** @return BelongsTo<User, $this> */
     public function postedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'posted_by');

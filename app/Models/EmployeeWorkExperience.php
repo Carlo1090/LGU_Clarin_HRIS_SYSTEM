@@ -11,6 +11,7 @@ class EmployeeWorkExperience extends Model
 
     protected $fillable = ['employee_id', 'company_name', 'position_title', 'employment_type', 'start_date', 'end_date', 'duties'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

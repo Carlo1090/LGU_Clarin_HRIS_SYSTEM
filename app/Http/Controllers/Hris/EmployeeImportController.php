@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Hris;
 
 use App\Imports\EmployeeSpreadsheetImport;
 use App\Support\EmployeeImportTemplate;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class EmployeeImportController
 {
@@ -16,6 +17,7 @@ class EmployeeImportController
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
         $path = storage_path('app/private/'.uniqid('employee-template-').'.xlsx');
         $template->download($path, $template->statuses());
+
         return response()->download($path, 'EMPLOYEE-BULK-IMPORT-TEMPLATE.xlsx')->deleteFileAfterSend();
     }
 
@@ -26,7 +28,7 @@ class EmployeeImportController
         return Inertia::render('hris/import-employees', ['statusOptions' => $template->statuses(), 'columns' => $template->columns()]);
     }
 
-    public function updateTemplate(Request $request, EmployeeImportTemplate $template): \Illuminate\Http\RedirectResponse
+    public function updateTemplate(Request $request, EmployeeImportTemplate $template): RedirectResponse
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
         $input = $request->validate([
@@ -36,10 +38,10 @@ class EmployeeImportController
             'status_options' => ['required', 'array', 'min:1', 'max:8'],
             'status_options.*' => ['required', 'string', 'max:30', 'not_regex:/,/'],
         ]);
-        $statuses = collect($input['status_options'])->map(fn ($status) => trim($status))->filter()->unique()->values();
+        $statuses = collect($request->array('status_options'))->map(fn ($status) => trim($status))->filter()->unique()->values();
         abort_if($statuses->isEmpty() || $statuses->count() !== count($input['status_options']), 422, 'Enter distinct status names without blank values.');
         abort_if(strlen($statuses->implode(',')) > 253, 422, 'The combined status choices are too long for Excel’s dropdown.');
-        $template->save($input['columns'], $statuses->all());
+        $template->save($input['columns'], array_values($statuses->all()));
 
         return back()->with('success', 'Employee template columns and choices updated.');
     }
@@ -72,12 +74,11 @@ class EmployeeImportController
         $rows = $request->session()->pull('employee_import.'.$input['token']);
         abort_unless(is_array($rows) && count($rows), 410, 'Import preview expired. Upload the workbook again.');
         abort_if(collect($rows)->contains(fn ($row) => ! $row['valid']), 422, 'Fix all spreadsheet row errors and preview the corrected workbook.');
-        $result = $import->commit($rows, $request->user(), $input['approval_reference']);
+        $result = $import->commit(array_values($rows), $request->user(), $input['approval_reference']);
 
         return Inertia::render('hris/import-employees', [
             'result' => collect($result)->except('credentials')->all(),
             'credentials' => $result['credentials'],
         ]);
     }
-
 }

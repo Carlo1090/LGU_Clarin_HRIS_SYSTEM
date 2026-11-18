@@ -11,6 +11,7 @@ class ApplicantDocument extends Model
 
     protected $fillable = ['applicant_id', 'document_type', 'file_path'];
 
+    /** @return BelongsTo<Applicant, $this> */
     public function applicant(): BelongsTo
     {
         return $this->belongsTo(Applicant::class);

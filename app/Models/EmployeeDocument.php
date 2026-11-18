@@ -11,6 +11,7 @@ class EmployeeDocument extends Model
 
     protected $fillable = ['employee_id', 'document_type', 'file_path', 'uploaded_by', 'remarks'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

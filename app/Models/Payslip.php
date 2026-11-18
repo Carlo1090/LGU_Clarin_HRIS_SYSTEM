@@ -23,11 +23,13 @@ class Payslip extends Model
                 ->whereHas('payrollPeriod', fn ($period) => $period->where('released_at', '<=', now())));
     }
 
+    /** @return BelongsTo<Payroll, $this> */
     public function payroll(): BelongsTo
     {
         return $this->belongsTo(Payroll::class);
     }
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

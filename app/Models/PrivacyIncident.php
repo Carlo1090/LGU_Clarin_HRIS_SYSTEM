@@ -11,6 +11,7 @@ class PrivacyIncident extends Model
 
     protected $fillable = ['employee_id', 'incident_type', 'details', 'severity', 'reported_at', 'resolved_at'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

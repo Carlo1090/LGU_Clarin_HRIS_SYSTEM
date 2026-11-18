@@ -15,7 +15,7 @@ class LeaveTypeFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->unique()->words(2, true).' Leave',
+            'name' => fake()->word().' '.fake()->word().' Leave',
             'code' => fake()->unique()->bothify('LV-##'),
             'default_days' => fake()->numberBetween(5, 20),
             'is_paid' => true,

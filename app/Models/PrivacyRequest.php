@@ -11,6 +11,7 @@ class PrivacyRequest extends Model
 
     protected $fillable = ['employee_id', 'request_type', 'status', 'requested_at', 'processed_at'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

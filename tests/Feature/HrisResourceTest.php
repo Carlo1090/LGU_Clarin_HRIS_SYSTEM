@@ -242,7 +242,9 @@ class HrisResourceTest extends TestCase
         $path = storage_path('app/private/TEMPLATE_HRMO-AND-PLANTILLA-IMPORT.xlsx');
         $created = ! is_file($path);
         if ($created) {
-            if (! is_dir(dirname($path))) mkdir(dirname($path), 0775, true);
+            if (! is_dir(dirname($path))) {
+                mkdir(dirname($path), 0775, true);
+            }
             file_put_contents($path, 'test workbook');
         }
         try {
@@ -251,7 +253,9 @@ class HrisResourceTest extends TestCase
                 ->assertOk()
                 ->assertDownload('TEMPLATE_HRMO-AND-PLANTILLA-IMPORT.xlsx');
         } finally {
-            if ($created) unlink($path);
+            if ($created) {
+                unlink($path);
+            }
         }
     }
 
@@ -265,12 +269,12 @@ class HrisResourceTest extends TestCase
 
         $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))
             ->assertOk()->assertInertia(fn ($page) => $page
-                ->component('hris/resources/index')
-                ->where('fields.9.name', 'employment_status')
-                ->where('records.data.0.employee_number', 'EMP-ACTIVE')
-                ->where('records.data.0.employment_status', 'active')
-                ->where('statusSummary.0.status', 'active')
-                ->where('statusSummary.0.total', 1)
+            ->component('hris/resources/index')
+            ->where('fields.9.name', 'employment_status')
+            ->where('records.data.0.employee_number', 'EMP-ACTIVE')
+            ->where('records.data.0.employment_status', 'active')
+            ->where('statusSummary.0.status', 'active')
+            ->where('statusSummary.0.total', 1)
             );
     }
 }

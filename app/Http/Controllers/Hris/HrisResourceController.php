@@ -26,12 +26,14 @@ use App\Support\EmployeeImportTemplate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class HrisResourceController extends Controller
 {
@@ -65,14 +67,6 @@ class HrisResourceController extends Controller
         ['name' => 'dissolved', 'label' => 'Dissolved'],
         ['name' => 'gsis_bp_number', 'label' => 'GSIS BP Number'],
         ['name' => 'position_classification', 'label' => 'Position Classification'],
-    ];
-
-    private const PLANTILLA_CHOICES = [
-        'areaType' => [['value' => 'R', 'label' => 'R — Region'], ['value' => 'P', 'label' => 'P — Province'], ['value' => 'D', 'label' => 'D — District'], ['value' => 'M', 'label' => 'M — Municipality'], ['value' => 'F', 'label' => 'F — Foreign Post']],
-        'level' => [['value' => 'K', 'label' => 'K — Key positions'], ['value' => 'A', 'label' => 'A — Administrative positions'], ['value' => 'S', 'label' => 'S — Support to Key positions'], ['value' => 'T', 'label' => 'T — Technical positions']],
-        'sex' => [['value' => 'M', 'label' => 'M — Male'], ['value' => 'F', 'label' => 'F — Female']],
-        'appointmentStatus' => [['value' => 'P', 'label' => 'P — Permanent'], ['value' => 'E', 'label' => 'E — Elected'], ['value' => 'T', 'label' => 'T — Temporary'], ['value' => 'S', 'label' => 'S — Substitute'], ['value' => 'CT', 'label' => 'CT — Co-terminous'], ['value' => 'PA', 'label' => 'PA — Presidential Appointee'], ['value' => 'FT', 'label' => 'FT — Fixed-Term']],
-        'positionClassification' => [['value' => '1st Level', 'label' => '1st Level'], ['value' => '2nd Level', 'label' => '2nd Level'], ['value' => 'Executive/Managerial (appointment by authorities other than the President)', 'label' => 'Executive/Managerial (appointment by authorities other than the President)'], ['value' => '3rd Level (appointment by the President)', 'label' => '3rd Level (appointment by the President)']],
     ];
 
     private const RESOURCES = [
@@ -403,7 +397,7 @@ class HrisResourceController extends Controller
         }
 
         $statusSummary = $resource === 'employees'
-            ? (clone $query)->select('employment_status', DB::raw('count(*) as total'))->groupBy('employment_status')->orderByRaw("CASE LOWER(employment_status) WHEN 'active' THEN 1 WHEN 'on leave' THEN 2 WHEN 'inactive' THEN 3 WHEN 'terminated' THEN 4 ELSE 5 END")->orderBy('employment_status')->get()
+            ? (clone $query)->select('employment_status', DB::raw('count(*) as total'))->groupBy('employment_status')->orderByRaw("CASE LOWER(employment_status) WHEN 'active' THEN 1 WHEN 'on leave' THEN 2 WHEN 'inactive' THEN 3 WHEN 'terminated' THEN 4 ELSE 5 END")->orderBy('employment_status')->toBase()->get()
                 ->map(fn ($status) => ['status' => $status->employment_status, 'total' => $status->total])->values()
             : [];
 
@@ -436,7 +430,7 @@ class HrisResourceController extends Controller
     public function myProfile(Request $request): Response
     {
         $employee = $request->user()->employee;
-        abort_unless($employee, 404);
+        abort_unless($employee !== null, 404);
         $employee->load(['department', 'plantillaItem.department']);
         $item = $employee->plantillaItem;
 
@@ -463,10 +457,10 @@ class HrisResourceController extends Controller
                 'indigenous_people' => $employee->indigenous_people,
                 'solo_parent_id_number' => $employee->solo_parent_id_number,
                 'gsis_bp_number' => $employee->gsis_bp_number,
-                'department' => $item?->department_name ?? $item?->department?->name ?? $employee->department?->name,
+                'department' => $item->department_name ?? $item->department->name ?? $employee->department?->name,
                 'organizational_unit' => $item?->organizational_unit,
                 'item_number' => $item?->item_number,
-                'position_title' => $item?->position_title ?? $employee->position?->title,
+                'position_title' => $item->position_title ?? $employee->position?->title,
                 'salary_grade' => $item?->salary_grade,
                 'authorized_annual_salary' => $item?->authorized_annual_salary,
                 'actual_annual_salary' => $item?->actual_annual_salary,
@@ -503,7 +497,9 @@ class HrisResourceController extends Controller
                 $data = $this->validatedPlantillaData($request);
                 $employee = $this->resolvePlantillaEmployee($data);
                 $this->savePlantillaEmployee($employee, $request->all());
-                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) unset($data[$field]);
+                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) {
+                    unset($data[$field]);
+                }
                 PlantillaItem::query()->create($data + ['employee_id' => $employee?->id]);
             });
             Inertia::flash('toast', ['type' => 'success', 'message' => 'Plantilla position record created.']);
@@ -529,7 +525,9 @@ class HrisResourceController extends Controller
                 $data = $this->validatedPlantillaData($request, $item);
                 $employee = $this->resolvePlantillaEmployee($data, $item);
                 $this->savePlantillaEmployee($employee, $request->all());
-                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) unset($data[$field]);
+                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) {
+                    unset($data[$field]);
+                }
                 $item->update($data + ['employee_id' => $employee?->id]);
             });
             Inertia::flash('toast', ['type' => 'success', 'message' => 'Plantilla position record updated.']);
@@ -559,6 +557,7 @@ class HrisResourceController extends Controller
         return to_route('hris.resources.index', ['resource' => $resource]);
     }
 
+    /** @return array{model: class-string<Model>, title: string, fields: list<array{name: string, label: string, type: string, required?: bool, options?: string}>, rules: array<string, string>, unique: list<string>} */
     private function resourceConfig(string $resource): array
     {
         abort_unless(isset(self::RESOURCES[$resource]), 404);
@@ -566,13 +565,15 @@ class HrisResourceController extends Controller
         return self::RESOURCES[$resource];
     }
 
-    private function plantillaDepartments(): \Illuminate\Support\Collection
+    /** @return Collection<string, string> */
+    private function plantillaDepartments(): Collection
     {
         return collect(Department::PLANTILLA_OFFICES)->union(
             Department::query()->whereNotIn('code', array_keys(Department::PLANTILLA_OFFICES))->orderBy('name')->pluck('name', 'code'),
         );
     }
 
+    /** @return array<string, mixed> */
     private function validatedPlantillaData(Request $request, ?PlantillaItem $record = null): array
     {
         $departmentOptions = $this->plantillaDepartments();
@@ -620,11 +621,13 @@ class HrisResourceController extends Controller
         return $data;
     }
 
+    /** @return list<string> */
     private function employeePlantillaFields(): array
     {
         return ['last_name', 'first_name', 'middle_name', 'sex', 'date_of_birth', 'age', 'tin', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status', 'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number', 'gsis_bp_number'];
     }
 
+    /** @param array<string, mixed> $data */
     private function resolvePlantillaEmployee(array $data, ?PlantillaItem $record = null): ?Employee
     {
         $number = $data['employee_number'] ?? null;
@@ -638,6 +641,7 @@ class HrisResourceController extends Controller
         return $employee;
     }
 
+    /** @param array<string, mixed> $input */
     private function savePlantillaEmployee(?Employee $employee, array $input): void
     {
         if (! $employee) {
@@ -678,13 +682,17 @@ class HrisResourceController extends Controller
         };
     }
 
+    /**
+     * @param  array{model: class-string<Model>, rules: array<string, string>, unique: list<string>}  $config
+     * @return array<string, string|list<string|Unique>>
+     */
     private function validationRules(array $config, ?Model $record = null): array
     {
         $rules = $config['rules'];
 
         foreach ($config['unique'] as $field) {
             $rules[$field] = [
-                ...explode('|', $rules[$field]),
+                ...explode('|', $config['rules'][$field]),
                 Rule::unique($record?->getTable() ?? (new $config['model'])->getTable(), $field)->ignore($record?->getKey()),
             ];
         }
@@ -692,6 +700,10 @@ class HrisResourceController extends Controller
         return $rules;
     }
 
+    /**
+     * @param  list<array{name: string, label: string, type: string, required?: bool, options?: string}>  $fields
+     * @return list<array<string, mixed>>
+     */
     private function fieldsWithOptions(array $fields, ?int $departmentId): array
     {
         $optionQueries = [

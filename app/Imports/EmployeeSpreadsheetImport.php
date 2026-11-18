@@ -50,6 +50,7 @@ class EmployeeSpreadsheetImport
         'soloparentidnumber' => 'solo_parent_id_number', 'gsisbpnumber' => 'gsis_bp_number', 'emailaddress' => 'email',
     ];
 
+    /** @return list<array<string, mixed>> */
     public function parse(UploadedFile $file): array
     {
         if ($file->getClientOriginalExtension() !== 'xlsx') {
@@ -65,7 +66,9 @@ class EmployeeSpreadsheetImport
         foreach ($headers as $index => $header) {
             $normalized = preg_replace('/[^a-z0-9]/', '', strtolower(trim((string) $header)));
             $field = $headerMap[$normalized] ?? (in_array(self::HEADER_FIELDS[$normalized] ?? null, $allowedKeys, true) ? self::HEADER_FIELDS[$normalized] : null);
-            if ($field) $mappedHeaders[$index] = $field;
+            if ($field) {
+                $mappedHeaders[$index] = $field;
+            }
         }
         if (array_diff(['employee_number', 'first_name', 'last_name', 'employment_status'], array_values($mappedHeaders))) {
             throw ValidationException::withMessages(['file' => 'Use the Employee workbook. Its EMPLOYEES sheet must include Employee Number.']);
@@ -84,7 +87,6 @@ class EmployeeSpreadsheetImport
 
         foreach ($dataRows as $excelRow => $values) {
             $data = array_fill_keys(array_unique(array_merge(self::FIELDS, $customKeys)), null);
-            $data['present_fields'] = array_values(array_unique($mappedHeaders));
             foreach ($mappedHeaders as $index => $field) {
                 $value = trim((string) ($values[$index] ?? ''));
                 $data[$field] = $value === '' ? null : $value;
@@ -97,30 +99,52 @@ class EmployeeSpreadsheetImport
 
             $errors = [];
             foreach (['employee_number', 'first_name', 'last_name', 'employment_status'] as $field) {
-                if (! $data[$field]) $errors[] = str_replace('_', ' ', ucfirst($field)).' is required.';
+                if (! $data[$field]) {
+                    $errors[] = str_replace('_', ' ', ucfirst($field)).' is required.';
+                }
             }
-            if ($data['employee_number'] && isset($seenEmployees[$data['employee_number']])) $errors[] = 'Duplicate employee number in this workbook.';
-            if ($data['employee_number']) $seenEmployees[$data['employee_number']] = true;
+            if ($data['employee_number'] && isset($seenEmployees[$data['employee_number']])) {
+                $errors[] = 'Duplicate employee number in this workbook.';
+            }
+            if ($data['employee_number']) {
+                $seenEmployees[$data['employee_number']] = true;
+            }
 
             $department = $data['department'] ? $departments->first(fn (Department $candidate) => strcasecmp($candidate->name, $data['department']) === 0 || strcasecmp($candidate->code, $data['department']) === 0) : null;
             $positionCandidates = $data['position'] ? $positions->filter(fn (Position $candidate) => strcasecmp($candidate->title, $data['position']) === 0 || strcasecmp($candidate->code, $data['position']) === 0) : collect();
-            if ($department) $positionCandidates = $positionCandidates->where('department_id', $department->id);
+            if ($department) {
+                $positionCandidates = $positionCandidates->where('department_id', $department->id);
+            }
             $position = $positionCandidates->count() === 1 ? $positionCandidates->first() : null;
-            if ($position && ! $department) $department = $position->department;
-            if ($data['department'] && ! $department) $errors[] = 'Department must match an existing department name or code.';
-            if ($data['position'] && ! $position) $errors[] = $positionCandidates->count() > 1 ? 'Position is ambiguous; enter its Department too.' : 'Position must match an existing position title or code.';
+            if ($position && ! $department) {
+                $department = $position->department;
+            }
+            if ($data['department'] && ! $department) {
+                $errors[] = 'Department must match an existing department name or code.';
+            }
+            if ($data['position'] && ! $position) {
+                $errors[] = $positionCandidates->count() > 1 ? 'Position is ambiguous; enter its Department too.' : 'Position must match an existing position title or code.';
+            }
 
             $existing = $data['employee_number'] ? $employees->get($data['employee_number']) : null;
-            $user = $existing?->user ?? ($existing ? User::query()->where('employee_id', $existing->id)->first() : null);
+            $user = $existing->user ?? ($existing ? User::query()->where('employee_id', $existing->id)->first() : null);
             if ($data['email']) {
-                if (isset($seenEmails[$data['email']])) $errors[] = 'Duplicate email address in this workbook.';
+                if (isset($seenEmails[$data['email']])) {
+                    $errors[] = 'Duplicate email address in this workbook.';
+                }
                 $seenEmails[$data['email']] = true;
-                if ($user && $user->email !== $data['email']) $errors[] = 'This employee already has an account. Change its email through account settings.';
+                if ($user && $user->email !== $data['email']) {
+                    $errors[] = 'This employee already has an account. Change its email through account settings.';
+                }
                 $validator = Validator::make(['email' => $data['email']], ['email' => ['email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)]]);
-                if ($validator->fails()) $errors = array_merge($errors, $validator->errors()->all());
+                if ($validator->fails()) {
+                    $errors = array_merge($errors, $validator->errors()->all());
+                }
             }
             foreach (['birth_date', 'date_hired', 'date_regularized', 'date_of_original_appointment', 'date_of_last_promotion_appointment'] as $field) {
-                if ($data[$field] && ! $this->validDate($data[$field])) $errors[] = str_replace('_', ' ', ucfirst($field)).' must be a valid date.';
+                if ($data[$field] && ! $this->validDate($data[$field])) {
+                    $errors[] = str_replace('_', ' ', ucfirst($field)).' must be a valid date.';
+                }
             }
             $validator = Validator::make($data, [
                 'employee_number' => ['required', 'string', 'max:255'],
@@ -134,25 +158,33 @@ class EmployeeSpreadsheetImport
                 'pwd' => ['nullable', Rule::in(['Y'])], 'indigenous_people' => ['nullable', Rule::in(['Y'])],
                 'solo_parent_id_number' => ['nullable', 'string', 'max:255'], 'gsis_bp_number' => ['nullable', 'string', 'max:100'],
             ]);
-            if ($validator->fails()) $errors = array_merge($errors, $validator->errors()->all());
+            if ($validator->fails()) {
+                $errors = array_merge($errors, $validator->errors()->all());
+            }
 
-            $data['department_id'] = $department?->id ?? $existing?->department_id;
-            $data['position_id'] = $position?->id ?? ($department && $existing?->department_id !== $department->id ? null : $existing?->position_id);
+            $data['department_id'] = $department->id ?? $existing?->department_id;
+            $data['position_id'] = $position->id ?? ($department && $existing?->department_id !== $department->id ? null : $existing?->position_id);
             $rows[] = [
                 'row' => $excelRow, 'employee_number' => $data['employee_number'] ?? '—',
                 'name' => trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')),
-                'department' => $department?->name ?? '—', 'position' => $position?->title ?? '—',
+                'department' => $department->name ?? '—', 'position' => $position->title ?? '—',
                 'status' => $data['employment_status'] ?? '—',
                 'action' => $existing ? 'Update profile' : 'Create employee account',
-                'valid' => ! $errors, 'errors' => array_values(array_unique($errors)), 'data' => $data,
+                'valid' => ! $errors, 'errors' => array_values(array_unique($errors)), 'data' => $data + ['present_fields' => array_values(array_unique($mappedHeaders))],
             ];
         }
 
-        if (! $rows) throw ValidationException::withMessages(['file' => 'No employees were found below the row 1 headers.']);
+        if (! $rows) {
+            throw ValidationException::withMessages(['file' => 'No employees were found below the row 1 headers.']);
+        }
 
         return $rows;
     }
 
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return array{createdProfiles: int, updatedProfiles: int, createdAccounts: int, credentials: list<array<string, string>>, emailSetupSent: int}
+     */
     public function commit(array $rows, User $actor, string $approval): array
     {
         $result = DB::transaction(function () use ($rows, $actor, $approval): array {
@@ -170,7 +202,9 @@ class EmployeeSpreadsheetImport
                     $employeeData['position_id'] = $data['position_id'];
                 }
                 $customFields = array_filter($data, fn ($value, $key) => str_starts_with($key, 'custom_') && $value !== null, ARRAY_FILTER_USE_BOTH);
-                if ($customFields) $employeeData['custom_fields'] = array_merge($employee?->custom_fields ?? [], $customFields);
+                if ($customFields) {
+                    $employeeData['custom_fields'] = array_merge($employee->custom_fields ?? [], $customFields);
+                }
                 $employee ? $employee->update($employeeData) : $employee = Employee::query()->create($employeeData);
                 $employee->refresh();
                 $createdProfiles += $employee->wasRecentlyCreated ? 1 : 0;
@@ -184,8 +218,11 @@ class EmployeeSpreadsheetImport
                     $employee->forceFill(['user_id' => $user->id])->save();
                     $createdAccounts++;
                     $credential = ['employee_number' => $employee->employee_number, 'name' => trim($employee->first_name.' '.$employee->last_name), 'temporary_password' => $temporaryPassword];
-                    if ($data['email']) $emailUsers[] = ['email' => $data['email']] + $credential;
-                    else $credentials[] = $credential;
+                    if ($data['email']) {
+                        $emailUsers[] = ['email' => $data['email']] + $credential;
+                    } else {
+                        $credentials[] = $credential;
+                    }
                 } elseif ($user->name !== trim($employee->first_name.' '.$employee->last_name)) {
                     $user->update(['name' => trim($employee->first_name.' '.$employee->last_name)]);
                 }
@@ -201,18 +238,24 @@ class EmployeeSpreadsheetImport
 
         $result['emailSetupSent'] = 0;
         foreach ($result['emailUsers'] as $emailUser) {
-            if (HrisAccountSetup::sendTo($emailUser['email']) === Password::RESET_LINK_SENT) $result['emailSetupSent']++;
-            else $result['credentials'][] = array_diff_key($emailUser, ['email' => true]);
+            if (HrisAccountSetup::sendTo($emailUser['email']) === Password::RESET_LINK_SENT) {
+                $result['emailSetupSent']++;
+            } else {
+                $result['credentials'][] = array_diff_key($emailUser, ['email' => true]);
+            }
         }
         unset($result['emailUsers']);
 
         return $result;
     }
 
+    /** @return array<int, array<int, string>> */
     private function sheetRows(string $path, string $sheetName): array
     {
         $zip = new ZipArchive;
-        if ($zip->open($path) !== true) throw ValidationException::withMessages(['file' => 'The Excel workbook could not be opened.']);
+        if ($zip->open($path) !== true) {
+            throw ValidationException::withMessages(['file' => 'The Excel workbook could not be opened.']);
+        }
         $workbook = simplexml_load_string((string) $zip->getFromName('xl/workbook.xml'), SimpleXMLElement::class, LIBXML_NONET);
         $rels = simplexml_load_string((string) $zip->getFromName('xl/_rels/workbook.xml.rels'), SimpleXMLElement::class, LIBXML_NONET);
         if (! $workbook || ! $rels) {
@@ -246,48 +289,88 @@ class EmployeeSpreadsheetImport
         }
         if (($sharedXml = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
             $sharedReader = XMLReader::XML($sharedXml, null, LIBXML_NONET | LIBXML_COMPACT);
-            while ($sharedReader->read()) if ($sharedReader->nodeType === XMLReader::ELEMENT && $sharedReader->localName === 'si') { $node = simplexml_load_string($sharedReader->readOuterXml(), SimpleXMLElement::class, LIBXML_NONET); $shared[] = implode('', array_map('strval', (array) $node->xpath('.//*[local-name()="t"]'))); }
+            if (! $sharedReader instanceof XMLReader) {
+                throw ValidationException::withMessages(['file' => 'The workbook shared text could not be read.']);
+            }
+            while ($sharedReader->read()) {
+                if ($sharedReader->nodeType === XMLReader::ELEMENT && $sharedReader->localName === 'si') {
+                    $node = simplexml_load_string($sharedReader->readOuterXml(), SimpleXMLElement::class, LIBXML_NONET);
+                    if ($node === false) {
+                        throw ValidationException::withMessages(['file' => 'The workbook shared text could not be read.']);
+                    }
+                    $shared[] = implode('', array_map('strval', (array) $node->xpath('.//*[local-name()="t"]')));
+                }
+            }
             $sharedReader->close();
         }
-        $sheetStat = $target ? $zip->statName($target) : false;
+        $sheetStat = $zip->statName($target);
         if (! $sheetStat || $sheetStat['size'] > 50 * 1024 * 1024) {
             $zip->close();
             throw ValidationException::withMessages(['file' => 'The EMPLOYEES worksheet is missing or too large to import.']);
         }
-        $sheetXml = $target ? $zip->getFromName($target) : false;
+        $sheetXml = $zip->getFromName($target);
         $zip->close();
-        if ($sheetXml === false) throw ValidationException::withMessages(['file' => 'The workbook must contain an EMPLOYEES worksheet.']);
+        if ($sheetXml === false) {
+            throw ValidationException::withMessages(['file' => 'The workbook must contain an EMPLOYEES worksheet.']);
+        }
         $reader = XMLReader::XML($sheetXml, null, LIBXML_NONET | LIBXML_COMPACT);
+        if (! $reader instanceof XMLReader) {
+            throw ValidationException::withMessages(['file' => 'The EMPLOYEES worksheet could not be read.']);
+        }
         $rows = [];
         while ($reader->read()) {
-            if ($reader->nodeType !== XMLReader::ELEMENT || $reader->localName !== 'row') continue;
+            if ($reader->nodeType !== XMLReader::ELEMENT || $reader->localName !== 'row') {
+                continue;
+            }
             $rowNode = simplexml_load_string($reader->readOuterXml(), SimpleXMLElement::class, LIBXML_NONET);
-            $rowNumber = (int) $rowNode['r']; $cells = [];
+            if ($rowNode === false) {
+                throw ValidationException::withMessages(['file' => 'The EMPLOYEES worksheet could not be read.']);
+            }
+            $rowNumber = (int) $rowNode['r'];
+            $cells = [];
             foreach ($rowNode->c as $cell) {
-                preg_match('/^([A-Z]+)/', (string) $cell['r'], $match); $column = 0;
-                foreach (str_split($match[1] ?? 'A') as $letter) $column = $column * 26 + ord($letter) - 64;
-                $column--; $type = (string) $cell['t']; $value = (string) ($cell->v ?? '');
-                if ($type === 's') $value = $shared[(int) $value] ?? '';
-                elseif ($type === 'inlineStr') $value = implode('', array_map('strval', (array) $cell->xpath('.//*[local-name()="t"]')));
+                preg_match('/^([A-Z]+)/', (string) $cell['r'], $match);
+                $column = 0;
+                foreach (str_split($match[1] ?? 'A') as $letter) {
+                    $column = $column * 26 + ord($letter) - 64;
+                }
+                $column--;
+                $type = (string) $cell['t'];
+                $value = (string) ($cell->v ?? '');
+                if ($type === 's') {
+                    $value = $shared[(int) $value] ?? '';
+                } elseif ($type === 'inlineStr') {
+                    $value = implode('', array_map('strval', (array) $cell->xpath('.//*[local-name()="t"]')));
+                }
                 $cells[$column] = $value;
             }
-            if ($cells) { ksort($cells); $rows[$rowNumber] = array_replace(array_fill(0, max(array_keys($cells)) + 1, ''), $cells); }
+            if ($cells) {
+                ksort($cells);
+                $rows[$rowNumber] = array_replace(array_fill(0, max(array_keys($cells)) + 1, ''), $cells);
+            }
         }
         $reader->close();
+
         return $rows;
     }
 
     private function date(?string $value): ?string
     {
-        if (! $value) return null;
-        if (is_numeric($value) && (float) $value >= 30000 && (float) $value <= 80000) return gmdate('Y-m-d', (int) round(((float) $value - 25569) * 86400));
+        if (! $value) {
+            return null;
+        }
+        if (is_numeric($value) && (float) $value >= 30000 && (float) $value <= 80000) {
+            return gmdate('Y-m-d', (int) round(((float) $value - 25569) * 86400));
+        }
         $timestamp = strtotime($value);
+
         return $timestamp ? gmdate('Y-m-d', $timestamp) : $value;
     }
 
     private function validDate(string $value): bool
     {
         $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
         return $date !== false && $date->format('Y-m-d') === $value;
     }
 }

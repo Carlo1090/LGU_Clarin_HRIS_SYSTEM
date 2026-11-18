@@ -11,6 +11,7 @@ class TravelOrder extends Model
 
     protected $fillable = ['employee_id', 'travel_order_no', 'destination', 'departure_date', 'return_date', 'purpose', 'status'];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

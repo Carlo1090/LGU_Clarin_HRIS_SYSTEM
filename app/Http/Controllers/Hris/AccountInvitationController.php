@@ -58,7 +58,7 @@ class AccountInvitationController
             }
 
             $role = Role::query()->where('name', $input['role'])->where('guard_name', 'web')->first();
-            abort_unless($role, 409, 'The approved roles must be configured before inviting users.');
+            abort_unless($role !== null, 409, 'The approved roles must be configured before inviting users.');
 
             $user = User::query()->where('email', $email)->first();
             if ($employee->user_id && $user?->id === $employee->user_id

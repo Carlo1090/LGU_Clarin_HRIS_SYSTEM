@@ -142,6 +142,7 @@ class DashboardController extends Controller
         ]);
     }
 
+    /** @return array{label: string, value: string} */
     private function card(string $label, int|float|string $value, bool $currency = false): array
     {
         return [
