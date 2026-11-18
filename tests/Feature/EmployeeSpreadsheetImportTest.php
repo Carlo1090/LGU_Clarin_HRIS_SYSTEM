@@ -115,12 +115,16 @@ class EmployeeSpreadsheetImportTest extends TestCase
         Position::query()->create(['department_id' => $department->id, 'title' => 'Nurse I', 'code' => 'NURSE-I']);
         $actor = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
         $token = null;
-        $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
+        $preview = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
             'Employee Number' => 'EMP-IMPORT-01', 'First Name' => 'Jordan', 'Middle Name' => 'A', 'Last Name' => 'Sample',
             'Gender' => 'female', 'Birth Date' => '1990-05-06', 'Department' => $department->name, 'Position' => 'Nurse I',
             'Employment Status' => 'active', 'Date Hired' => '2015-04-03', 'Age' => '36', 'TIN' => '001-002-003',
             'Appointment Status' => 'P', 'Civil Service Eligibility' => 'Career Service Professional', 'PWD' => 'Y', 'GSIS BP Number' => '0008',
-        ]])])->assertOk()->assertInertia(function ($page) use (&$token): void {
+        ]])])->assertRedirect();
+        $token = parse_url($preview->headers->get('Location'), PHP_URL_QUERY);
+        parse_str((string) $token, $query);
+        $token = $query['token'] ?? null;
+        $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $token]))->assertOk()->assertInertia(function ($page) use (&$token): void {
             $page->component('hris/import-employees')->has('rows', 1)->where('rows.0.valid', true)->where('rows.0.status', 'active');
             $token = $page->toArray()['props']['token'];
         });

@@ -25,7 +25,17 @@ class EmployeeImportController
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
 
-        return Inertia::render('hris/import-employees', ['statusOptions' => $template->statuses(), 'columns' => $template->columns()]);
+        $token = $request->query('token');
+        $rows = is_string($token) && preg_match('/^[a-f0-9]{64}$/', $token)
+            ? $request->session()->get('employee_import.'.$token)
+            : null;
+
+        return Inertia::render('hris/import-employees', [
+            'statusOptions' => $template->statuses(),
+            'columns' => $template->columns(),
+            'rows' => is_array($rows) ? collect($rows)->map(fn ($row) => collect($row)->except('data')->all())->values() : [],
+            'token' => is_array($rows) ? $token : null,
+        ]);
     }
 
     public function updateTemplate(Request $request, EmployeeImportTemplate $template): RedirectResponse
@@ -46,7 +56,7 @@ class EmployeeImportController
         return back()->with('success', 'Employee template columns and choices updated.');
     }
 
-    public function preview(Request $request, EmployeeSpreadsheetImport $import, EmployeeImportTemplate $template): Response
+    public function preview(Request $request, EmployeeSpreadsheetImport $import): RedirectResponse
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
         $input = $request->validate([
@@ -56,12 +66,7 @@ class EmployeeImportController
         $token = bin2hex(random_bytes(32));
         $request->session()->put('employee_import.'.$token, $rows);
 
-        return Inertia::render('hris/import-employees', [
-            'statusOptions' => $template->statuses(),
-            'columns' => $template->columns(),
-            'rows' => collect($rows)->map(fn ($row) => collect($row)->except('data')->all())->values(),
-            'token' => $token,
-        ]);
+        return redirect()->route('hris.employees.import', ['token' => $token]);
     }
 
     public function store(Request $request, EmployeeSpreadsheetImport $import): Response
