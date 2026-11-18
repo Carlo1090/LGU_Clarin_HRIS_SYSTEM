@@ -7,6 +7,7 @@ use App\Http\Controllers\Hris\EmployeeImportController;
 use App\Http\Controllers\Hris\HrisResourceController;
 use App\Http\Controllers\Hris\LeaveReviewController;
 use App\Http\Controllers\Hris\PortalController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Middleware\EnsureHrisAccountReady;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,8 @@ Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::get('hris/my-profile', [HrisResourceController::class, 'myProfile'])->name('hris.my-profile');
     Route::get('hris/plantilla-items/template', [HrisResourceController::class, 'downloadPlantillaWorkbook'])->name('hris.plantilla.template');
 

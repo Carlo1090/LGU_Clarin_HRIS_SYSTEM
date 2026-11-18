@@ -19,18 +19,21 @@ use App\Models\PrivacyRequest;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Vacancy;
+use App\Support\DashboardInsights;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, DashboardInsights $insights): Response
     {
+        $validated = $request->validate(['months' => ['sometimes', 'integer', 'in:3,6,12']]);
+        $months = (int) ($validated['months'] ?? 6);
         $user = $request->user();
         $role = $user->role?->name;
         $employee = $user->employee;
-        if ($role === 'Employee' && $employee && $employee->user_id !== $user->id) {
+        if ($employee && (int) $employee->user_id !== $user->id) {
             $employee = null;
         }
         $departmentId = $employee?->department_id;
@@ -64,7 +67,7 @@ class DashboardController extends Controller
                 $this->card('Attendance issues', AttendanceRecord::query()->whereIn('status', ['absent', 'late', 'incomplete'])->count()),
                 $this->card('Pending leave requests', LeaveApplication::query()->where('status', 'pending')->count()),
             ],
-            'HRMO Head' => [
+            'HRMO Head', 'Administrator' => [
                 $this->card('Total employees', Employee::query()->count()),
                 $this->card('Departments', Department::query()->whereIn('code', array_keys(Department::PLANTILLA_OFFICES))->count()),
                 $this->card('Pending HR transactions', LeaveApplication::query()->where('status', 'pending')->count()),
@@ -118,6 +121,7 @@ class DashboardController extends Controller
             'role' => $role ?? 'Unassigned',
             'office' => $employee?->department?->name,
             'cards' => $cards,
+            'analytics' => $insights->for($user, $months),
         ]);
     }
 
