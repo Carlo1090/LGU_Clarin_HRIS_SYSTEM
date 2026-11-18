@@ -78,10 +78,10 @@ export default function AuthSimpleLayout({
                                 className="pointer-events-none absolute bottom-7 left-1 -z-10 h-36 w-48 -rotate-6 rounded-3xl bg-gradient-to-br from-[#164A2C] to-[#236B3B] shadow-lg xl:left-3"
                             />
                             <img
-                                src="/images/hero_model_green.png"
+                                src="/images/clarin-officials.png"
                                 alt=""
-                                width={447}
-                                height={559}
+                                width={1293}
+                                height={1216}
                                 decoding="async"
                                 className="h-full w-full object-contain object-bottom drop-shadow-xl"
                             />
