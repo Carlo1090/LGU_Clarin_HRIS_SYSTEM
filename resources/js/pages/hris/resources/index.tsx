@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BiometricIdField from '@/components/biometric-id-field';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
@@ -226,13 +227,29 @@ export default function HrisResourceIndex({
                         aria-hidden="true"
                         className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
                     />
-                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                        {title}
-                    </h1>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                        {moduleDescriptions[resource] ??
-                            'Manage HRIS records and their linked data.'}
-                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+                        <div>
+                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                                {title}
+                            </h1>
+                            <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+                                {moduleDescriptions[resource] ??
+                                    'Manage HRIS records and their linked data.'}
+                            </p>
+                        </div>
+                        {resource === 'employees' && canImport && (
+                            <Button
+                                asChild
+                                size="lg"
+                                className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
+                            >
+                                <Link href="/hris/employees/import">
+                                    <FileUp aria-hidden="true" />
+                                    Bulk Import Employees
+                                </Link>
+                            </Button>
+                        )}
+                    </div>
                 </header>
 
                 {isAttendance && (
@@ -540,15 +557,6 @@ export default function HrisResourceIndex({
                             two-factor authentication.
                         </p>
                     </section>
-                )}
-
-                {resource === 'employees' && canImport && (
-                    <Link
-                        href="/hris/employees/import"
-                        className="inline-flex rounded-md border px-3 py-2 text-sm hover:bg-muted"
-                    >
-                        Bulk import Plantilla Excel
-                    </Link>
                 )}
 
                 {officeDirectory && (
