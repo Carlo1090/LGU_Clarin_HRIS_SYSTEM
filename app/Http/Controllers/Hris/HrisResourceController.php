@@ -25,7 +25,6 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Vacancy;
 use App\Notifications\HrisAccountSetup;
-use App\Services\WorkCalendar;
 use App\Support\EmployeeImportTemplate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -392,26 +391,21 @@ class HrisResourceController extends Controller
                         ->latest('id')->select(['id', 'employee_id', 'attendance_date', 'time_in', 'time_out', 'status']),
                 ])
                 ->orderBy('last_name')->orderBy('first_name')->orderBy('id')
-                ->paginate(20, ['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id', 'biometric_id', 'employment_status', 'date_hired'])
+                ->paginate(20, ['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id', 'biometric_id'])
                 ->withQueryString();
-            $workCalendar = new WorkCalendar($records->getCollection(), $startDate, $endDate);
-            $punchDays = [];
-            foreach (AttendancePunch::query()
+            $punchDays = AttendancePunch::query()
                 ->whereIn('biometric_id', $records->getCollection()->pluck('biometric_id')->filter())
                 ->whereBetween('punched_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
-                ->orderBy('punched_at')->toBase()->select(['biometric_id', 'punched_at'])->cursor() as $punch) {
-                $date = substr($punch->punched_at, 0, 10);
-                if (count($punchDays[$punch->biometric_id][$date] ?? []) <= AttendancePunch::DTR_PUNCH_COUNT) {
-                    $punchDays[$punch->biometric_id][$date][] = substr($punch->punched_at, 11);
-                }
-            }
+                ->selectRaw('biometric_id, DATE(punched_at) as attendance_day, COUNT(*) as punch_count')
+                ->groupBy('biometric_id')->groupByRaw('DATE(punched_at)')
+                ->get()->groupBy('biometric_id');
             $records->through(fn (Employee $employee) => [
                 'id' => $employee->id,
                 'name' => trim("{$employee->last_name}, {$employee->first_name} {$employee->suffix}"),
                 'employee_number' => $employee->employee_number,
                 'department' => $employee->department?->name,
                 'dtr_url' => route('hris.attendance.dtr', ['employee' => $employee, 'month' => $month], false),
-            ] + $this->attendanceLogSummary($employee, $workCalendar, $startDate, $endDate, $punchDays[$employee->biometric_id] ?? []));
+            ] + $this->attendanceLogSummary($employee, $punchDays->get($employee->biometric_id, collect())));
 
             return Inertia::render('hris/resources/index', [
                 'resource' => $resource,
@@ -689,66 +683,34 @@ class HrisResourceController extends Controller
         return to_route('hris.resources.index', $parameters);
     }
 
-    /** @param array<string, list<string>> $punchDays */
-    private function attendanceLogSummary(Employee $employee, WorkCalendar $calendar, string $start, string $end, array $punchDays): array
+    /** @param Collection<int, AttendancePunch> $punchDays */
+    private function attendanceLogSummary(Employee $employee, Collection $punchDays): array
     {
-        $complete = $review = $missing = $scheduledDays = $verifiedDays = 0;
+        $complete = $review = 0;
         $manualDays = $employee->attendanceRecords->unique('attendance_date')->keyBy('attendance_date');
-        for ($day = Date::parse($start); $day->toDateString() <= $end; $day = $day->addDay()) {
-            $date = $day->toDateString();
-            $entry = $manualDays->get($date);
-            $status = str_replace([' ', '-'], '_', strtolower(trim($entry?->status ?? '')));
-            $schedule = $calendar->scheduleOn($employee, $date);
-            if ($calendar->holidayOn($date) !== null || $calendar->approvedLeaveOn($employee, $date)
-                || ($schedule !== null && (! $calendar->isWorkday($schedule, $date) || ! $calendar->shiftHasEnded($schedule, $date)))
-                || in_array($status, ['leave', 'on_leave', 'holiday', 'rest_day', 'day_off'], true)) {
+        foreach ($manualDays as $entry) {
+            $status = str_replace([' ', '-'], '_', strtolower(trim($entry->status)));
+            if (in_array($status, ['leave', 'on_leave', 'holiday', 'rest_day', 'day_off'], true)) {
                 continue;
             }
-            $expected = $schedule !== null && $calendar->hasEnded($employee, $schedule, $date);
-            if ($expected) {
-                $scheduledDays++;
-            }
-            if ($entry !== null) {
-                if ($status === 'present' && $entry->time_in && $entry->time_out) {
-                    $complete++;
-                } else {
-                    $review++;
-                }
-
-                continue;
-            }
-            $punches = $punchDays[$date] ?? [];
-            if ($punches === []) {
-                if ($expected) {
-                    $missing++;
-                    $review++;
-                }
-
-                continue;
-            }
-            if (count($punches) !== AttendancePunch::DTR_PUNCH_COUNT) {
+            if ($status === 'present' && $entry->time_in && $entry->time_out) {
+                $complete++;
+            } else {
                 $review++;
-
+            }
+        }
+        foreach ($punchDays as $day) {
+            if ($manualDays->has($day->attendance_day)) {
                 continue;
             }
-            if ($expected) {
-                $variance = $schedule->variances($punches);
-                if ($variance === null || $variance['late'] > 0 || $variance['undertime'] > 0) {
-                    $review++;
-
-                    continue;
-                }
-                $verifiedDays++;
+            if ((int) $day->punch_count === AttendancePunch::DTR_PUNCH_COUNT) {
+                $complete++;
+            } else {
+                $review++;
             }
-            $complete++;
         }
 
-        return [
-            'attendance_complete_days' => $complete,
-            'attendance_review_days' => $review,
-            'attendance_missing_days' => $missing,
-            'attendance_perfect' => $scheduledDays > 0 && $scheduledDays === $verifiedDays && $review === 0,
-        ];
+        return ['attendance_complete_days' => $complete, 'attendance_review_days' => $review];
     }
 
     /** @return array{model: class-string<Model>, title: string, fields: list<array{name: string, label: string, type: string, required?: bool, options?: string}>, rules: array<string, string>, unique: list<string>} */

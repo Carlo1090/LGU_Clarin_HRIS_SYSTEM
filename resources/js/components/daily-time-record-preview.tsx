@@ -9,7 +9,7 @@ export type DailyTimeRecordData = {
     month?: string;
     period?: 'full' | 'first' | 'second';
     periodLabel: string;
-    officialHours?: string | null;
+    officialHours?: string;
     punchTimes?: Record<string, string[]>;
     records: Partial<
         Record<

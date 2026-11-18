@@ -8,7 +8,6 @@ use App\Models\Employee;
 use App\Models\LeaveType;
 use App\Models\Payslip;
 use App\Models\User;
-use App\Services\WorkCalendar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -76,36 +75,18 @@ class PortalController extends Controller
             'leave_type_id' => ['required', 'integer', Rule::exists('leave_types', 'id')->where('is_active', true)],
             'start_date' => ['required', 'date_format:Y-m-d'],
             'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
-            'days_requested' => ['nullable', 'integer', 'min:1'],
+            'days_requested' => ['required', 'integer', 'min:1'],
             'reason' => ['required', 'string', 'max:2000'],
         ]);
 
         $calendarDays = Carbon::parse($data['start_date'])->diffInDays(Carbon::parse($data['end_date'])) + 1;
-        if ($calendarDays > 366) {
-            throw ValidationException::withMessages(['end_date' => 'Select a date range of up to 366 days.']);
-        }
-        if (($data['days_requested'] ?? 0) > $calendarDays) {
+        if ($data['days_requested'] > $calendarDays) {
             throw ValidationException::withMessages(['days_requested' => 'Requested days cannot exceed the selected date range.']);
         }
 
         DB::transaction(function () use ($employee, $data): void {
             $lockedEmployee = Employee::query()->lockForUpdate()->findOrFail($employee->id);
             abort_unless($lockedEmployee->user_id === $employee->user_id, 403);
-
-            $calendar = new WorkCalendar(collect([$lockedEmployee]), $data['start_date'], $data['end_date']);
-            $workingDates = $calendar->workingDates($lockedEmployee, $data['start_date'], $data['end_date']);
-            if ($workingDates === []) {
-                throw ValidationException::withMessages(['start_date' => 'The selected dates contain no scheduled workdays.']);
-            }
-            if ($workingDates !== null) {
-                $days = count($workingDates);
-                if (isset($data['days_requested']) && (int) $data['days_requested'] !== $days) {
-                    throw ValidationException::withMessages(['days_requested' => "Your calendar shows {$days} scheduled workday(s) in this range."]);
-                }
-                $data['days_requested'] = $days;
-            } elseif (! isset($data['days_requested'])) {
-                throw ValidationException::withMessages(['days_requested' => 'Enter the requested workdays for this date range.']);
-            }
 
             $overlaps = $lockedEmployee->leaveApplications()
                 ->whereIn('status', ['pending', 'department_reviewed', 'hr_validated', 'approved'])
@@ -117,7 +98,7 @@ class PortalController extends Controller
                 throw ValidationException::withMessages(['start_date' => 'These dates overlap an existing leave request under review or already approved.']);
             }
 
-            $lockedEmployee->leaveApplications()->create($data + ['status' => 'pending', 'working_dates' => $workingDates]);
+            $lockedEmployee->leaveApplications()->create($data + ['status' => 'pending']);
         });
 
         return to_route('hris.portal', ['page' => 'my-leave-requests']);

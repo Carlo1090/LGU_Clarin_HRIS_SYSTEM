@@ -114,6 +114,22 @@ class HrisResourceTest extends TestCase
         $this->assertModelMissing($entry);
     }
 
+    public function test_saved_calendar_rules_no_longer_influence_attendance_or_dtr_previews(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create(['date_hired' => '2020-01-01', 'employment_status' => 'active']);
+        DB::table('attendance_schedules')->insert([
+            'scope_key' => 'municipal', 'effective_from' => '2020-01-01', 'workdays' => '[1,2,3,4,5]',
+            'am_in' => '08:00', 'am_out' => '12:00', 'pm_in' => '13:00', 'pm_out' => '17:00',
+        ]);
+
+        $this->actingAs($hr)->get('/hris/attendance/work-calendar')->assertNotFound();
+        $this->get('/hris/attendance?month=2026-10')->assertInertia(fn ($page) => $page
+            ->where('records.data.0.attendance_complete_days', 0)
+            ->where('records.data.0.attendance_review_days', 0));
+        $this->getJson("/hris/attendance/dtr/{$employee->id}?month=2026-10")->assertOk()->assertJsonCount(0, 'records');
+    }
+
     public function test_hr_officer_can_view_but_cannot_create_a_department(): void
     {
         $role = Role::query()->create(['name' => 'HR Officer', 'guard_name' => 'web']);
