@@ -44,12 +44,14 @@ export default function ImportAttendanceLogs({
     batch,
     groups,
     unassigned,
+    month,
     selectedId,
     punches,
 }: {
     batch: ImportBatchSummary | null;
     groups: Page<BiometricPunchGroup>;
     unassigned: boolean;
+    month: string | null;
     selectedId: number | null;
     punches: Page<{ id: number; punched_at: string }> | null;
 }) {
@@ -58,7 +60,7 @@ export default function ImportAttendanceLogs({
         file: null,
         clock_offset_seconds: '',
     });
-    const groupUrl = unassigned ? `${logsUrl}?unassigned=1` : logsUrl;
+    const monthFilter = month ? { month } : {};
 
     function upload(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -261,11 +263,15 @@ export default function ImportAttendanceLogs({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 id="biometric-groups" className="text-lg font-semibold">
                         Imported punches by Biometric ID
+                        {month ? ` · ${month}` : ''}
                     </h2>
                     <Button asChild size="sm" variant="outline">
                         <Link
-                            href={
-                                unassigned ? logsUrl : `${logsUrl}?unassigned=1`
+                            href={logsUrl}
+                            data={
+                                unassigned
+                                    ? monthFilter
+                                    : { ...monthFilter, unassigned: 1 }
                             }
                         >
                             {unassigned
@@ -310,7 +316,16 @@ export default function ImportAttendanceLogs({
                                                     ? 'true'
                                                     : undefined
                                             }
-                                            href={`${groupUrl}${unassigned ? '&' : '?'}group_page=${groups.current_page}&biometric_id=${group.biometric_id}`}
+                                            href={logsUrl}
+                                            data={{
+                                                ...monthFilter,
+                                                ...(unassigned
+                                                    ? { unassigned: 1 }
+                                                    : {}),
+                                                group_page: groups.current_page,
+                                                biometric_id:
+                                                    group.biometric_id,
+                                            }}
                                         >
                                             {group.biometric_id}
                                         </Link>

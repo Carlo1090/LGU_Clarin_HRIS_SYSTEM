@@ -329,11 +329,25 @@ export default function HrisResourceIndex({
                             demo
                         />
                         {canManageAttendance && (
-                            <Button asChild variant="outline">
-                                <Link href="/hris/attendance/logs">
-                                    Import Attendance Logs
-                                </Link>
-                            </Button>
+                            <>
+                                <Button asChild variant="outline">
+                                    <Link href="/hris/attendance/logs">
+                                        Import Attendance Logs
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link
+                                        href="/hris/attendance/monthly-report"
+                                        data={
+                                            attendanceMonth
+                                                ? { month: attendanceMonth }
+                                                : undefined
+                                        }
+                                    >
+                                        Monthly Attendance Report
+                                    </Link>
+                                </Button>
+                            </>
                         )}
                     </nav>
                 )}
