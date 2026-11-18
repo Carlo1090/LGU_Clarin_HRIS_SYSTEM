@@ -9,21 +9,28 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { NavItem } from '@/types';
 
-export function NavMain({ items }: { items: NavItem[] }) {
+export function NavMain({
+    items,
+    label = 'HRIS workspace',
+}: {
+    items: NavItem[];
+    label?: string;
+}) {
     const { isCurrentUrl } = useCurrentUrl();
 
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>HRIS workspace</SidebarGroupLabel>
-            <SidebarMenu>
+            <SidebarGroupLabel>{label}</SidebarGroupLabel>
+            <SidebarMenu className="gap-1">
                 {items.map((item) => (
                     <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
+                            className="rounded-xl md:min-h-9"
                             asChild
                             isActive={isCurrentUrl(item.href)}
                             tooltip={{ children: item.title }}
                         >
-                            <Link href={item.href} prefetch>
+                            <Link href={item.href} prefetch aria-current={isCurrentUrl(item.href) ? 'page' : undefined}>
                                 {item.icon && <item.icon />}
                                 <span>{item.title}</span>
                             </Link>

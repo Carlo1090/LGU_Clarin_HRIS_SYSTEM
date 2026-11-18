@@ -83,28 +83,49 @@ function iconForLink(href: string): LucideIcon {
 }
 
 export default function Dashboard({ role, cards, links }: Props) {
+    const isHrmo = role === 'HRMO Head' || role === 'HR Officer';
+    const title = isHrmo ? 'HRMO Portal' : role === 'Unassigned' ? 'HRIS Dashboard' : `${role} Portal`;
+    const primaryLink = isHrmo
+        ? links.find((link) => link.href === '/hris/employees')
+        : links[0];
+
     return (
         <>
-            <Head title={`${role} Dashboard`} />
+            <Head title={title} />
             <div className="mx-auto w-full max-w-7xl space-y-8 p-4 md:p-8">
-                <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-blue-950 to-teal-900 px-6 py-8 text-white shadow-lg shadow-blue-950/10 sm:px-9 sm:py-10">
-                    <div className="absolute -top-20 -right-10 size-64 rounded-full border border-white/10" />
-                    <div className="absolute -top-12 -right-2 size-48 rounded-full border border-white/10" />
-                    <div className="relative max-w-3xl">
-                        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-50">
-                            <LayoutDashboard className="size-3.5" />
-                            LGU CLARIN · HUMAN RESOURCE INFORMATION SYSTEM
-                        </div>
-                        <p className="text-sm font-medium text-teal-200">
-                            Your workspace
+                <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9 sm:py-10">
+                    <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] md:block">
+                        <div className="absolute top-1/2 right-6 size-72 -translate-y-1/2 rounded-full border border-[#a6eb20]/25" />
+                        <div className="absolute top-1/2 right-14 size-56 -translate-y-1/2 rounded-full bg-[#a6eb20]/10" />
+                        <img
+                            src="/images/clarin-officials.png"
+                            alt=""
+                            width={1293}
+                            height={1216}
+                            className="absolute right-4 bottom-0 h-[94%] w-[90%] object-contain object-right-bottom lg:right-10"
+                        />
+                    </div>
+                    <div className="relative md:max-w-[58%]">
+                        <p className="text-sm font-medium text-[#c2ec8b]">
+                            LGU Clarin{role !== 'Unassigned' && ` · ${role}`}
                         </p>
-                        <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
-                            {role} Dashboard
+                        <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
+                            {title}
                         </h1>
-                        <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100/80 sm:text-base">
-                            A clear overview of the HR information and tasks
-                            relevant to your role.
+                        <p className="mt-3 max-w-md text-sm leading-6 text-white/80 sm:text-base">
+                            {isHrmo
+                                ? 'Oversee municipal staff records, attendance, leave requests, and vacancies.'
+                                : 'View your role’s key information and open the tools available to you.'}
                         </p>
+                        {primaryLink && (
+                            <Link
+                                href={primaryLink.href}
+                                className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#a6eb20] px-5 py-2.5 text-sm font-semibold text-[#142014] transition-colors hover:bg-[#c2ec8b] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                            >
+                                {isHrmo ? 'Employee directory' : primaryLink.label}
+                                <ArrowUpRight aria-hidden="true" className="size-4" />
+                            </Link>
+                        )}
                     </div>
                 </header>
 
@@ -115,11 +136,11 @@ export default function Dashboard({ role, cards, links }: Props) {
                                 At a glance
                             </h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Current information for your HRIS workspace
+                                {isHrmo ? 'Municipal workforce overview' : 'Current information for your HRIS workspace'}
                             </p>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                            {cards.map((card, index) => {
+                            {cards.map((card) => {
                                 const Icon =
                                     cardIcons[card.label] ?? LayoutDashboard;
 
@@ -133,13 +154,7 @@ export default function Dashboard({ role, cards, links }: Props) {
                                                 {card.label}
                                             </h3>
                                             <span
-                                                className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
-                                                    index % 3 === 0
-                                                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
-                                                        : index % 3 === 1
-                                                          ? 'bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300'
-                                                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                                                }`}
+                                                className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"
                                             >
                                                 <Icon
                                                     aria-hidden="true"
@@ -194,7 +209,7 @@ export default function Dashboard({ role, cards, links }: Props) {
                                     href={link.href}
                                     className="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-sm transition duration-200 hover:border-primary/30 hover:shadow-md"
                                 >
-                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
+                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground transition group-hover:bg-primary group-hover:text-primary-foreground">
                                         {(() => {
                                             const Icon = iconForLink(link.href);
 

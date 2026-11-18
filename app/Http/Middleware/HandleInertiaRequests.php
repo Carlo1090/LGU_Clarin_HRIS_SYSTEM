@@ -42,6 +42,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'isHrmoWorkspace' => fn (): bool => in_array($request->user()?->role?->name, ['HRMO Head', 'HR Officer'], true),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'hrisNavigation' => fn (): array => $request->user() ? HrisResourceController::navigation() : [],
         ];

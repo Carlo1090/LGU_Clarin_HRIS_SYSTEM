@@ -213,3 +213,21 @@
         transition: none !important;
     }
 }
+
+.portal-sidebar {
+    --sidebar: #f3f5ef;
+    --sidebar-foreground: #142014;
+    --sidebar-accent: #e5f2cc;
+    --sidebar-accent-foreground: #284c0a;
+    --sidebar-border: #d8dfd3;
+    --sidebar-ring: #69b518;
+}
+
+.dark .portal-sidebar {
+    --sidebar: #142019;
+    --sidebar-foreground: #eef4e8;
+    --sidebar-accent: #263820;
+    --sidebar-accent-foreground: #c2ec8b;
+    --sidebar-border: #2b3c2e;
+    --sidebar-ring: #a6eb20;
+}

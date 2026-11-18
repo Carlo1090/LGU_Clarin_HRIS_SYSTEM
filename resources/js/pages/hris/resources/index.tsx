@@ -28,6 +28,14 @@ type Props = {
     };
 };
 
+const moduleDescriptions: Record<string, string> = {
+    employees: 'Maintain personnel records and review employee assignments.',
+    departments: 'Review municipal offices and maintain department information.',
+    attendance: 'Review and maintain employee time and attendance records.',
+    'leave-applications': 'Review employee leave requests and their status.',
+    vacancies: 'Track open positions and recruitment deadlines.',
+};
+
 type FormData = Record<string, string | number | boolean | null>;
 
 const emptyValue = (field: Field): string | number | boolean | null =>
@@ -74,6 +82,7 @@ export default function HrisResourceIndex({
 
     const edit = (row: HrisRow) => {
         setEditingId(row.id);
+        document.getElementById('record-editor')?.scrollIntoView({ block: 'start' });
         form.setData(
             Object.fromEntries(
                 fields.map((field) => [
@@ -113,11 +122,15 @@ export default function HrisResourceIndex({
     return (
         <>
             <Head title={title} />
-            <main className="space-y-6 p-4 md:p-8">
-                <header>
-                    <h1 className="text-2xl font-semibold">{title}</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Manage HRIS records and their linked data.
+            <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+                <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
+                    <div aria-hidden="true" className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30" />
+                    <div aria-hidden="true" className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10" />
+                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                        {title}
+                    </h1>
+                    <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+                        {moduleDescriptions[resource] ?? 'Manage HRIS records and their linked data.'}
                     </p>
                 </header>
 
@@ -126,7 +139,8 @@ export default function HrisResourceIndex({
                         <Link
                             key={item.key}
                             href={`/hris/${item.key}`}
-                            className={`rounded-md border px-3 py-2 text-sm ${resource === item.key ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                            aria-current={resource === item.key ? 'page' : undefined}
+                            className="rounded-full border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground"
                         >
                             {item.title}
                         </Link>
@@ -134,7 +148,7 @@ export default function HrisResourceIndex({
                 </nav>
 
                 {canManage && (
-                    <section className="rounded-lg border p-4">
+                    <section id="record-editor" className="scroll-mt-20 rounded-2xl border bg-card p-5 sm:p-6">
                         <h2 className="mb-4 text-lg font-medium">
                             {editingId ? 'Edit record' : 'Add record'}
                         </h2>
@@ -172,7 +186,7 @@ export default function HrisResourceIndex({
                                                 )
                                             }
                                             required={field.required}
-                                            className="w-full rounded-md border bg-background px-3 py-2"
+                                            className="w-full rounded-xl border border-input bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-ring"
                                         >
                                             <option value="">Select…</option>
                                             {field.options?.map((option) => (
@@ -196,7 +210,7 @@ export default function HrisResourceIndex({
                                                 )
                                             }
                                             required={field.required}
-                                            className="min-h-24 w-full rounded-md border bg-background px-3 py-2"
+                                            className="min-h-24 w-full rounded-xl border border-input bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-ring"
                                         />
                                     ) : field.type === 'checkbox' ? (
                                         <input
@@ -210,7 +224,7 @@ export default function HrisResourceIndex({
                                                     event.target.checked,
                                                 )
                                             }
-                                            className="ml-2 size-4 align-middle"
+                                            className="ml-2 size-4 align-middle accent-primary"
                                         />
                                     ) : (
                                         <input
@@ -247,7 +261,7 @@ export default function HrisResourceIndex({
                                                 )
                                             }
                                             required={field.required}
-                                            className="w-full rounded-md border bg-background px-3 py-2"
+                                            className="w-full rounded-xl border border-input bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-ring"
                                         />
                                     )}
                                     {form.errors[field.name] && (
@@ -261,7 +275,7 @@ export default function HrisResourceIndex({
                                 <button
                                     type="submit"
                                     disabled={form.processing}
-                                    className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                                    className="rounded-full bg-primary px-5 py-2 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                                 >
                                     {form.processing
                                         ? 'Saving…'
@@ -273,7 +287,7 @@ export default function HrisResourceIndex({
                                     <button
                                         type="button"
                                         onClick={cancelEdit}
-                                        className="rounded-md border px-4 py-2"
+                                        className="rounded-full border px-4 py-2 hover:bg-muted"
                                     >
                                         Cancel
                                     </button>
@@ -283,10 +297,18 @@ export default function HrisResourceIndex({
                     </section>
                 )}
 
-                <section className="overflow-hidden rounded-lg border">
+                <section aria-labelledby="records-heading" className="overflow-hidden rounded-2xl border bg-card">
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
+                        <h2 id="records-heading" className="text-lg font-semibold tracking-tight">
+                            Records
+                        </h2>
+                        <span className="text-sm text-muted-foreground">
+                            {records.data.length} on this page
+                        </span>
+                    </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-muted/50">
+                            <thead className="bg-muted text-muted-foreground">
                                 <tr>
                                     <th className="px-3 py-3 font-medium">
                                         ID
@@ -308,7 +330,7 @@ export default function HrisResourceIndex({
                             </thead>
                             <tbody>
                                 {records.data.map((row) => (
-                                    <tr key={row.id} className="border-t">
+                                    <tr key={row.id} className="border-t transition-colors hover:bg-muted/60">
                                         <td className="px-3 py-3">{row.id}</td>
                                         {fields.map((field) => (
                                             <td
@@ -326,14 +348,14 @@ export default function HrisResourceIndex({
                                                 <button
                                                     type="button"
                                                     onClick={() => edit(row)}
-                                                    className="mr-3 underline"
+                                                    className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
                                                 >
                                                     Edit
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => remove(row)}
-                                                    className="text-destructive underline"
+                                                    className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10"
                                                 >
                                                     Delete
                                                 </button>
@@ -372,7 +394,7 @@ export default function HrisResourceIndex({
                         ))}
                     </div>
                 </section>
-            </main>
+            </div>
         </>
     );
 }
