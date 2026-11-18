@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\AttendanceImport;
+use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
 use App\Models\Department;
 use App\Models\Employee;
@@ -29,15 +31,18 @@ class HrisResourceTest extends TestCase
         $withoutEntries = Employee::factory()->create(['last_name' => 'Zulu']);
         AttendanceRecord::factory()->count(2)->for($employee)->create();
 
-        $this->actingAs($hr)->get('/hris/attendance')
+        $this->actingAs($hr)->get('/hris/attendance?month=2026-10')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('hris/resources/index')
                 ->where('attendanceDirectory', true)
                 ->has('records.data', 2)
                 ->where('records.data.0.name', 'Adams, Alex')
-                ->where('records.data.0.dtr_url', "/hris/attendance/dtr/{$employee->id}")
-                ->where('records.data.1.dtr_url', "/hris/attendance/dtr/{$withoutEntries->id}"));
+                ->where('attendanceMonth', '2026-10')
+                ->where('records.data.0.dtr_url', "/hris/attendance/dtr/{$employee->id}?month=2026-10")
+                ->where('records.data.1.dtr_url', "/hris/attendance/dtr/{$withoutEntries->id}?month=2026-10")
+                ->where('records.data.1.attendance_complete_days', 0)
+                ->where('records.data.1.attendance_review_days', 0));
 
         $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create(['employee_id' => $employee->id]);
         $this->actingAs($head)->get('/hris/attendance')
@@ -46,6 +51,40 @@ class HrisResourceTest extends TestCase
                 ->has('records.data', 1)
                 ->where('records.data.0.id', $employee->id));
         $this->getJson("/hris/attendance/dtr/{$withoutEntries->id}")->assertForbidden();
+    }
+
+    public function test_attendance_indicators_count_each_recorded_workday_once_for_the_selected_month(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create();
+        $employee->forceFill(['biometric_id' => 15])->save();
+        $batch = AttendanceImport::query()->create(['file_name' => 'test.dat', 'status' => 'completed']);
+        foreach (['19 07:50:00', '19 12:03:00', '19 12:50:00', '19 17:02:00', '20 07:54:00', '22 07:55:00'] as $punch) {
+            AttendancePunch::query()->insert([
+                'attendance_import_id' => $batch->id, 'biometric_id' => 15,
+                'punched_at' => '2026-10-'.$punch, 'created_at' => now(),
+            ]);
+        }
+        foreach ([
+            ['2026-10-21', 'absent', null, null],
+            ['2026-10-21', 'present', '2026-10-21 08:00:00', '2026-10-21 17:00:00'],
+            ['2026-10-22', 'On Leave', null, null],
+            ['2026-10-23', 'late', '2026-10-23 09:00:00', '2026-10-23 17:00:00'],
+            ['2026-11-02', 'incomplete', '2026-11-02 08:00:00', null],
+        ] as [$date, $status, $in, $out]) {
+            AttendanceRecord::factory()->for($employee)->create([
+                'attendance_date' => $date, 'status' => $status, 'time_in' => $in, 'time_out' => $out,
+            ]);
+        }
+
+        $this->actingAs($hr)->get('/hris/attendance?month=2026-10')
+            ->assertInertia(fn ($page) => $page
+                ->where('records.data.0.attendance_complete_days', 2)
+                ->where('records.data.0.attendance_review_days', 2));
+        $this->get('/hris/attendance?month=2026-11')
+            ->assertInertia(fn ($page) => $page
+                ->where('records.data.0.attendance_complete_days', 0)
+                ->where('records.data.0.attendance_review_days', 1));
     }
 
     public function test_attendance_entries_can_still_be_managed_from_the_entries_view(): void

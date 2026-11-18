@@ -1,10 +1,12 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Form, Head, Link, router, useForm } from '@inertiajs/react';
 import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BiometricIdField from '@/components/biometric-id-field';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type Field = {
     name: string;
@@ -31,6 +33,7 @@ type Props = {
     canImport?: boolean;
     officeDirectory?: boolean;
     attendanceDirectory?: boolean;
+    attendanceMonth?: string;
     canManageAttendance?: boolean;
     canLinkBiometricIds?: boolean;
     statusSummary?: { status: string; total: number }[];
@@ -62,6 +65,35 @@ type FormData = Record<string, string | number | boolean | null>;
 const emptyValue = (field: Field): string | number | boolean | null =>
     field.type === 'checkbox' ? false : '';
 
+function AttendanceBadge({
+    complete,
+    review,
+}: {
+    complete: number;
+    review: number;
+}) {
+    return (
+        <div className="space-y-1">
+            {review > 0 ? (
+                <Badge className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                    Needs review
+                </Badge>
+            ) : complete > 0 ? (
+                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                    Complete logs
+                </Badge>
+            ) : (
+                <Badge variant="secondary">No work logs</Badge>
+            )}
+            {complete + review > 0 && (
+                <p className="text-xs text-muted-foreground tabular-nums">
+                    {complete} complete · {review} to review
+                </p>
+            )}
+        </div>
+    );
+}
+
 export default function HrisResourceIndex({
     resource,
     title,
@@ -71,6 +103,7 @@ export default function HrisResourceIndex({
     canImport = false,
     officeDirectory = false,
     attendanceDirectory = false,
+    attendanceMonth,
     canManageAttendance = false,
     canLinkBiometricIds = false,
     statusSummary = [],
@@ -303,6 +336,31 @@ export default function HrisResourceIndex({
                             </Button>
                         )}
                     </nav>
+                )}
+
+                {attendanceMonth && (
+                    <Form
+                        key={attendanceMonth}
+                        action="/hris/attendance"
+                        method="get"
+                        className="flex flex-wrap items-end gap-3"
+                    >
+                        <label className="space-y-1 text-sm font-medium">
+                            <span>Attendance month</span>
+                            <Input
+                                name="month"
+                                type="month"
+                                defaultValue={attendanceMonth}
+                                required
+                            />
+                        </label>
+                        <Button type="submit" variant="outline">
+                            Show month
+                        </Button>
+                        <p className="basis-full text-sm text-muted-foreground">
+                            Badges summarize recorded workdays for this month.
+                        </p>
+                    </Form>
                 )}
 
                 {resource === 'employees' && statusSummary.length > 0 && (
@@ -676,9 +734,21 @@ export default function HrisResourceIndex({
                                                 key={field.name}
                                                 className="max-w-64 truncate px-3 py-3"
                                             >
-                                                {resource === 'employees' &&
-                                                field.name ===
-                                                    'employment_status' ? (
+                                                {field.name ===
+                                                'attendance_summary' ? (
+                                                    <AttendanceBadge
+                                                        complete={Number(
+                                                            row.attendance_complete_days ??
+                                                                0,
+                                                        )}
+                                                        review={Number(
+                                                            row.attendance_review_days ??
+                                                                0,
+                                                        )}
+                                                    />
+                                                ) : resource === 'employees' &&
+                                                  field.name ===
+                                                      'employment_status' ? (
                                                     <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">
                                                         {displayValue(
                                                             field,

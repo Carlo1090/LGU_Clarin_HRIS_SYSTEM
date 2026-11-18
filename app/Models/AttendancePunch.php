@@ -10,6 +10,8 @@ class AttendancePunch extends Model
 {
     public const UPDATED_AT = null;
 
+    public const DTR_PUNCH_COUNT = 4;
+
     /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {

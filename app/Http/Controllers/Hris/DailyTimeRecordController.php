@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Hris;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
 use App\Models\Employee;
 use Illuminate\Http\JsonResponse;
@@ -73,7 +74,7 @@ class DailyTimeRecordController extends Controller
             }
             $count = count($times);
             // Four ordered punches fill the four slots. Other counts need HR review.
-            $records[$day] = $count === 4
+            $records[$day] = $count === AttendancePunch::DTR_PUNCH_COUNT
                 ? array_combine(['amIn', 'amOut', 'pmIn', 'pmOut'], array_map(fn (string $time) => substr($time, 0, 5), $times))
                 : ['remarks' => "Review {$count} punch(es)"];
         }

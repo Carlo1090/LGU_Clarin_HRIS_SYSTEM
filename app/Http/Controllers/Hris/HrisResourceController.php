@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Hris;
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Models\Applicant;
+use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
 use App\Models\AuditLog;
 use App\Models\Department;
@@ -29,6 +30,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Password;
@@ -373,31 +375,50 @@ class HrisResourceController extends Controller
         $canManageAttendance = in_array($resource, ['attendance', 'employees'], true) && Gate::allows('manage-hris-resource', 'attendance');
         $canLinkBiometricIds = $resource === 'employees' && $canManageAttendance;
         if ($resource === 'attendance' && $request->query('view') !== 'entries') {
+            $filters = $request->validate([
+                'month' => ['sometimes', 'required', 'date_format:Y-m', 'regex:/^[1-9][0-9]{3}-/'],
+            ]);
+            $month = $filters['month'] ?? now('Asia/Manila')->format('Y-m');
+            $startDate = $month.'-01';
+            $endDate = Date::parse($startDate)->endOfMonth()->toDateString();
             $records = Employee::query()
                 ->when($departmentHead, fn ($query) => $departmentId
                     ? $query->where('department_id', $departmentId)
                     : $query->whereRaw('1 = 0'))
-                ->with('department:id,name')
+                ->with([
+                    'department:id,name',
+                    'attendanceRecords' => fn ($query) => $query->whereBetween('attendance_date', [$startDate, $endDate])
+                        ->latest('id')->select(['id', 'employee_id', 'attendance_date', 'time_in', 'time_out', 'status']),
+                ])
                 ->orderBy('last_name')->orderBy('first_name')->orderBy('id')
-                ->paginate(20, ['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id'])
-                ->through(fn (Employee $employee) => [
-                    'id' => $employee->id,
-                    'name' => trim("{$employee->last_name}, {$employee->first_name} {$employee->suffix}"),
-                    'employee_number' => $employee->employee_number,
-                    'department' => $employee->department?->name,
-                    'dtr_url' => route('hris.attendance.dtr', $employee, false),
-                ]);
+                ->paginate(20, ['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id', 'biometric_id'])
+                ->withQueryString();
+            $punchDays = AttendancePunch::query()
+                ->whereIn('biometric_id', $records->getCollection()->pluck('biometric_id')->filter())
+                ->whereBetween('punched_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
+                ->selectRaw('biometric_id, DATE(punched_at) as attendance_day, COUNT(*) as punch_count')
+                ->groupBy('biometric_id')->groupByRaw('DATE(punched_at)')
+                ->get()->groupBy('biometric_id');
+            $records->through(fn (Employee $employee) => [
+                'id' => $employee->id,
+                'name' => trim("{$employee->last_name}, {$employee->first_name} {$employee->suffix}"),
+                'employee_number' => $employee->employee_number,
+                'department' => $employee->department?->name,
+                'dtr_url' => route('hris.attendance.dtr', ['employee' => $employee, 'month' => $month], false),
+            ] + $this->attendanceLogSummary($employee, $punchDays->get($employee->biometric_id, collect())));
 
             return Inertia::render('hris/resources/index', [
                 'resource' => $resource,
                 'title' => $config['title'],
                 'attendanceDirectory' => true,
+                'attendanceMonth' => $month,
                 'canManageAttendance' => $canManageAttendance,
                 'canManage' => false,
                 'fields' => [
                     ['name' => 'name', 'label' => 'Employee', 'type' => 'text'],
                     ['name' => 'employee_number', 'label' => 'Employee number', 'type' => 'text'],
                     ['name' => 'department', 'label' => 'Department', 'type' => 'text'],
+                    ['name' => 'attendance_summary', 'label' => 'Attendance', 'type' => 'text'],
                 ],
                 'records' => $records,
             ]);
@@ -660,6 +681,36 @@ class HrisResourceController extends Controller
         }
 
         return to_route('hris.resources.index', $parameters);
+    }
+
+    /** @param Collection<int, AttendancePunch> $punchDays */
+    private function attendanceLogSummary(Employee $employee, Collection $punchDays): array
+    {
+        $complete = $review = 0;
+        $manualDays = $employee->attendanceRecords->unique('attendance_date')->keyBy('attendance_date');
+        foreach ($manualDays as $entry) {
+            $status = str_replace([' ', '-'], '_', strtolower(trim($entry->status)));
+            if (in_array($status, ['leave', 'on_leave', 'holiday', 'rest_day', 'day_off'], true)) {
+                continue;
+            }
+            if ($status === 'present' && $entry->time_in && $entry->time_out) {
+                $complete++;
+            } else {
+                $review++;
+            }
+        }
+        foreach ($punchDays as $day) {
+            if ($manualDays->has($day->attendance_day)) {
+                continue;
+            }
+            if ((int) $day->punch_count === AttendancePunch::DTR_PUNCH_COUNT) {
+                $complete++;
+            } else {
+                $review++;
+            }
+        }
+
+        return ['attendance_complete_days' => $complete, 'attendance_review_days' => $review];
     }
 
     /** @return array{model: class-string<Model>, title: string, fields: list<array{name: string, label: string, type: string, required?: bool, options?: string}>, rules: array<string, string>, unique: list<string>} */
