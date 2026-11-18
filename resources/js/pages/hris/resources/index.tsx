@@ -23,6 +23,7 @@ type Props = {
     resources: { key: string; title: string }[];
     fields: Field[];
     canManage: boolean;
+    leaveReviewStage?: [string, string, string] | null;
     records: {
         data: HrisRow[];
         links: { url: string | null; label: string; active: boolean }[];
@@ -48,8 +49,25 @@ export default function HrisResourceIndex({
     resources,
     fields,
     canManage,
+    leaveReviewStage,
     records,
 }: Props) {
+    const [reviewing, setReviewing] = useState(false);
+    const [reviewError, setReviewError] = useState('');
+    const hasActions = canManage || Boolean(leaveReviewStage);
+
+    function reviewLeave(id: number, decision: 'advance' | 'reject') {
+        if (!window.confirm(decision === 'reject' ? 'Reject this leave request?' : 'Confirm this leave decision?')) return;
+
+        setReviewError('');
+        setReviewing(true);
+        router.post(`/hris/leave-applications/${id}/review`, { decision }, {
+            preserveScroll: true,
+            onError: (errors) => setReviewError(errors.decision ?? 'The leave decision could not be saved.'),
+            onFinish: () => setReviewing(false),
+        });
+    }
+
     const [editingId, setEditingId] = useState<number | null>(null);
     const initialData = useMemo(
         () =>
@@ -110,6 +128,9 @@ export default function HrisResourceIndex({
 
     const displayValue = (field: Field, value: HrisValue | undefined) => {
         if (value === null || value === undefined || value === '') return '—';
+        if (resource === 'leave-applications' && field.name === 'status') {
+            return String(value).replaceAll('_', ' ');
+        }
         if (field.type === 'checkbox') return value ? 'Yes' : 'No';
         if (field.options)
             return (
@@ -303,6 +324,7 @@ export default function HrisResourceIndex({
                     </section>
                 )}
 
+                {reviewError && <p role="alert" className="text-sm text-destructive">{reviewError}</p>}
                 <section aria-labelledby="records-heading" className="overflow-hidden rounded-2xl border bg-card">
                     <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
                         <h2 id="records-heading" className="text-lg font-semibold tracking-tight">
@@ -327,7 +349,7 @@ export default function HrisResourceIndex({
                                             {field.label}
                                         </th>
                                     ))}
-                                    {canManage && (
+                                    {hasActions && (
                                         <th className="px-3 py-3 font-medium">
                                             Actions
                                         </th>
@@ -349,6 +371,20 @@ export default function HrisResourceIndex({
                                                 )}
                                             </td>
                                         ))}
+                                        {leaveReviewStage && (
+                                            <td className="whitespace-nowrap px-3 py-3">
+                                                {row.status === leaveReviewStage[0] && (
+                                                    <>
+                                                        <button type="button" disabled={reviewing} onClick={() => reviewLeave(row.id, 'advance')} className="mr-2 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground disabled:opacity-50">
+                                                            {leaveReviewStage[2]}
+                                                        </button>
+                                                        <button type="button" disabled={reviewing} onClick={() => reviewLeave(row.id, 'reject')} className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50">
+                                                            Reject
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </td>
+                                        )}
                                         {canManage && (
                                             <td className="px-3 py-3 whitespace-nowrap">
                                                 <button
@@ -374,7 +410,7 @@ export default function HrisResourceIndex({
                                         <td
                                             colSpan={
                                                 fields.length +
-                                                (canManage ? 2 : 1)
+                                                (hasActions ? 2 : 1)
                                             }
                                             className="px-3 py-8 text-center text-muted-foreground"
                                         >

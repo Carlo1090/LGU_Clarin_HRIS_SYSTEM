@@ -9,7 +9,7 @@ class AttendanceCorrection extends Model
 {
     protected $table = 'attendance_corrections';
 
-    protected $fillable = ['attendance_record_id', 'employee_id', 'correction_type', 'reason', 'approved_by', 'approved_at'];
+    protected $fillable = ['attendance_record_id', 'employee_id', 'correction_type', 'reason', 'proposed_time_in', 'proposed_time_out', 'status', 'approved_by', 'approved_at'];
 
     public function attendanceRecord(): BelongsTo
     {

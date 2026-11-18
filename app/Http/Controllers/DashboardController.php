@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Hris\PortalController;
 use App\Models\AttendanceRecord;
 use App\Models\AuditLog;
 use App\Models\Department;
@@ -30,6 +31,9 @@ class DashboardController extends Controller
         $user = $request->user();
         $role = $user->role?->name;
         $employee = $user->employee;
+        if ($role === 'Employee' && $employee && $employee->user_id !== $user->id) {
+            $employee = null;
+        }
         $departmentId = $employee?->department_id;
         $departmentEmployees = Employee::query()->where('department_id', $departmentId ?? 0);
         $departmentAttendanceIssues = $departmentId
@@ -46,7 +50,7 @@ class DashboardController extends Controller
             'Employee' => [
                 $this->card('Attendance this month', $employee ? AttendanceRecord::query()->where('employee_id', $employee->id)->whereBetween('attendance_date', [now()->startOfMonth(), now()->endOfMonth()])->count() : 0),
                 $this->card('Available leave days', $employee ? LeaveCredit::query()->where('employee_id', $employee->id)->sum('remaining_days') : 0),
-                $this->card('Payslips', $employee ? Payslip::query()->where('employee_id', $employee->id)->count() : 0),
+                $this->card('Payslips', $employee ? Payslip::query()->releasedForEmployee($employee->id)->count() : 0),
                 $this->card('Pending leave requests', $employee ? LeaveApplication::query()->where('employee_id', $employee->id)->where('status', 'pending')->count() : 0),
             ],
             'Department Head' => [
@@ -125,7 +129,10 @@ class DashboardController extends Controller
         return Inertia::render('dashboard', [
             'role' => $role ?? 'Unassigned',
             'cards' => $cards,
-            'links' => $links,
+            'links' => [
+                ...array_map(fn (array $item) => ['label' => $item['title'], 'href' => $item['href']], PortalController::navigation($user)),
+                ...$links,
+            ],
         ]);
     }
 

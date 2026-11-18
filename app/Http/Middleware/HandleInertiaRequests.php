@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Http\Controllers\Hris\HrisResourceController;
+use App\Http\Controllers\Hris\PortalController;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -44,7 +45,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'isHrmoWorkspace' => fn (): bool => in_array($request->user()?->role?->name, ['HRMO Head', 'HR Officer'], true),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'hrisNavigation' => fn (): array => $request->user() ? HrisResourceController::navigation() : [],
+            'hrisNavigation' => fn (): array => $request->user() ? [...PortalController::navigation($request->user()), ...HrisResourceController::navigation()] : [],
         ];
     }
 }

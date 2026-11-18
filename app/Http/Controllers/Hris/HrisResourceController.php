@@ -305,7 +305,7 @@ class HrisResourceController extends Controller
     {
         Gate::authorize('view-hris-resource', $resource);
         $config = $this->resourceConfig($resource);
-        $fields = $this->fieldsWithOptions($config['fields']);
+        $fields = $this->fieldsWithOptions($config['fields'], $request->user());
         $model = $config['model'];
         $query = $model::query();
 
@@ -330,7 +330,8 @@ class HrisResourceController extends Controller
                 ->filter(fn (array $item, string $key) => Gate::allows('view-hris-resource', $key))
                 ->map(fn (array $item, string $key) => ['key' => $key, 'title' => $item['title']])
                 ->values(),
-            'canManage' => Gate::allows('manage-hris-resource', $resource),
+            'canManage' => $resource !== 'leave-applications' && Gate::allows('manage-hris-resource', $resource),
+            'leaveReviewStage' => $resource === 'leave-applications' ? LeaveReviewController::stage($request->user()) : null,
             'fields' => $fields,
             'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()] + collect($config['fields'])->mapWithKeys(
                 fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])]
@@ -341,6 +342,7 @@ class HrisResourceController extends Controller
 
     public function store(Request $request, string $resource): RedirectResponse
     {
+        abort_if($resource === 'leave-applications', 403);
         Gate::authorize('manage-hris-resource', $resource);
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
@@ -353,6 +355,7 @@ class HrisResourceController extends Controller
 
     public function update(Request $request, string $resource, int $record): RedirectResponse
     {
+        abort_if($resource === 'leave-applications', 403);
         Gate::authorize('manage-hris-resource', $resource);
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
@@ -366,6 +369,7 @@ class HrisResourceController extends Controller
 
     public function destroy(string $resource, int $record): RedirectResponse
     {
+        abort_if($resource === 'leave-applications', 403);
         Gate::authorize('manage-hris-resource', $resource);
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
@@ -397,12 +401,17 @@ class HrisResourceController extends Controller
         return $rules;
     }
 
-    private function fieldsWithOptions(array $fields): array
+    private function fieldsWithOptions(array $fields, User $user): array
     {
+        $employees = Employee::query();
+        if ($user->role?->name === 'Department Head') {
+            $employees->where('department_id', $user->employee?->department_id ?? 0);
+        }
+
         $optionQueries = [
             'departments' => Department::query()->orderBy('name')->pluck('name', 'id'),
             'positions' => Position::query()->orderBy('title')->pluck('title', 'id'),
-            'employees' => Employee::query()->orderBy('employee_number')->get()->mapWithKeys(fn (Employee $employee) => [
+            'employees' => $employees->orderBy('employee_number')->get()->mapWithKeys(fn (Employee $employee) => [
                 $employee->id => $employee->employee_number.' — '.$employee->first_name.' '.$employee->last_name,
             ]),
             'leave-types' => LeaveType::query()->orderBy('name')->pluck('name', 'id'),
