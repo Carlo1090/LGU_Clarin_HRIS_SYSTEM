@@ -26,12 +26,13 @@ use App\Support\EmployeeImportTemplate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class HrisResourceController extends Controller
 {
@@ -501,7 +502,9 @@ class HrisResourceController extends Controller
                 $data = $this->validatedPlantillaData($request);
                 $employee = $this->resolvePlantillaEmployee($data);
                 $this->savePlantillaEmployee($employee, $request->all());
-                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) unset($data[$field]);
+                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) {
+                    unset($data[$field]);
+                }
                 PlantillaItem::query()->create($data + ['employee_id' => $employee?->id]);
             });
             Inertia::flash('toast', ['type' => 'success', 'message' => 'Plantilla position record created.']);
@@ -526,7 +529,9 @@ class HrisResourceController extends Controller
                 $data = $this->validatedPlantillaData($request, $item);
                 $employee = $this->resolvePlantillaEmployee($data, $item);
                 $this->savePlantillaEmployee($employee, $request->all());
-                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) unset($data[$field]);
+                foreach (['employee_number', ...$this->employeePlantillaFields()] as $field) {
+                    unset($data[$field]);
+                }
                 $item->update($data + ['employee_id' => $employee?->id]);
             });
             Inertia::flash('toast', ['type' => 'success', 'message' => 'Plantilla position record updated.']);
@@ -562,7 +567,7 @@ class HrisResourceController extends Controller
         return self::RESOURCES[$resource];
     }
 
-    private function plantillaDepartments(): \Illuminate\Support\Collection
+    private function plantillaDepartments(): Collection
     {
         return collect(Department::PLANTILLA_OFFICES)->union(
             Department::query()->whereNotIn('code', array_keys(Department::PLANTILLA_OFFICES))->orderBy('name')->pluck('name', 'code'),

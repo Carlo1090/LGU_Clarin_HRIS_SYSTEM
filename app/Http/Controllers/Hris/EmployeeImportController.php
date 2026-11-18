@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Hris;
 
 use App\Imports\EmployeeSpreadsheetImport;
 use App\Support\EmployeeImportTemplate;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class EmployeeImportController
 {
@@ -16,6 +17,7 @@ class EmployeeImportController
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
         $path = storage_path('app/private/'.uniqid('employee-template-').'.xlsx');
         $template->download($path, $template->statuses());
+
         return response()->download($path, 'EMPLOYEE-BULK-IMPORT-TEMPLATE.xlsx')->deleteFileAfterSend();
     }
 
@@ -26,7 +28,7 @@ class EmployeeImportController
         return Inertia::render('hris/import-employees', ['statusOptions' => $template->statuses(), 'columns' => $template->columns()]);
     }
 
-    public function updateTemplate(Request $request, EmployeeImportTemplate $template): \Illuminate\Http\RedirectResponse
+    public function updateTemplate(Request $request, EmployeeImportTemplate $template): RedirectResponse
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
         $input = $request->validate([
@@ -79,5 +81,4 @@ class EmployeeImportController
             'credentials' => $result['credentials'],
         ]);
     }
-
 }

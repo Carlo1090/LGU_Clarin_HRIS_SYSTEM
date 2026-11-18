@@ -46,9 +46,9 @@ class EmployeeSpreadsheetImportTest extends TestCase
 
         $this->actingAs($actor)->get(route('hris.resources.index', ['resource' => 'departments']))
             ->assertOk()->assertInertia(fn ($page) => $page
-                ->has('records.data', 15)
-                ->where('records.data.0.code', $legacy->code)
-                ->where('records.data.0.name', $legacy->name));
+            ->has('records.data', 15)
+            ->where('records.data.0.code', $legacy->code)
+            ->where('records.data.0.name', $legacy->name));
     }
 
     public function test_employee_template_matches_employee_fields_and_includes_eligibility_dropdown(): void
@@ -94,9 +94,13 @@ class EmployeeSpreadsheetImportTest extends TestCase
             $this->actingAs($hrmo)->get(route('hris.employees.import.template'))
                 ->assertOk()->assertDownload('EMPLOYEE-BULK-IMPORT-TEMPLATE.xlsx');
         } finally {
-            if (is_file($path)) unlink($path);
+            if (is_file($path)) {
+                unlink($path);
+            }
             if ($previousConfig === null) {
-                if (is_file($configPath)) unlink($configPath);
+                if (is_file($configPath)) {
+                    unlink($configPath);
+                }
             } else {
                 file_put_contents($configPath, $previousConfig, LOCK_EX);
             }
@@ -154,21 +158,28 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $zip->addFromString('xl/workbook.xml', '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="EMPLOYEES" sheetId="1" r:id="rId1"/></sheets></workbook>');
         $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
         $sheetRows = [$headers];
-        foreach ($rows as $row) $sheetRows[] = array_map(fn ($header) => $row[$header] ?? '', $headers);
+        foreach ($rows as $row) {
+            $sheetRows[] = array_map(fn ($header) => $row[$header] ?? '', $headers);
+        }
         $xml = '';
         foreach ($sheetRows as $rowIndex => $cells) {
             $rowNumber = $rowIndex + 1;
             $xml .= '<row r="'.$rowNumber.'">';
             foreach ($cells as $index => $value) {
-                if ($value === '') continue;
+                if ($value === '') {
+                    continue;
+                }
                 $column = '';
-                for ($number = $index + 1; $number > 0; $number = intdiv($number - 1, 26)) $column = chr(65 + (($number - 1) % 26)).$column;
+                for ($number = $index + 1; $number > 0; $number = intdiv($number - 1, 26)) {
+                    $column = chr(65 + (($number - 1) % 26)).$column;
+                }
                 $xml .= '<c r="'.$column.$rowNumber.'" t="inlineStr"><is><t>'.htmlspecialchars((string) $value, ENT_XML1).'</t></is></c>';
             }
             $xml .= '</row>';
         }
         $zip->addFromString('xl/worksheets/sheet1.xml', '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'.$xml.'</sheetData></worksheet>');
         $zip->close();
+
         return new UploadedFile($path, 'employees.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', UPLOAD_ERR_OK, true);
     }
 }
