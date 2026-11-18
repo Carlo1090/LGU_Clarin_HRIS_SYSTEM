@@ -1,9 +1,11 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { ArrowLeft } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { index } from '@/routes/hris/resources';
 
 type PreviewRow = {
     row: number;
@@ -76,6 +78,17 @@ export default function ImportEmployees({
             <Head title="Bulk import employees" />
             <main className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-8">
                 <header>
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="mb-4"
+                    >
+                        <Link href={index('employees')}>
+                            <ArrowLeft aria-hidden="true" />
+                            Back to Employees
+                        </Link>
+                    </Button>
                     <h1 className="text-2xl font-semibold">
                         Bulk import employees
                     </h1>
