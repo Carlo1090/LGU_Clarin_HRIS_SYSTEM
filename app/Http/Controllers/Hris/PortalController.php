@@ -188,6 +188,7 @@ class PortalController extends Controller
             'missingEmployee' => $employee === null,
             'dtrPreviewUrl' => $page === 'my-attendance' && $employee ? route('hris.attendance.dtr', $employee, false) : null,
             'dtrDemoUrl' => $page === 'my-attendance' ? route('hris.attendance.dtr.demo', absolute: false) : null,
+            'canPreviewLeaveForm' => $page === 'my-leave-requests',
             'leaveTypes' => $page === 'my-leave-requests' && $employee
                 ? LeaveType::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])
                 : null,

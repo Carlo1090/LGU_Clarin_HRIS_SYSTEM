@@ -108,7 +108,7 @@ export default function DailyTimeRecordDialog({
             </DialogTrigger>
             <DialogContent
                 aria-describedby={undefined}
-                data-dtr-preview=""
+                data-print-preview=""
                 className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl"
             >
                 <DialogTitle className="pr-8 print:hidden">

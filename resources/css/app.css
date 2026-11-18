@@ -233,12 +233,12 @@
 }
 
 @media print {
-    body:has(> [data-dtr-preview][data-state='open'])
-        > :not([data-dtr-preview]) {
+    body:has(> [data-print-preview][data-state='open'])
+        > :not([data-print-preview]) {
         display: none !important;
     }
 
-    [data-dtr-preview][data-state='open'] {
+    [data-print-preview][data-state='open'] {
         position: static;
         display: block;
         max-width: none;
@@ -251,8 +251,8 @@
         box-shadow: none;
     }
 
-    [data-dtr-preview] > [data-slot='dialog-title'],
-    [data-dtr-preview] > button {
+    [data-print-preview] > [data-slot='dialog-title'],
+    [data-print-preview] > button {
         display: none;
     }
 }

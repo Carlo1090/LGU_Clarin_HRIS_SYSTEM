@@ -3,6 +3,7 @@ import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BiometricIdField from '@/components/biometric-id-field';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
+import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
 import { Button } from '@/components/ui/button';
 
 type Field = {
@@ -248,6 +249,9 @@ export default function HrisResourceIndex({
                                     Bulk Import Employees
                                 </Link>
                             </Button>
+                        )}
+                        {resource === 'leave-applications' && (
+                            <LeaveFormDemoDialog />
                         )}
                     </div>
                 </header>
