@@ -9,7 +9,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
@@ -37,15 +36,17 @@ export default function Login({ status, canResetPassword }: Props) {
                     <>
                         <div className="space-y-5">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="email">
+                                    Email or Employee Number
+                                </Label>
                                 <Input
                                     id="email"
-                                    type="email"
+                                    type="text"
                                     name="email"
                                     required
                                     autoFocus
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
+                                    autoComplete="username"
+                                    placeholder="Email or employee number"
                                     aria-invalid={!!errors.email}
                                     aria-describedby={
                                         errors.email ? 'email-error' : undefined
@@ -117,13 +118,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             </Button>
                         </div>
                         <p className="text-center text-sm leading-6 text-muted-foreground">
-                            Don&apos;t have an account?{' '}
-                            <TextLink
-                                href={register()}
-                                className="font-semibold text-accent-foreground"
-                            >
-                                Create an account
-                            </TextLink>
+                            Contact HRMO for an account invitation.
                         </p>
                     </>
                 )}

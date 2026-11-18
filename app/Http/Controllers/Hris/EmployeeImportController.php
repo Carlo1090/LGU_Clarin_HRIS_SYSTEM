@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Http\Controllers\Hris;
+
+use App\Imports\EmployeeSpreadsheetImport;
+use App\Support\EmployeeImportTemplate;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class EmployeeImportController
+{
+    public function downloadTemplate(Request $request, EmployeeImportTemplate $template): BinaryFileResponse
+    {
+        abort_unless($request->user()->role?->name === 'HRMO Head', 403);
+        $path = storage_path('app/private/'.uniqid('employee-template-').'.xlsx');
+        $template->download($path, $template->statuses());
+        return response()->download($path, 'EMPLOYEE-BULK-IMPORT-TEMPLATE.xlsx')->deleteFileAfterSend();
+    }
+
+    public function create(Request $request, EmployeeImportTemplate $template): Response
+    {
+        abort_unless($request->user()->role?->name === 'HRMO Head', 403);
+
+        return Inertia::render('hris/import-employees', ['statusOptions' => $template->statuses(), 'columns' => $template->columns()]);
+    }
+
+    public function updateTemplate(Request $request, EmployeeImportTemplate $template): \Illuminate\Http\RedirectResponse
+    {
+        abort_unless($request->user()->role?->name === 'HRMO Head', 403);
+        $input = $request->validate([
+            'columns' => ['required', 'array', 'min:4', 'max:40'],
+            'columns.*.key' => ['nullable', 'string', 'max:100'],
+            'columns.*.label' => ['required', 'string', 'max:64'],
+            'status_options' => ['required', 'array', 'min:1', 'max:8'],
+            'status_options.*' => ['required', 'string', 'max:30', 'not_regex:/,/'],
+        ]);
+        $statuses = collect($input['status_options'])->map(fn ($status) => trim($status))->filter()->unique()->values();
+        abort_if($statuses->isEmpty() || $statuses->count() !== count($input['status_options']), 422, 'Enter distinct status names without blank values.');
+        abort_if(strlen($statuses->implode(',')) > 253, 422, 'The combined status choices are too long for Excel’s dropdown.');
+        $template->save($input['columns'], $statuses->all());
+
+        return back()->with('success', 'Employee template columns and choices updated.');
+    }
+
+    public function preview(Request $request, EmployeeSpreadsheetImport $import, EmployeeImportTemplate $template): Response
+    {
+        abort_unless($request->user()->role?->name === 'HRMO Head', 403);
+        $input = $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx', 'max:10240'],
+        ]);
+        $rows = $import->parse($request->file('file'));
+        $token = bin2hex(random_bytes(32));
+        $request->session()->put('employee_import.'.$token, $rows);
+
+        return Inertia::render('hris/import-employees', [
+            'statusOptions' => $template->statuses(),
+            'columns' => $template->columns(),
+            'rows' => collect($rows)->map(fn ($row) => collect($row)->except('data')->all())->values(),
+            'token' => $token,
+        ]);
+    }
+
+    public function store(Request $request, EmployeeSpreadsheetImport $import): Response
+    {
+        abort_unless($request->user()->role?->name === 'HRMO Head', 403);
+        $input = $request->validate([
+            'token' => ['required', 'string', 'size:64'],
+            'approval_reference' => ['required', 'string', 'max:100'],
+        ]);
+        $rows = $request->session()->pull('employee_import.'.$input['token']);
+        abort_unless(is_array($rows) && count($rows), 410, 'Import preview expired. Upload the workbook again.');
+        abort_if(collect($rows)->contains(fn ($row) => ! $row['valid']), 422, 'Fix all spreadsheet row errors and preview the corrected workbook.');
+        $result = $import->commit($rows, $request->user(), $input['approval_reference']);
+
+        return Inertia::render('hris/import-employees', [
+            'result' => collect($result)->except('credentials')->all(),
+            'credentials' => $result['credentials'],
+        ]);
+    }
+
+}

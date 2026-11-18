@@ -1,5 +1,4 @@
-import { Link } from '@inertiajs/react';
-import { ArrowLeft, FileText, ShieldCheck } from 'lucide-react';
+import { FileText, ShieldCheck } from 'lucide-react';
 import PublicHeader from '@/components/public-header';
 import {
     Card,
@@ -7,7 +6,6 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card';
-import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
 export default function AuthSimpleLayout({

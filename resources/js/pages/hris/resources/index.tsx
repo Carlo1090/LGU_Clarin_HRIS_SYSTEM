@@ -10,10 +10,11 @@ type Field = {
     options?: { value: number; label: string }[];
 };
 
-type HrisValue = string | number | boolean | null;
+type HrisValue = string | number | boolean | null | undefined;
 
 type HrisRow = {
-    id: number;
+    id: number | string;
+    canManage?: boolean;
     [key: string]: HrisValue;
 };
 
@@ -24,6 +25,9 @@ type Props = {
     fields: Field[];
     canManage: boolean;
     leaveReviewStage?: [string, string, string] | null;
+    canImport?: boolean;
+    officeDirectory?: boolean;
+    statusSummary?: { status: string; total: number }[];
     records: {
         data: HrisRow[];
         links: { url: string | null; label: string; active: boolean }[];
@@ -32,7 +36,8 @@ type Props = {
 
 const moduleDescriptions: Record<string, string> = {
     employees: 'Maintain personnel records and review employee assignments.',
-    departments: 'Review municipal offices and maintain department information.',
+    departments:
+        'Review municipal offices and maintain department information.',
     attendance: 'Review and maintain employee time and attendance records.',
     'leave-applications': 'Review employee leave requests and their status.',
     vacancies: 'Track open positions and recruitment deadlines.',
@@ -50,6 +55,9 @@ export default function HrisResourceIndex({
     fields,
     canManage,
     leaveReviewStage,
+    canImport = false,
+    officeDirectory = false,
+    statusSummary = [],
     records,
 }: Props) {
     const [reviewing, setReviewing] = useState(false);
@@ -57,18 +65,33 @@ export default function HrisResourceIndex({
     const hasActions = canManage || Boolean(leaveReviewStage);
 
     function reviewLeave(id: number, decision: 'advance' | 'reject') {
-        if (!window.confirm(decision === 'reject' ? 'Reject this leave request?' : 'Confirm this leave decision?')) return;
+        if (
+            !window.confirm(
+                decision === 'reject'
+                    ? 'Reject this leave request?'
+                    : 'Confirm this leave decision?',
+            )
+        )
+            return;
 
         setReviewError('');
         setReviewing(true);
-        router.post(`/hris/leave-applications/${id}/review`, { decision }, {
-            preserveScroll: true,
-            onError: (errors) => setReviewError(errors.decision ?? 'The leave decision could not be saved.'),
-            onFinish: () => setReviewing(false),
-        });
+        router.post(
+            `/hris/leave-applications/${id}/review`,
+            { decision },
+            {
+                preserveScroll: true,
+                onError: (errors) =>
+                    setReviewError(
+                        errors.decision ??
+                            'The leave decision could not be saved.',
+                    ),
+                onFinish: () => setReviewing(false),
+            },
+        );
     }
 
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<number | string | null>(null);
     const initialData = useMemo(
         () =>
             Object.fromEntries(
@@ -101,7 +124,9 @@ export default function HrisResourceIndex({
 
     const edit = (row: HrisRow) => {
         setEditingId(row.id);
-        document.getElementById('record-editor')?.scrollIntoView({ block: 'start' });
+        document
+            .getElementById('record-editor')
+            ?.scrollIntoView({ block: 'start' });
         form.setData(
             Object.fromEntries(
                 fields.map((field) => [
@@ -138,6 +163,25 @@ export default function HrisResourceIndex({
                     (option) => String(option.value) === String(value),
                 )?.label ?? String(value)
             );
+        if (resource === 'employees' && field.name === 'appointment_status') {
+            return (
+                (
+                    {
+                        P: 'Permanent',
+                        E: 'Elected',
+                        T: 'Temporary',
+                        S: 'Substitute',
+                        CT: 'Casual Temporary',
+                        PA: 'Permanent Acting',
+                        FT: 'Fixed Term',
+                    } as Record<string, string>
+                )[String(value)] ?? String(value)
+            );
+        }
+        if (resource === 'employees' && field.name === 'employment_status')
+            return String(value)
+                .replaceAll('_', ' ')
+                .replace(/\b\w/g, (letter) => letter.toUpperCase());
         return value;
     };
 
@@ -146,13 +190,20 @@ export default function HrisResourceIndex({
             <Head title={title} />
             <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
                 <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                    <div aria-hidden="true" className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30" />
-                    <div aria-hidden="true" className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10" />
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
+                    />
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
+                    />
                     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
                         {title}
                     </h1>
                     <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                        {moduleDescriptions[resource] ?? 'Manage HRIS records and their linked data.'}
+                        {moduleDescriptions[resource] ??
+                            'Manage HRIS records and their linked data.'}
                     </p>
                 </header>
 
@@ -164,18 +215,44 @@ export default function HrisResourceIndex({
                             <Link
                                 key={item.key}
                                 href={`/hris/${item.key}`}
-                                aria-current={resource === item.key ? 'page' : undefined}
+                                aria-current={
+                                    resource === item.key ? 'page' : undefined
+                                }
                                 className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground"
                             >
-                                <Icon aria-hidden="true" className="size-4 shrink-0" />
+                                <Icon
+                                    aria-hidden="true"
+                                    className="size-4 shrink-0"
+                                />
                                 {item.title}
                             </Link>
                         );
                     })}
                 </nav>
 
+                {resource === 'employees' && statusSummary.length > 0 && (
+                    <section
+                        aria-label="Employees by status"
+                        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                    >
+                        {statusSummary.map(({ status, total }) => (
+                            <div key={status} className="rounded-lg border p-4">
+                                <p className="text-sm text-muted-foreground capitalize">
+                                    {status.replaceAll('_', ' ')}
+                                </p>
+                                <p className="mt-1 text-2xl font-semibold">
+                                    {total}
+                                </p>
+                            </div>
+                        ))}
+                    </section>
+                )}
+
                 {canManage && (
-                    <section id="record-editor" className="scroll-mt-20 rounded-2xl border bg-card p-5 sm:p-6">
+                    <section
+                        id="record-editor"
+                        className="scroll-mt-20 rounded-2xl border bg-card p-5 sm:p-6"
+                    >
                         <h2 className="mb-4 text-lg font-medium">
                             {editingId ? 'Edit record' : 'Add record'}
                         </h2>
@@ -324,10 +401,36 @@ export default function HrisResourceIndex({
                     </section>
                 )}
 
-                {reviewError && <p role="alert" className="text-sm text-destructive">{reviewError}</p>}
-                <section aria-labelledby="records-heading" className="overflow-hidden rounded-2xl border bg-card">
+                {resource === 'employees' && canImport && (
+                    <Link
+                        href="/hris/employees/import"
+                        className="inline-flex rounded-md border px-3 py-2 text-sm hover:bg-muted"
+                    >
+                        Bulk import Plantilla Excel
+                    </Link>
+                )}
+
+                {officeDirectory && (
+                    <p className="text-sm text-muted-foreground">
+                        Fixed municipal offices from the approved 2025
+                        plantilla.
+                    </p>
+                )}
+
+                {reviewError && (
+                    <p role="alert" className="text-sm text-destructive">
+                        {reviewError}
+                    </p>
+                )}
+                <section
+                    aria-labelledby="records-heading"
+                    className="overflow-hidden rounded-2xl border bg-card"
+                >
                     <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
-                        <h2 id="records-heading" className="text-lg font-semibold tracking-tight">
+                        <h2
+                            id="records-heading"
+                            className="text-lg font-semibold tracking-tight"
+                        >
                             Records
                         </h2>
                         <span className="text-sm text-muted-foreground">
@@ -358,49 +461,103 @@ export default function HrisResourceIndex({
                             </thead>
                             <tbody>
                                 {records.data.map((row) => (
-                                    <tr key={row.id} className="border-t transition-colors hover:bg-muted/60">
+                                    <tr
+                                        key={row.id}
+                                        className="border-t transition-colors hover:bg-muted/60"
+                                    >
                                         <td className="px-3 py-3">{row.id}</td>
                                         {fields.map((field) => (
                                             <td
                                                 key={field.name}
                                                 className="max-w-64 truncate px-3 py-3"
                                             >
-                                                {displayValue(
-                                                    field,
-                                                    row[field.name],
+                                                {resource === 'employees' &&
+                                                field.name ===
+                                                    'employment_status' ? (
+                                                    <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">
+                                                        {displayValue(
+                                                            field,
+                                                            row[field.name],
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    displayValue(
+                                                        field,
+                                                        row[field.name],
+                                                    )
                                                 )}
                                             </td>
                                         ))}
                                         {leaveReviewStage && (
-                                            <td className="whitespace-nowrap px-3 py-3">
-                                                {row.status === leaveReviewStage[0] && (
+                                            <td className="px-3 py-3 whitespace-nowrap">
+                                                {typeof row.id === 'number' &&
+                                                    row.status ===
+                                                        leaveReviewStage[0] && (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                disabled={
+                                                                    reviewing
+                                                                }
+                                                                onClick={() =>
+                                                                    reviewLeave(
+                                                                        Number(
+                                                                            row.id,
+                                                                        ),
+                                                                        'advance',
+                                                                    )
+                                                                }
+                                                                className="mr-2 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground disabled:opacity-50"
+                                                            >
+                                                                {
+                                                                    leaveReviewStage[2]
+                                                                }
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={
+                                                                    reviewing
+                                                                }
+                                                                onClick={() =>
+                                                                    reviewLeave(
+                                                                        Number(
+                                                                            row.id,
+                                                                        ),
+                                                                        'reject',
+                                                                    )
+                                                                }
+                                                                className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </>
+                                                    )}
+                                            </td>
+                                        )}
+                                        {hasActions && !leaveReviewStage && (
+                                            <td className="px-3 py-3 whitespace-nowrap">
+                                                {row.canManage !== false && (
                                                     <>
-                                                        <button type="button" disabled={reviewing} onClick={() => reviewLeave(row.id, 'advance')} className="mr-2 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground disabled:opacity-50">
-                                                            {leaveReviewStage[2]}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                edit(row)
+                                                            }
+                                                            className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
+                                                        >
+                                                            Edit
                                                         </button>
-                                                        <button type="button" disabled={reviewing} onClick={() => reviewLeave(row.id, 'reject')} className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50">
-                                                            Reject
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                remove(row)
+                                                            }
+                                                            className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10"
+                                                        >
+                                                            Delete
                                                         </button>
                                                     </>
                                                 )}
-                                            </td>
-                                        )}
-                                        {canManage && (
-                                            <td className="px-3 py-3 whitespace-nowrap">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => edit(row)}
-                                                    className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => remove(row)}
-                                                    className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10"
-                                                >
-                                                    Delete
-                                                </button>
                                             </td>
                                         )}
                                     </tr>

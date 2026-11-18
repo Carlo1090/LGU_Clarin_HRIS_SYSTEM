@@ -15,6 +15,7 @@ import ManageTwoFactor from '@/components/manage-two-factor';
 // oxfmt-ignore
 type Props = {
     passwordRules: string;
+    requiresMfaEnrollment: boolean;
 } & ManagePasskeysProps &
     ManageTwoFactorProps;
 
@@ -29,6 +30,15 @@ export default function Security(props: Props) {
             <h1 className="sr-only">Security settings</h1>
 
             <div className="space-y-6">
+                {props.requiresMfaEnrollment && (
+                    <p
+                        role="status"
+                        className="rounded-lg border bg-muted p-4 text-sm"
+                    >
+                        Set up two-factor authentication below to open your HRIS
+                        dashboard.
+                    </p>
+                )}
                 <Heading
                     variant="small"
                     title="Update password"

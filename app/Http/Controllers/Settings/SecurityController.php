@@ -19,6 +19,7 @@ class SecurityController extends Controller
     public function edit(TwoFactorAuthenticationRequest $request): Response
     {
         $props = [
+            'requiresMfaEnrollment' => (bool) $request->user()->requires_mfa && ! $request->user()->hasEnabledTwoFactorAuthentication(),
             'canManageTwoFactor' => Features::canManageTwoFactorAuthentication(),
             'canManagePasskeys' => Features::canManagePasskeys(),
             'passkeys' => Features::canManagePasskeys()
@@ -55,9 +56,10 @@ class SecurityController extends Controller
      */
     public function update(PasswordUpdateRequest $request): RedirectResponse
     {
-        $request->user()->update([
+        $request->user()->forceFill([
             'password' => $request->password,
-        ]);
+            'must_change_password' => false,
+        ])->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 

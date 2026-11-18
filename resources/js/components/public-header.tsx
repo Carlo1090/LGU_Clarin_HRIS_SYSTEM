@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import AppLogo from '@/components/app-logo';
 import AppearanceToggle from '@/components/appearance-toggle';
 import { Button } from '@/components/ui/button';
-import { dashboard, home, login, register } from '@/routes';
+import { dashboard, home, login } from '@/routes';
 
 const navigation = [
     { id: 'departments', label: 'Offices' },
@@ -34,14 +34,18 @@ export default function PublicHeader({
 
         function updateActiveSection() {
             const marker = (headerRef.current?.offsetHeight ?? 0) + 40;
-            const current = [...sections].reverse().find(
-                (section) => section.getBoundingClientRect().top <= marker,
-            );
+            const current = [...sections]
+                .reverse()
+                .find(
+                    (section) => section.getBoundingClientRect().top <= marker,
+                );
             setActiveSection(current?.id);
         }
 
         updateActiveSection();
-        window.addEventListener('scroll', updateActiveSection, { passive: true });
+        window.addEventListener('scroll', updateActiveSection, {
+            passive: true,
+        });
         window.addEventListener('resize', updateActiveSection);
 
         return () => {
@@ -51,7 +55,10 @@ export default function PublicHeader({
     }, [showNavigation]);
 
     return (
-        <header ref={headerRef} className="sticky top-0 z-50 border-b border-border/60 bg-background/95 backdrop-blur-md">
+        <header
+            ref={headerRef}
+            className="sticky top-0 z-50 border-b border-border/60 bg-background/95 backdrop-blur-md"
+        >
             <nav
                 aria-label="Main navigation"
                 className="mx-auto flex min-h-20 w-full max-w-6xl flex-wrap items-center justify-between gap-x-3 px-4 sm:px-6 lg:flex-nowrap lg:px-10"
@@ -69,7 +76,11 @@ export default function PublicHeader({
                             <a
                                 key={id}
                                 href={`#${id}`}
-                                aria-current={activeSection === id ? 'location' : undefined}
+                                aria-current={
+                                    activeSection === id
+                                        ? 'location'
+                                        : undefined
+                                }
                                 onClick={() => setActiveSection(id)}
                                 className="shrink-0 rounded-md px-2.5 py-2 transition-[scale,color] duration-200 ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring aria-[current=location]:scale-110 aria-[current=location]:text-foreground motion-reduce:transition-none motion-reduce:aria-[current=location]:scale-100 dark:aria-[current=location]:text-white"
                             >
@@ -92,13 +103,6 @@ export default function PublicHeader({
                                 className="rounded-full px-3 text-xs sm:text-sm"
                             >
                                 <Link href={login()}>Log in</Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="rounded-full border-primary bg-accent px-3 text-xs text-accent-foreground hover:bg-primary hover:text-primary-foreground sm:px-4 sm:text-sm"
-                            >
-                                <Link href={register()}>Get started</Link>
                             </Button>
                         </>
                     )}

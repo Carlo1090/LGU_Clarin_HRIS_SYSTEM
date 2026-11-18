@@ -13,7 +13,7 @@ import {
     UserCheck,
 } from 'lucide-react';
 import PublicHeader from '@/components/public-header';
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login } from '@/routes';
 
 export default function Welcome() {
     const { auth } = usePage().props;
@@ -399,8 +399,8 @@ export default function Welcome() {
                                                 Sign In to Your Workspace.
                                             </strong>{' '}
                                             Log in using your official LGU
-                                            Clarin credentials or register an
-                                            account for HRMO verification.
+                                            Clarin credentials. Contact HRMO for
+                                            an account invitation.
                                         </p>
                                     </div>
 
@@ -443,17 +443,35 @@ export default function Welcome() {
                         aria-labelledby="users-heading"
                         className="mx-auto max-w-6xl px-6 py-16 lg:px-10"
                     >
-                        <h2 id="users-heading" className="text-3xl font-semibold tracking-tight">
+                        <h2
+                            id="users-heading"
+                            className="text-3xl font-semibold tracking-tight"
+                        >
                             Who uses the HRIS?
                         </h2>
                         <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             {[
-                                ['Municipal employees', 'Access their employee records and submit requests.'],
-                                ['Department heads', 'Review requests and coordinate with HR for their teams.'],
-                                ['HRMO staff', 'Manage personnel records and process employee requests.'],
-                                ['MIS administrators', 'Manage system access and help users with technical issues.'],
+                                [
+                                    'Municipal employees',
+                                    'Access their employee records and submit requests.',
+                                ],
+                                [
+                                    'Department heads',
+                                    'Review requests and coordinate with HR for their teams.',
+                                ],
+                                [
+                                    'HRMO staff',
+                                    'Manage personnel records and process employee requests.',
+                                ],
+                                [
+                                    'MIS administrators',
+                                    'Manage system access and help users with technical issues.',
+                                ],
                             ].map(([role, description]) => (
-                                <li key={role} className="rounded-2xl border border-border bg-card p-5">
+                                <li
+                                    key={role}
+                                    className="rounded-2xl border border-border bg-card p-5"
+                                >
                                     <h3 className="font-semibold">{role}</h3>
                                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                                         {description}
@@ -561,14 +579,6 @@ export default function Welcome() {
                                             ? 'Dashboard'
                                             : 'Log in to HRIS'}
                                     </Link>
-                                    {!auth.user && (
-                                        <Link
-                                            href={register()}
-                                            className="text-muted-foreground hover:text-accent-foreground"
-                                        >
-                                            Create an account
-                                        </Link>
-                                    )}
                                     <a
                                         href="#contact"
                                         className="text-muted-foreground hover:text-accent-foreground"

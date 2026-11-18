@@ -4,13 +4,14 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import type { AppLayoutProps } from '@/types';
 
-export default function AppSidebarLayout({
-    children,
-}: AppLayoutProps) {
+export default function AppSidebarLayout({ children }: AppLayoutProps) {
     return (
         <AppShell variant="sidebar">
             <AppSidebar />
-            <AppContent variant="sidebar" className="public-surface isolate min-w-0 overflow-x-clip bg-background text-foreground">
+            <AppContent
+                variant="sidebar"
+                className="public-surface isolate min-w-0 overflow-x-clip bg-background text-foreground"
+            >
                 <AppSidebarHeader />
                 {children}
             </AppContent>

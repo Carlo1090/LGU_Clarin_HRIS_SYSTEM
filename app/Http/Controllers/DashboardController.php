@@ -67,7 +67,7 @@ class DashboardController extends Controller
             ],
             'HRMO Head' => [
                 $this->card('Total employees', Employee::query()->count()),
-                $this->card('Departments', Department::query()->count()),
+                $this->card('Departments', Department::query()->whereIn('code', array_keys(Department::PLANTILLA_OFFICES))->count()),
                 $this->card('Pending HR transactions', LeaveApplication::query()->where('status', 'pending')->count()),
                 $this->card('Open vacancies', Vacancy::query()->where('status', 'open')->count()),
             ],
@@ -91,7 +91,7 @@ class DashboardController extends Controller
             'Mayor' => [
                 $this->card('Total employees', Employee::query()->count()),
                 $this->card('Active employees', Employee::query()->where('employment_status', 'active')->count()),
-                $this->card('Departments', Department::query()->count()),
+                $this->card('Departments', Department::query()->whereIn('code', array_keys(Department::PLANTILLA_OFFICES))->count()),
                 $this->card('Open vacancies', Vacancy::query()->where('status', 'open')->count()),
             ],
             'MIS Administrator' => [
@@ -116,6 +116,7 @@ class DashboardController extends Controller
         };
 
         $links = match ($role) {
+            'Employee' => [['label' => 'My HR profile', 'href' => route('hris.my-profile', absolute: false)]],
             'Department Head' => [['label' => 'Department employees', 'href' => '/hris/employees'], ['label' => 'Attendance', 'href' => '/hris/attendance'], ['label' => 'Leave approvals', 'href' => '/hris/leave-applications'], ['label' => 'Performance reviews', 'href' => '/hris/performance-reviews']],
             'HR Officer', 'HRMO Head' => [['label' => 'Employees', 'href' => '/hris/employees'], ['label' => 'Departments', 'href' => '/hris/departments'], ['label' => 'Attendance', 'href' => '/hris/attendance'], ['label' => 'Leave requests', 'href' => '/hris/leave-applications'], ['label' => 'Vacancies', 'href' => '/hris/vacancies']],
             'Payroll Officer' => [['label' => 'Payroll periods', 'href' => '/hris/payroll-periods'], ['label' => 'Payroll preparation', 'href' => '/hris/payrolls']],
@@ -126,8 +127,13 @@ class DashboardController extends Controller
             default => [],
         };
 
+        if ($role === 'HRMO Head' && $user->requires_mfa && $user->hasEnabledTwoFactorAuthentication()) {
+            $links[] = ['label' => 'Invite an employee', 'href' => route('hris.invitations.create', absolute: false)];
+        }
+
         return Inertia::render('dashboard', [
             'role' => $role ?? 'Unassigned',
+            'office' => $employee?->department?->name,
             'cards' => $cards,
             'links' => [
                 ...array_map(fn (array $item) => ['label' => $item['title'], 'href' => $item['href']], PortalController::navigation($user)),

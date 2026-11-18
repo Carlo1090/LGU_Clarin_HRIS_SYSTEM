@@ -27,6 +27,7 @@ type DashboardLink = {
 
 type Props = {
     role: string;
+    office: string | null;
     cards: DashboardCard[];
     links: DashboardLink[];
 };
@@ -70,9 +71,13 @@ const cardIcons: Record<string, LucideIcon> = {
     'Payroll net total': Wallet,
 };
 
-export default function Dashboard({ role, cards, links }: Props) {
+export default function Dashboard({ role, office, cards, links }: Props) {
     const isHrmo = role === 'HRMO Head' || role === 'HR Officer';
-    const title = isHrmo ? 'HRMO Portal' : role === 'Unassigned' ? 'HRIS Dashboard' : `${role} Portal`;
+    const title = isHrmo
+        ? 'HRMO Portal'
+        : role === 'Unassigned'
+          ? 'HRIS Dashboard'
+          : `${role} Portal`;
     const primaryLink = isHrmo
         ? links.find((link) => link.href === '/hris/employees')
         : links[0];
@@ -82,7 +87,10 @@ export default function Dashboard({ role, cards, links }: Props) {
             <Head title={title} />
             <div className="mx-auto w-full max-w-7xl space-y-8 p-4 md:p-8">
                 <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9 sm:py-10">
-                    <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] md:block">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] md:block"
+                    >
                         <div className="absolute top-1/2 right-6 size-72 -translate-y-1/2 rounded-full border border-[#a6eb20]/25" />
                         <div className="absolute top-1/2 right-14 size-56 -translate-y-1/2 rounded-full bg-[#a6eb20]/10" />
                         <img
@@ -100,6 +108,11 @@ export default function Dashboard({ role, cards, links }: Props) {
                         <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
                             {title}
                         </h1>
+                        {office && (
+                            <p className="mt-3 text-sm text-[#c2ec8b]">
+                                {office}
+                            </p>
+                        )}
                         <p className="mt-3 max-w-md text-sm leading-6 text-white/80 sm:text-base">
                             {isHrmo
                                 ? 'Oversee municipal staff records, attendance, leave requests, and vacancies.'
@@ -110,8 +123,13 @@ export default function Dashboard({ role, cards, links }: Props) {
                                 href={primaryLink.href}
                                 className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#a6eb20] px-5 py-2.5 text-sm font-semibold text-[#142014] transition-colors hover:bg-[#c2ec8b] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
                             >
-                                {isHrmo ? 'Employee directory' : primaryLink.label}
-                                <ArrowUpRight aria-hidden="true" className="size-4" />
+                                {isHrmo
+                                    ? 'Employee directory'
+                                    : primaryLink.label}
+                                <ArrowUpRight
+                                    aria-hidden="true"
+                                    className="size-4"
+                                />
                             </Link>
                         )}
                     </div>
@@ -124,7 +142,9 @@ export default function Dashboard({ role, cards, links }: Props) {
                                 At a glance
                             </h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                {isHrmo ? 'Municipal workforce overview' : 'Current information for your HRIS workspace'}
+                                {isHrmo
+                                    ? 'Municipal workforce overview'
+                                    : 'Current information for your HRIS workspace'}
                             </p>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -141,9 +161,7 @@ export default function Dashboard({ role, cards, links }: Props) {
                                             <h3 className="text-sm leading-5 font-medium text-muted-foreground">
                                                 {card.label}
                                             </h3>
-                                            <span
-                                                className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"
-                                            >
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
                                                 <Icon
                                                     aria-hidden="true"
                                                     className="size-5"
@@ -199,7 +217,9 @@ export default function Dashboard({ role, cards, links }: Props) {
                                 >
                                     <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground transition group-hover:bg-primary group-hover:text-primary-foreground">
                                         {(() => {
-                                            const Icon = hrisResourceIcon(link.href.replace('/hris/', ''));
+                                            const Icon = hrisResourceIcon(
+                                                link.href.replace('/hris/', ''),
+                                            );
 
                                             return (
                                                 <Icon

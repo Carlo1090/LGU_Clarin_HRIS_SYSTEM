@@ -52,7 +52,10 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={items} label={isHrmoWorkspace ? 'HRMO workspace' : undefined} />
+                <NavMain
+                    items={items}
+                    label={isHrmoWorkspace ? 'HRMO workspace' : undefined}
+                />
             </SidebarContent>
 
             <SidebarFooter>
