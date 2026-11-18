@@ -306,12 +306,22 @@ class HrisResourceTest extends TestCase
         $url = route('hris.resources.store', ['resource' => 'employees']);
         $record = [
             'employee_number' => 'EMP-MANUAL-01', 'first_name' => 'Jordan', 'last_name' => 'Sample',
+            'department_id' => Department::factory()->create()->id,
             'employment_status' => 'unknown', 'appointment_status' => 'unknown',
         ];
 
         $this->actingAs($user)->post($url, $record)->assertSessionHasErrors(['employment_status', 'appointment_status']);
         $this->actingAs($user)->post($url, array_merge($record, ['employment_status' => 'active', 'appointment_status' => 'CT']))
-            ->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('employees', ['employee_number' => 'EMP-MANUAL-01', 'appointment_status' => 'CT']);
+            ->assertRedirect(route('hris.resources.index', ['resource' => 'employees']));
+        $employee = Employee::query()->where('employee_number', 'EMP-MANUAL-01')->firstOrFail();
+        $account = User::query()->where('employee_id', $employee->id)->firstOrFail();
+        $this->assertSame('CT', $employee->appointment_status);
+        $this->assertNull($account->email);
+        $this->assertTrue($account->must_change_password);
+        $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))
+            ->assertOk()->assertInertia(fn ($page) => $page
+            ->where('createdAccountCredentials.username', 'EMP-MANUAL-01')
+            ->where('createdAccountCredentials.employee_number', 'EMP-MANUAL-01')
+            ->has('createdAccountCredentials.temporary_password'));
     }
 }

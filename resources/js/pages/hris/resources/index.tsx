@@ -26,6 +26,14 @@ type Props = {
     canImport?: boolean;
     officeDirectory?: boolean;
     statusSummary?: { status: string; total: number }[];
+    createdAccountCredentials?: {
+        employee_number: string;
+        username: string;
+        name: string;
+        temporary_password: string;
+        email: string | null;
+    } | null;
+    accountSetupEmailSent?: boolean | null;
     records: {
         data: HrisRow[];
         links: { url: string | null; label: string; active: boolean }[];
@@ -55,6 +63,8 @@ export default function HrisResourceIndex({
     canImport = false,
     officeDirectory = false,
     statusSummary = [],
+    createdAccountCredentials = null,
+    accountSetupEmailSent = null,
     records,
 }: Props) {
     const [reviewing, setReviewing] = useState(false);
@@ -97,6 +107,7 @@ export default function HrisResourceIndex({
         [fields],
     );
     const form = useForm<FormData>(initialData);
+    const [accountEmail, setAccountEmail] = useState('');
 
     useEffect(() => {
         form.setData(initialData);
@@ -115,7 +126,17 @@ export default function HrisResourceIndex({
                 },
             });
         } else {
-            form.post(url, { onSuccess: () => form.reset() });
+            form.transform((data) =>
+                resource === 'employees'
+                    ? { ...data, account_email: accountEmail || null }
+                    : data,
+            );
+            form.post(url, {
+                onSuccess: () => {
+                    form.reset();
+                    setAccountEmail('');
+                },
+            });
         }
     };
 
@@ -228,28 +249,30 @@ export default function HrisResourceIndex({
                         className="scroll-mt-20 rounded-2xl border bg-card p-5 sm:p-6"
                     >
                         <h2 className="mb-4 text-lg font-medium">
-                            {editingId ? 'Edit record' : 'Add record'}
+                            {editingId
+                                ? 'Edit record'
+                                : resource === 'employees'
+                                  ? 'Create employee account'
+                                  : 'Add record'}
                         </h2>
                         {resource === 'employees' && (
                             <div className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                                 <p>
-                                    This form creates an employee profile only;
-                                    it does not create a login account or
-                                    credentials.
+                                    Creating this record also creates a login
+                                    account. The employee number is the
+                                    username. The temporary password is shown
+                                    once after saving.
                                 </p>
                                 {canImport && (
                                     <p className="mt-1">
-                                        To create accounts, use{' '}
+                                        For multiple accounts, use{' '}
                                         <Link
                                             href="/hris/employees/import"
                                             className="font-medium text-foreground underline underline-offset-4"
                                         >
                                             employee bulk import
                                         </Link>
-                                        . Email users receive a setup link. For
-                                        employees without email, the employee
-                                        number is the username and the temporary
-                                        password appears once after import.
+                                        . Email is optional.
                                     </p>
                                 )}
                             </div>
@@ -374,6 +397,24 @@ export default function HrisResourceIndex({
                                     )}
                                 </label>
                             ))}
+                            {resource === 'employees' && !editingId && (
+                                <label className="space-y-1 text-sm">
+                                    <span>Email (optional)</span>
+                                    <input
+                                        type="email"
+                                        value={accountEmail}
+                                        onChange={(event) =>
+                                            setAccountEmail(event.target.value)
+                                        }
+                                        className="w-full rounded-xl border border-input bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-ring"
+                                    />
+                                    {form.errors.account_email && (
+                                        <span className="block text-sm text-destructive">
+                                            {form.errors.account_email}
+                                        </span>
+                                    )}
+                                </label>
+                            )}
                             <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
                                 <button
                                     type="submit"
@@ -384,7 +425,9 @@ export default function HrisResourceIndex({
                                         ? 'Saving…'
                                         : editingId
                                           ? 'Save changes'
-                                          : 'Create record'}
+                                          : resource === 'employees'
+                                            ? 'Create account'
+                                            : 'Create record'}
                                 </button>
                                 {editingId && (
                                     <button
@@ -397,6 +440,46 @@ export default function HrisResourceIndex({
                                 )}
                             </div>
                         </form>
+                    </section>
+                )}
+
+                {resource === 'employees' && createdAccountCredentials && (
+                    <section className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-5">
+                        <h2 className="font-semibold">
+                            Employee account created
+                        </h2>
+                        <p>Name: {createdAccountCredentials.name}</p>
+                        <p>
+                            Employee number:{' '}
+                            <span className="font-mono">
+                                {createdAccountCredentials.employee_number}
+                            </span>
+                        </p>
+                        <p>
+                            Username:{' '}
+                            <span className="font-mono">
+                                {createdAccountCredentials.username}
+                            </span>
+                        </p>
+                        <p>
+                            Temporary password:{' '}
+                            <span className="font-mono">
+                                {createdAccountCredentials.temporary_password}
+                            </span>
+                        </p>
+                        {createdAccountCredentials.email && (
+                            <p>
+                                {accountSetupEmailSent
+                                    ? 'Setup link sent to'
+                                    : 'Setup link could not be sent to'}{' '}
+                                {createdAccountCredentials.email}.
+                            </p>
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                            Share these credentials privately. The employee must
+                            change the temporary password and enroll in
+                            two-factor authentication.
+                        </p>
                     </section>
                 )}
 

@@ -30,10 +30,20 @@ class EmployeeImportController
             ? $request->session()->get('employee_import.'.$token)
             : null;
 
+        $previewRows = [];
+        if (is_array($rows)) {
+            foreach ($rows as $row) {
+                if (is_array($row)) {
+                    unset($row['data']);
+                    $previewRows[] = $row;
+                }
+            }
+        }
+
         return Inertia::render('hris/import-employees', [
             'statusOptions' => $template->statuses(),
             'columns' => $template->columns(),
-            'rows' => is_array($rows) ? collect($rows)->map(fn ($row) => collect($row)->except('data')->all())->values() : [],
+            'rows' => $previewRows,
             'token' => is_array($rows) ? $token : null,
         ]);
     }
@@ -42,7 +52,7 @@ class EmployeeImportController
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
         $input = $request->validate([
-            'columns' => ['required', 'array', 'min:4', 'max:40'],
+            'columns' => ['required', 'array', 'min:5', 'max:40'],
             'columns.*.key' => ['nullable', 'string', 'max:100'],
             'columns.*.label' => ['required', 'string', 'max:64'],
             'status_options' => ['required', 'array', 'min:1', 'max:8'],

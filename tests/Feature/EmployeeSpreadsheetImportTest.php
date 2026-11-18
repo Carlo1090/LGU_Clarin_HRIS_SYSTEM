@@ -51,20 +51,25 @@ class EmployeeSpreadsheetImportTest extends TestCase
             ->where('records.data.0.name', $legacy->name));
     }
 
-    public function test_employee_template_matches_employee_fields_and_includes_eligibility_dropdown(): void
+    public function test_employee_template_contains_minimal_account_creation_fields(): void
     {
         $this->seed();
         $hrmo = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
         $this->actingAs($hrmo)->get(route('hris.employees.import.template'))->assertOk()->assertDownload('EMPLOYEE-BULK-IMPORT-TEMPLATE.xlsx');
+        $path = sys_get_temp_dir().'/employee-template-'.uniqid().'.xlsx';
+        app(EmployeeImportTemplate::class)->download($path, app(EmployeeImportTemplate::class)->statuses());
         $zip = new ZipArchive;
-        $this->assertTrue($zip->open(resource_path('templates/EMPLOYEE-BULK-IMPORT-TEMPLATE.xlsx')) === true);
+        $this->assertTrue($zip->open($path) === true);
         $workbook = $zip->getFromName('xl/workbook.xml');
         $worksheet = $zip->getFromName('xl/worksheets/sheet1.xml');
         $this->assertStringContainsString('name="EMPLOYEES"', $workbook);
-        $this->assertStringContainsString('name="EligibilityOptions"', $workbook);
-        $this->assertStringContainsString('sqref="R2:R5001"', $worksheet);
-        $this->assertStringContainsString('<x:formula1>EligibilityOptions</x:formula1>', $worksheet);
+        $this->assertStringNotContainsString('EligibilityOptions', $workbook);
+        $this->assertStringContainsString('sqref="H2:H5001"', $worksheet);
+        $this->assertStringContainsString('<x:formula1>"active,on leave,inactive,terminated"</x:formula1>', $worksheet);
+        $this->assertStringContainsString('Employee Number', $worksheet);
+        $this->assertStringContainsString('Department', $worksheet);
         $zip->close();
+        unlink($path);
     }
 
     public function test_template_popup_updates_the_downloaded_status_dropdown(): void
@@ -114,23 +119,20 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $department = Department::query()->where('code', 'HEALTH')->firstOrFail();
         Position::query()->create(['department_id' => $department->id, 'title' => 'Nurse I', 'code' => 'NURSE-I']);
         $actor = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
-        $token = null;
+        $previewPassword = null;
         $preview = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
             'Employee Number' => 'EMP-IMPORT-01', 'First Name' => 'Jordan', 'Middle Name' => 'A', 'Last Name' => 'Sample',
-            'Gender' => 'female', 'Birth Date' => '1990-05-06', 'Department' => $department->name, 'Position' => 'Nurse I',
-            'Suffix' => 'Jr.', 'Employment Status' => 'active', 'Date Hired' => '2015-04-03', 'Date Regularized' => '2017-04-03',
-            'Age' => '36', 'TIN' => '001-002-003', 'Date of Original Appointment' => '2015-04-03',
-            'Date of Last Promotion/Appointment' => '2020-04-03', 'Appointment Status' => 'P',
-            'Civil Service Eligibility' => 'Career Service Professional', 'Comment/Annotation' => 'Verified',
-            'PWD' => 'Y', 'Indigenous People' => 'N', 'Solo Parent ID Number' => 'N/A', 'GSIS BP Number' => '0008',
+            'Department' => $department->name, 'Position' => 'Nurse I', 'Suffix' => 'Jr.', 'Employment Status' => 'active',
         ]])])->assertRedirect();
         $token = parse_url($preview->headers->get('Location'), PHP_URL_QUERY);
         parse_str((string) $token, $query);
         $token = $query['token'] ?? null;
-        $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $token]))->assertOk()->assertInertia(function ($page) use (&$token): void {
+        $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $token]))->assertOk()->assertInertia(function ($page) use (&$token, &$previewPassword): void {
             $page->component('hris/import-employees')->has('rows', 1)->where('rows.0.valid', true)->where('rows.0.status', 'active')
-                ->where('rows.0.profile_action', 'Create profile')->where('rows.0.account_action', 'Create account');
+                ->where('rows.0.profile_action', 'Create profile')->where('rows.0.account_action', 'Create account')
+                ->where('rows.0.username', 'EMP-IMPORT-01')->has('rows.0.temporary_password');
             $token = $page->toArray()['props']['token'];
+            $previewPassword = $page->toArray()['props']['rows'][0]['temporary_password'];
         });
 
         $password = null;
@@ -141,12 +143,12 @@ class EmployeeSpreadsheetImportTest extends TestCase
             });
         $employee = Employee::query()->where('employee_number', 'EMP-IMPORT-01')->firstOrFail();
         $this->assertSame('active', $employee->employment_status);
-        $this->assertSame('001-002-003', $employee->tin);
-        $this->assertSame('Career Service Professional', $employee->civil_service_eligibility);
+        $this->assertNull($employee->tin);
+        $this->assertNull($employee->civil_service_eligibility);
         $this->assertSame($department->id, $employee->department_id);
         $this->assertSame('NURSE-I', $employee->position->code);
         $this->assertDatabaseCount('plantilla_items', 0);
-        $this->assertNotNull($password);
+        $this->assertSame($previewPassword, $password);
         $employeeUser = User::query()->where('employee_id', $employee->id)->firstOrFail();
         auth()->logout();
         $this->post('/login', ['email' => $employee->employee_number, 'password' => $password])->assertRedirect();
@@ -156,30 +158,28 @@ class EmployeeSpreadsheetImportTest extends TestCase
             ->where('employee.department', $department->name)
             ->where('employee.position_title', 'Nurse I')
             ->where('employee.employment_status', 'active')
-            ->where('employee.civil_service_eligibility', 'Career Service Professional'));
+            ->where('employee.civil_service_eligibility', null));
     }
 
-    public function test_employee_workbook_requires_every_field_except_email(): void
+    public function test_employee_workbook_requires_only_core_account_fields(): void
     {
         $this->seed();
         $department = Department::query()->where('code', 'HEALTH')->firstOrFail();
         $position = Position::query()->create(['department_id' => $department->id, 'title' => 'Nurse I', 'code' => 'NURSE-I']);
         $actor = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
         $response = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
-            'Employee Number' => 'EMP-IMPORT-02', 'First Name' => 'Jordan', 'Last Name' => 'Sample', 'Suffix' => 'Jr.',
-            'Gender' => 'female', 'Birth Date' => '1990-05-06', 'Department' => $department->name, 'Position' => $position->title,
-            'Employment Status' => 'active', 'Date Hired' => '2015-04-03', 'Date Regularized' => '2017-04-03',
-            'Age' => '0', 'TIN' => '001-002-003', 'Date of Original Appointment' => '2015-04-03',
-            'Date of Last Promotion/Appointment' => '2020-04-03', 'Appointment Status' => 'P',
-            'Civil Service Eligibility' => 'Career Service Professional', 'Comment/Annotation' => 'Verified',
-            'PWD' => 'Y', 'Indigenous People' => 'N', 'Solo Parent ID Number' => 'N/A', 'GSIS BP Number' => '0008',
+            'Employee Number' => 'EMP-IMPORT-02', 'First Name' => 'Jordan', 'Last Name' => 'Sample',
+            'Department' => $department->name, 'Employment Status' => 'active',
+        ], [
+            'Employee Number' => 'EMP-IMPORT-03', 'First Name' => 'Taylor', 'Last Name' => 'Missing Department',
+            'Employment Status' => 'active',
         ]])])->assertRedirect();
         parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
 
         $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $query['token']]))->assertOk()
-            ->assertInertia(fn ($page) => $page->where('rows.0.valid', false)
-                ->where('rows.0.errors.0', 'Middle name is required.')
-                ->has('rows.0.errors', 1));
+            ->assertInertia(fn ($page) => $page->has('rows', 2)
+                ->where('rows.0.valid', true)->where('rows.0.account_action', 'Create account')
+                ->where('rows.1.valid', false)->where('rows.1.errors.0', 'Department is required.'));
     }
 
     public function test_employee_import_creates_account_for_existing_employee_number(): void
@@ -217,7 +217,7 @@ class EmployeeSpreadsheetImportTest extends TestCase
 
     private function workbook(array $rows): UploadedFile
     {
-        $headers = ['Employee Number', 'First Name', 'Middle Name', 'Last Name', 'Suffix', 'Gender', 'Birth Date', 'Department', 'Position', 'Employment Status', 'Date Hired', 'Date Regularized', 'Age', 'TIN', 'Date of Original Appointment', 'Date of Last Promotion/Appointment', 'Appointment Status', 'Civil Service Eligibility', 'Comment/Annotation', 'PWD', 'Indigenous People', 'Solo Parent ID Number', 'GSIS BP Number', 'Email Address'];
+        $headers = ['Employee Number', 'First Name', 'Middle Name', 'Last Name', 'Suffix', 'Department', 'Position', 'Employment Status', 'Email Address'];
         $path = tempnam(sys_get_temp_dir(), 'employees-').'.xlsx';
         $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);

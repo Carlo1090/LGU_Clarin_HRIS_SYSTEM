@@ -16,11 +16,14 @@ type PreviewRow = {
     status: string;
     profile_action: string;
     account_action: string;
+    username: string;
+    temporary_password: string | null;
     valid: boolean;
     errors: string[];
 };
 type Credential = {
     employee_number: string;
+    username: string;
     name: string;
     temporary_password: string;
 };
@@ -29,6 +32,7 @@ type Result = {
     updatedProfiles: number;
     createdAccounts: number;
     emailSetupSent: number;
+    emailSetupFailed: number;
 };
 type TemplateColumn = { key: string; label: string };
 
@@ -53,9 +57,13 @@ export default function ImportEmployees({
     const apply = useForm({ token: token ?? '' });
     const templateForm = useForm({ columns, status_options: statusOptions });
     const [newColumn, setNewColumn] = useState('');
-    const requiredColumns = columns
-        .filter((column) => column.key !== 'email')
-        .map((column) => column.key);
+    const requiredColumns = [
+        'employee_number',
+        'first_name',
+        'last_name',
+        'department',
+        'employment_status',
+    ];
 
     function preview(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -113,13 +121,13 @@ export default function ImportEmployees({
                                     One-time temporary credentials
                                 </h3>
                                 <p className="text-sm text-muted-foreground">
-                                    These are shown for employees without email
-                                    and when email setup delivery fails. Copy
-                                    them now and share them privately. Each
-                                    employee must change the temporary password
-                                    and set up two-factor authentication at
-                                    first sign-in. These passwords are not saved
-                                    for later viewing.
+                                    Copy these one-time credentials now and
+                                    share them privately. Email recipients also
+                                    receive a setup link. Each employee must
+                                    change the temporary password and set up
+                                    two-factor authentication at first sign-in.
+                                    These passwords are not saved for later
+                                    viewing.
                                 </p>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
@@ -127,6 +135,9 @@ export default function ImportEmployees({
                                             <tr>
                                                 <th className="p-2">
                                                     Employee Number
+                                                </th>
+                                                <th className="p-2">
+                                                    Username
                                                 </th>
                                                 <th className="p-2">Name</th>
                                                 <th className="p-2">
@@ -148,6 +159,9 @@ export default function ImportEmployees({
                                                         }
                                                     </td>
                                                     <td className="p-2">
+                                                        {credential.username}
+                                                    </td>
+                                                    <td className="p-2">
                                                         {credential.name}
                                                     </td>
                                                     <td className="p-2 font-mono">
@@ -164,9 +178,8 @@ export default function ImportEmployees({
                         )}
                         <p className="text-sm text-muted-foreground">
                             Account setup links sent by email:{' '}
-                            {result.emailSetupSent}. If delivery failed, the
-                            temporary password appears in the one-time
-                            credentials table above.
+                            {result.emailSetupSent}. Delivery failures:{' '}
+                            {result.emailSetupFailed}.
                         </p>
                     </section>
                 ) : (
@@ -177,8 +190,10 @@ export default function ImportEmployees({
                                     Employee import template
                                 </h2>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    All configured spreadsheet columns are
-                                    required. Email is optional.
+                                    The required columns are Employee Number,
+                                    First Name, Last Name, Department, and
+                                    Employment Status. Other fields and Email
+                                    are optional.
                                 </p>
                             </div>
                             <div className="flex gap-2">
@@ -209,9 +224,9 @@ export default function ImportEmployees({
                                 Required spreadsheet columns
                             </h2>
                             <p className="text-muted-foreground">
-                                Fill in every configured column for each
-                                employee. Email is optional. Keep ID values as
-                                text.
+                                Enter account setup details only. Plantilla and
+                                other profile information can be added later.
+                                Keep employee numbers as text.
                             </p>
                         </section>
                         {editTemplate && (
@@ -523,6 +538,8 @@ export default function ImportEmployees({
                                                         'Employment Status',
                                                         'Employee profile',
                                                         'Login account',
+                                                        'Username',
+                                                        'Temporary password',
                                                         'Validation',
                                                     ].map((heading) => (
                                                         <th
@@ -565,6 +582,15 @@ export default function ImportEmployees({
                                                         </td>
                                                         <td className="p-3">
                                                             {row.account_action}
+                                                        </td>
+                                                        <td className="p-3 font-mono">
+                                                            {row.username}
+                                                        </td>
+                                                        <td className="p-3 font-mono">
+                                                            {row.temporary_password ??
+                                                                (row.valid
+                                                                    ? 'Account already exists'
+                                                                    : '—')}
                                                         </td>
                                                         <td className="p-3">
                                                             {row.valid

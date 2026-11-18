@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Models\Applicant;
 use App\Models\AttendanceRecord;
+use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EvaluationPeriod;
@@ -22,6 +23,7 @@ use App\Models\Role;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Vacancy;
+use App\Notifications\HrisAccountSetup;
 use App\Support\EmployeeImportTemplate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +31,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 use Inertia\Inertia;
@@ -139,14 +143,14 @@ class HrisResourceController extends Controller
                 ['name' => 'suffix', 'label' => 'Suffix', 'type' => 'text'],
                 ['name' => 'gender', 'label' => 'Gender', 'type' => 'text'],
                 ['name' => 'birth_date', 'label' => 'Birth date', 'type' => 'date'],
-                ['name' => 'department_id', 'label' => 'Department', 'type' => 'select', 'options' => 'departments'],
+                ['name' => 'department_id', 'label' => 'Department', 'type' => 'select', 'required' => true, 'options' => 'departments'],
                 ['name' => 'position_id', 'label' => 'Position', 'type' => 'select', 'options' => 'positions'],
                 ['name' => 'employment_status', 'label' => 'Employment status', 'type' => 'select', 'required' => true, 'options' => 'employment-statuses'],
                 ['name' => 'appointment_status', 'label' => 'Appointment status', 'type' => 'select', 'options' => 'appointment-statuses'],
                 ['name' => 'date_hired', 'label' => 'Date hired', 'type' => 'date'],
                 ['name' => 'date_regularized', 'label' => 'Date regularized', 'type' => 'date'],
             ],
-            'rules' => ['employee_number' => 'required|string|max:255', 'first_name' => 'required|string|max:255', 'middle_name' => 'nullable|string|max:255', 'last_name' => 'required|string|max:255', 'suffix' => 'nullable|string|max:255', 'gender' => 'nullable|string|max:255', 'birth_date' => 'nullable|date', 'department_id' => 'nullable|exists:departments,id', 'position_id' => 'nullable|exists:positions,id', 'appointment_status' => 'nullable|in:P,E,T,S,CT,PA,FT', 'employment_status' => 'required|string|max:255', 'date_hired' => 'nullable|date', 'date_regularized' => 'nullable|date'],
+            'rules' => ['employee_number' => 'required|string|max:255', 'first_name' => 'required|string|max:255', 'middle_name' => 'nullable|string|max:255', 'last_name' => 'required|string|max:255', 'suffix' => 'nullable|string|max:255', 'gender' => 'nullable|string|max:255', 'birth_date' => 'nullable|date', 'department_id' => 'required|exists:departments,id', 'position_id' => 'nullable|exists:positions,id', 'appointment_status' => 'nullable|in:P,E,T,S,CT,PA,FT', 'employment_status' => 'required|string|max:255', 'date_hired' => 'nullable|date', 'date_regularized' => 'nullable|date'],
             'unique' => ['employee_number'],
         ],
         'attendance' => [
@@ -420,6 +424,8 @@ class HrisResourceController extends Controller
             'leaveReviewStage' => $resource === 'leave-applications' ? LeaveReviewController::stage($request->user()) : null,
             'canImport' => $resource === 'employees' && $request->user()->role?->name === 'HRMO Head',
             'statusSummary' => $statusSummary,
+            'createdAccountCredentials' => $resource === 'employees' ? $request->session()->get('createdAccountCredentials') : null,
+            'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'fields' => $fields,
             'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()] + collect($config['fields'])->mapWithKeys(
                 fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])]
@@ -506,6 +512,59 @@ class HrisResourceController extends Controller
             Inertia::flash('toast', ['type' => 'success', 'message' => 'Plantilla position record created.']);
 
             return to_route('hris.resources.index', ['resource' => $resource]);
+        }
+        if ($resource === 'employees') {
+            $input = $request->validate($this->validationRules($this->resourceConfig($resource)) + [
+                'account_email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')],
+            ]);
+            $email = filled($input['account_email'] ?? null) ? Str::lower($input['account_email']) : null;
+            unset($input['account_email']);
+            $temporaryPassword = Str::password(18);
+            $employee = DB::transaction(function () use ($input, $request, $temporaryPassword, $email): Employee {
+                $employee = Employee::query()->create($input);
+                $role = Role::query()->where('name', 'Employee')->where('guard_name', 'web')->firstOrFail();
+                $account = new User([
+                    'name' => trim($employee->first_name.' '.$employee->last_name),
+                    'email' => $email,
+                    'password' => $temporaryPassword,
+                ]);
+                $account->forceFill([
+                    'employee_id' => $employee->id,
+                    'role_id' => $role->id,
+                    'requires_mfa' => true,
+                    'must_change_password' => true,
+                ])->save();
+                $employee->forceFill(['user_id' => $account->id])->save();
+                AuditLog::create([
+                    'user_id' => $request->user()->id,
+                    'action' => 'employee.account_created',
+                    'model_type' => Employee::class,
+                    'model_id' => $employee->id,
+                    'metadata' => json_encode(['employee_number' => $employee->employee_number], JSON_THROW_ON_ERROR),
+                ]);
+
+                return $employee;
+            });
+            $emailSetupSent = false;
+            if ($email) {
+                try {
+                    $emailSetupSent = HrisAccountSetup::sendTo($email) === Password::RESET_LINK_SENT;
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+            Inertia::flash('toast', ['type' => 'success', 'message' => 'Employee account created.']);
+
+            return to_route('hris.resources.index', ['resource' => $resource])->with([
+                'createdAccountCredentials' => [
+                    'employee_number' => $employee->employee_number,
+                    'username' => $employee->employee_number,
+                    'name' => trim($employee->first_name.' '.$employee->last_name),
+                    'temporary_password' => $temporaryPassword,
+                    'email' => $email,
+                ],
+                'accountSetupEmailSent' => $email ? (bool) $emailSetupSent : null,
+            ]);
         }
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
