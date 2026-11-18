@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -9,9 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
-type Props = {
-    passwordRules: string;
-};
+type Props = { passwordRules: string };
 
 export default function Register({ passwordRules }: Props) {
     return (
@@ -20,93 +19,128 @@ export default function Register({ passwordRules }: Props) {
             <Form
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
-                disableWhileProcessing
-                className="flex flex-col gap-6"
+                className="space-y-6"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
+                        <div className="space-y-5">
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="name">Full name</Label>
                                 <Input
                                     id="name"
                                     type="text"
+                                    name="name"
                                     required
                                     autoFocus
-                                    tabIndex={1}
                                     autoComplete="name"
-                                    name="name"
-                                    placeholder="Full name"
+                                    placeholder="Enter your full name"
+                                    aria-invalid={!!errors.name}
+                                    aria-describedby={
+                                        errors.name ? 'name-error' : undefined
+                                    }
                                 />
                                 <InputError
+                                    id="name-error"
                                     message={errors.name}
-                                    className="mt-2"
+                                    role="alert"
                                 />
                             </div>
-
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email address</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="email"
                                     name="email"
+                                    required
+                                    autoComplete="email"
                                     placeholder="email@example.com"
+                                    aria-invalid={!!errors.email}
+                                    aria-describedby={
+                                        errors.email ? 'email-error' : undefined
+                                    }
                                 />
-                                <InputError message={errors.email} />
+                                <InputError
+                                    id="email-error"
+                                    message={errors.email}
+                                    role="alert"
+                                />
                             </div>
-
                             <div className="grid gap-2">
                                 <Label htmlFor="password">Password</Label>
                                 <PasswordInput
                                     id="password"
-                                    required
-                                    tabIndex={3}
-                                    autoComplete="new-password"
                                     name="password"
-                                    placeholder="Password"
+                                    required
+                                    autoComplete="new-password"
+                                    placeholder="Create a password"
                                     passwordrules={passwordRules}
+                                    aria-invalid={!!errors.password}
+                                    aria-describedby={
+                                        errors.password
+                                            ? 'password-error'
+                                            : undefined
+                                    }
                                 />
-                                <InputError message={errors.password} />
+                                <InputError
+                                    id="password-error"
+                                    message={errors.password}
+                                    role="alert"
+                                />
                             </div>
-
                             <div className="grid gap-2">
                                 <Label htmlFor="password_confirmation">
                                     Confirm password
                                 </Label>
                                 <PasswordInput
                                     id="password_confirmation"
-                                    required
-                                    tabIndex={4}
-                                    autoComplete="new-password"
                                     name="password_confirmation"
-                                    placeholder="Confirm password"
+                                    required
+                                    autoComplete="new-password"
+                                    placeholder="Re-enter your password"
                                     passwordrules={passwordRules}
+                                    aria-invalid={
+                                        !!errors.password_confirmation
+                                    }
+                                    aria-describedby={
+                                        errors.password_confirmation
+                                            ? 'password-confirmation-error'
+                                            : undefined
+                                    }
                                 />
                                 <InputError
+                                    id="password-confirmation-error"
                                     message={errors.password_confirmation}
+                                    role="alert"
                                 />
                             </div>
-
                             <Button
                                 type="submit"
-                                className="mt-2 w-full"
-                                tabIndex={5}
+                                className="w-full"
+                                disabled={processing}
+                                aria-busy={processing}
                                 data-test="register-user-button"
                             >
-                                {processing && <Spinner />}
-                                Create account
+                                {processing ? <Spinner /> : null}
+                                {processing
+                                    ? 'Creating account...'
+                                    : 'Create account'}
+                                {!processing && (
+                                    <ArrowRight
+                                        aria-hidden="true"
+                                        className="size-4"
+                                    />
+                                )}
                             </Button>
                         </div>
-
-                        <div className="text-center text-sm text-muted-foreground">
+                        <p className="text-center text-sm leading-6 text-muted-foreground">
                             Already have an account?{' '}
-                            <TextLink href={login()} tabIndex={6}>
+                            <TextLink
+                                href={login()}
+                                className="font-semibold text-accent-foreground"
+                            >
                                 Log in
                             </TextLink>
-                        </div>
+                        </p>
                     </>
                 )}
             </Form>
@@ -116,5 +150,5 @@ export default function Register({ passwordRules }: Props) {
 
 Register.layout = {
     title: 'Create an account',
-    description: 'Enter your details below to create your account',
+    description: 'Enter your details to get started with LGU Clarin HRIS.',
 };

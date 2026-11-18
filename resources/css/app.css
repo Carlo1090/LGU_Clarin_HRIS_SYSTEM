@@ -7,7 +7,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
+@theme inline {
     --font-sans:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
@@ -133,11 +133,83 @@
 }
 
 @layer base {
+    /* Enable smooth scrolling globally for anchor links */
+    html {
+        scroll-behavior: smooth;
+    }
+
     * {
         @apply border-border outline-ring/50;
     }
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+/* Public pages share the landing palette in both appearance modes. */
+.public-surface {
+    color-scheme: light;
+    --background: #ffffff;
+    --foreground: #142014;
+    --card: #ffffff;
+    --card-foreground: #142014;
+    --popover: #ffffff;
+    --popover-foreground: #142014;
+    --primary: #a6eb20;
+    --primary-foreground: #142014;
+    --secondary: #f3f5ef;
+    --secondary-foreground: #142014;
+    --muted: #f6f8f3;
+    --muted-foreground: #626b60;
+    --accent: #f0f8e2;
+    --accent-foreground: #3c6a0d;
+    --border: #e1e6dc;
+    --input: #d8dfd3;
+    --ring: #69b518;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+}
+
+.dark .public-surface {
+    color-scheme: dark;
+    --background: #0e1710;
+    --foreground: #eef4e8;
+    --card: #162119;
+    --card-foreground: #eef4e8;
+    --popover: #162119;
+    --popover-foreground: #eef4e8;
+    --secondary: #203024;
+    --secondary-foreground: #eef4e8;
+    --muted: #162119;
+    --muted-foreground: #aab7a6;
+    --accent: #263820;
+    --accent-foreground: #c2ec8b;
+    --border: #2b3c2e;
+    --input: #3c4f3c;
+    --ring: #a6eb20;
+    --destructive: #f87171;
+}
+.public-surface [data-slot='input'] {
+    @apply h-11 rounded-xl bg-background;
+}
+
+.public-surface button[type='submit'] {
+    @apply h-11 rounded-full font-semibold;
+}
+
+.public-surface section[id],
+.public-surface p[id] {
+    scroll-margin-top: 6rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    .public-surface [data-aos] {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
     }
 }
