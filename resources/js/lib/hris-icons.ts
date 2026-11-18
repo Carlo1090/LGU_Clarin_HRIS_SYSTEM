@@ -15,6 +15,7 @@ import {
     Settings,
     ShieldAlert,
     ShieldCheck,
+    UserRoundPlus,
     UserRoundSearch,
     Users,
 } from 'lucide-react';
@@ -38,7 +39,8 @@ const resourceIcons: Partial<Record<string, LucideIcon>> = {
     'performance-reviews': ClipboardCheck,
     'privacy-requests': FileLock2,
     'privacy-incidents': ShieldAlert,
-    'portal/my-profile': IdCard,
+    'my-profile': IdCard,
+    'account-invitations': UserRoundPlus,
     'portal/my-attendance': CalendarCheck,
     'portal/my-leave-credits': CalendarDays,
     'portal/my-leave-requests': FileText,

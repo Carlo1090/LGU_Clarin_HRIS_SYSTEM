@@ -1,6 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import {
-    ArrowUpRight,
     Building2,
     CalendarCheck,
     CalendarDays,
@@ -13,23 +12,16 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { hrisResourceIcon } from '@/lib/hris-icons';
 
 type DashboardCard = {
     label: string;
     value: string;
 };
 
-type DashboardLink = {
-    label: string;
-    href: string;
-};
-
 type Props = {
     role: string;
     office: string | null;
     cards: DashboardCard[];
-    links: DashboardLink[];
 };
 
 const cardIcons: Record<string, LucideIcon> = {
@@ -71,16 +63,13 @@ const cardIcons: Record<string, LucideIcon> = {
     'Payroll net total': Wallet,
 };
 
-export default function Dashboard({ role, office, cards, links }: Props) {
+export default function Dashboard({ role, office, cards }: Props) {
     const isHrmo = role === 'HRMO Head' || role === 'HR Officer';
     const title = isHrmo
         ? 'HRMO Portal'
         : role === 'Unassigned'
           ? 'HRIS Dashboard'
           : `${role} Portal`;
-    const primaryLink = isHrmo
-        ? links.find((link) => link.href === '/hris/employees')
-        : links[0];
 
     return (
         <>
@@ -118,20 +107,6 @@ export default function Dashboard({ role, office, cards, links }: Props) {
                                 ? 'Oversee municipal staff records, attendance, leave requests, and vacancies.'
                                 : 'View your role’s key information and open the tools available to you.'}
                         </p>
-                        {primaryLink && (
-                            <Link
-                                href={primaryLink.href}
-                                className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#a6eb20] px-5 py-2.5 text-sm font-semibold text-[#142014] transition-colors hover:bg-[#c2ec8b] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-                            >
-                                {isHrmo
-                                    ? 'Employee directory'
-                                    : primaryLink.label}
-                                <ArrowUpRight
-                                    aria-hidden="true"
-                                    className="size-4"
-                                />
-                            </Link>
-                        )}
                     </div>
                 </header>
 
@@ -194,55 +169,6 @@ export default function Dashboard({ role, office, cards, links }: Props) {
                                     have your account assigned the correct role.
                                 </p>
                             </div>
-                        </div>
-                    </section>
-                )}
-
-                {links.length > 0 && (
-                    <section className="space-y-4">
-                        <div>
-                            <h2 className="text-lg font-semibold tracking-tight">
-                                Quick access
-                            </h2>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Go directly to the tools available for your role
-                            </p>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                            {links.map((link) => (
-                                <Link
-                                    key={link.href}
-                                    href={link.href}
-                                    className="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-sm transition duration-200 hover:border-primary/30 hover:shadow-md"
-                                >
-                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground transition group-hover:bg-primary group-hover:text-primary-foreground">
-                                        {(() => {
-                                            const Icon = hrisResourceIcon(
-                                                link.href.replace('/hris/', ''),
-                                            );
-
-                                            return (
-                                                <Icon
-                                                    aria-hidden="true"
-                                                    className="size-5"
-                                                />
-                                            );
-                                        })()}
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block font-medium">
-                                            {link.label}
-                                        </span>
-                                        <span className="mt-0.5 block text-xs text-muted-foreground">
-                                            Open {link.label.toLowerCase()}
-                                        </span>
-                                    </span>
-                                    <ArrowUpRight
-                                        aria-hidden="true"
-                                        className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground"
-                                    />
-                                </Link>
-                            ))}
                         </div>
                     </section>
                 )}

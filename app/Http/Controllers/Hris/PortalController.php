@@ -42,13 +42,22 @@ class PortalController extends Controller
 
         $items = [];
         foreach (self::PAGES[$user->role?->name] ?? [] as $page => $title) {
-            $items[] = ['title' => $title, 'href' => route('hris.portal', $page, false)];
+            $items[] = $page === 'my-profile'
+                ? ['title' => 'My HR profile', 'href' => route('hris.my-profile', absolute: false)]
+                : ['title' => $title, 'href' => route('hris.portal', $page, false)];
         }
 
         if (AttendanceCorrectionController::available($user)) {
             $items[] = [
                 'title' => 'Attendance corrections',
                 'href' => route('hris.attendance-corrections.index', [], false),
+            ];
+        }
+
+        if ($user->role?->name === 'HRMO Head' && $user->requires_mfa && $user->hasEnabledTwoFactorAuthentication()) {
+            $items[] = [
+                'title' => 'Invite an employee',
+                'href' => route('hris.invitations.create', absolute: false),
             ];
         }
 

@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 
 type EmployeeProfile = Record<string, string | number | null>;
 
@@ -75,15 +75,7 @@ export default function MyProfile({
             <Head title="My HR Profile" />
             <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
                 <header>
-                    <Link
-                        href="/dashboard"
-                        className="text-sm text-muted-foreground hover:underline"
-                    >
-                        ← Dashboard
-                    </Link>
-                    <h1 className="mt-3 text-2xl font-semibold">
-                        My HR Profile
-                    </h1>
+                    <h1 className="text-2xl font-semibold">My HR Profile</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Employee information maintained by HRMO.
                     </p>

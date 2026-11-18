@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Hris\PortalController;
 use App\Models\AttendanceRecord;
 use App\Models\AuditLog;
 use App\Models\Department;
@@ -115,30 +114,10 @@ class DashboardController extends Controller
             default => [],
         };
 
-        $links = match ($role) {
-            'Employee' => [['label' => 'My HR profile', 'href' => route('hris.my-profile', absolute: false)]],
-            'Department Head' => [['label' => 'Department employees', 'href' => '/hris/employees'], ['label' => 'Attendance', 'href' => '/hris/attendance'], ['label' => 'Leave approvals', 'href' => '/hris/leave-applications'], ['label' => 'Performance reviews', 'href' => '/hris/performance-reviews']],
-            'HR Officer', 'HRMO Head' => [['label' => 'Employees', 'href' => '/hris/employees'], ['label' => 'Departments', 'href' => '/hris/departments'], ['label' => 'Attendance', 'href' => '/hris/attendance'], ['label' => 'Leave requests', 'href' => '/hris/leave-applications'], ['label' => 'Vacancies', 'href' => '/hris/vacancies']],
-            'Payroll Officer' => [['label' => 'Payroll periods', 'href' => '/hris/payroll-periods'], ['label' => 'Payroll preparation', 'href' => '/hris/payrolls']],
-            'Accountant', 'Treasurer', 'Auditor' => [['label' => 'Payroll records', 'href' => '/hris/payrolls']],
-            'Mayor' => [['label' => 'Departments', 'href' => '/hris/departments'], ['label' => 'Vacancies', 'href' => '/hris/vacancies']],
-            'MIS Administrator' => [['label' => 'Roles', 'href' => '/hris/roles'], ['label' => 'System settings', 'href' => '/hris/system-settings']],
-            'DPO' => [['label' => 'Privacy requests', 'href' => '/hris/privacy-requests'], ['label' => 'Privacy incidents', 'href' => '/hris/privacy-incidents']],
-            default => [],
-        };
-
-        if ($role === 'HRMO Head' && $user->requires_mfa && $user->hasEnabledTwoFactorAuthentication()) {
-            $links[] = ['label' => 'Invite an employee', 'href' => route('hris.invitations.create', absolute: false)];
-        }
-
         return Inertia::render('dashboard', [
             'role' => $role ?? 'Unassigned',
             'office' => $employee?->department?->name,
             'cards' => $cards,
-            'links' => [
-                ...array_map(fn (array $item) => ['label' => $item['title'], 'href' => $item['href']], PortalController::navigation($user)),
-                ...$links,
-            ],
         ]);
     }
 

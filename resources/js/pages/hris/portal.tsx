@@ -1,6 +1,4 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
-import { dashboard } from '@/routes';
 
 type Cell = string | number | null;
 
@@ -174,14 +172,7 @@ export default function PortalPage({
         <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
             <Head title={title} />
             <header className="rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                <Link
-                    href={dashboard()}
-                    className="inline-flex items-center gap-2 text-sm font-medium text-[#c2ec8b] hover:underline"
-                >
-                    <ArrowLeft aria-hidden="true" className="size-4" />
-                    Dashboard
-                </Link>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
                     {title}
                 </h1>
                 <p className="mt-2 text-sm text-white/80">{description}</p>

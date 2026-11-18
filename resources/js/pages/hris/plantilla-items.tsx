@@ -8,7 +8,6 @@ type Row = {
 };
 type Props = {
     title: string;
-    resources: { key: string; title: string }[];
     fields: { name: string; label: string }[];
     records: {
         data: Row[];
@@ -31,12 +30,7 @@ function displayValue(name: string, value: string | number | null | undefined) {
     return String(value);
 }
 
-export default function PlantillaItems({
-    title,
-    resources,
-    fields,
-    records,
-}: Props) {
+export default function PlantillaItems({ title, fields, records }: Props) {
     const columns = [
         { name: 'department_name', label: 'Department' },
         ...fields,
@@ -50,18 +44,6 @@ export default function PlantillaItems({
                 <header>
                     <h1 className="text-2xl font-semibold">{title}</h1>
                 </header>
-                <nav aria-label="HRIS modules" className="flex flex-wrap gap-2">
-                    {resources.map((item) => (
-                        <Link
-                            key={item.key}
-                            href={`/hris/${item.key}`}
-                            className={`rounded-md border px-3 py-2 text-sm ${item.key === 'plantilla-items' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                        >
-                            {item.title}
-                        </Link>
-                    ))}
-                </nav>
-
                 <section className="space-y-3">
                     <div>
                         <h2 className="text-lg font-semibold">

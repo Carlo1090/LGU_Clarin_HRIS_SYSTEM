@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -75,12 +75,6 @@ export default function ImportEmployees({
         <>
             <Head title="Bulk import employees" />
             <main className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-8">
-                <Link
-                    href="/hris/employees"
-                    className="text-sm text-muted-foreground underline"
-                >
-                    Back to Employees
-                </Link>
                 <header>
                     <h1 className="text-2xl font-semibold">
                         Bulk import employees
@@ -162,12 +156,6 @@ export default function ImportEmployees({
                             temporary password appears in the one-time
                             credentials table above.
                         </p>
-                        <Link
-                            href="/hris/employees"
-                            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-                        >
-                            Open Employees
-                        </Link>
                     </section>
                 ) : (
                     <>

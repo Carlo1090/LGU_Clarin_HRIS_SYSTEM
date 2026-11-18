@@ -353,7 +353,6 @@ class HrisResourceController extends Controller
 
             return Inertia::render('hris/plantilla-items', [
                 'title' => $config['title'],
-                'resources' => collect(self::RESOURCES)->filter(fn (array $item, string $key) => Gate::allows('view-hris-resource', $key))->map(fn (array $item, string $key) => ['key' => $key, 'title' => $item['title']])->values(),
                 'fields' => self::PLANTILLA_FIELDS,
                 'records' => $records,
             ]);
@@ -378,7 +377,6 @@ class HrisResourceController extends Controller
 
             return Inertia::render('hris/resources/index', [
                 'resource' => $resource, 'title' => $config['title'],
-                'resources' => collect(self::RESOURCES)->filter(fn (array $item, string $key) => Gate::allows('view-hris-resource', $key))->map(fn (array $item, string $key) => ['key' => $key, 'title' => $item['title']])->values(),
                 'canManage' => false, 'fields' => $config['fields'],
                 'records' => ['data' => $records, 'links' => []], 'editing' => null,
                 'officeDirectory' => true,
@@ -411,10 +409,6 @@ class HrisResourceController extends Controller
         return Inertia::render('hris/resources/index', [
             'resource' => $resource,
             'title' => $config['title'],
-            'resources' => collect(self::RESOURCES)
-                ->filter(fn (array $item, string $key) => Gate::allows('view-hris-resource', $key))
-                ->map(fn (array $item, string $key) => ['key' => $key, 'title' => $item['title']])
-                ->values(),
             'canManage' => $resource !== 'leave-applications' && Gate::allows('manage-hris-resource', $resource),
             'leaveReviewStage' => $resource === 'leave-applications' ? LeaveReviewController::stage($request->user()) : null,
             'canImport' => $resource === 'employees' && $request->user()->role?->name === 'HRMO Head',

@@ -1,10 +1,9 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { dashboard } from '@/routes';
 import { store } from '@/routes/hris/invitations';
 
 export default function InviteAccount({ roles }: { roles: string[] }) {
@@ -24,12 +23,6 @@ export default function InviteAccount({ roles }: { roles: string[] }) {
         <>
             <Head title="Invite an employee" />
             <main className="mx-auto w-full max-w-xl space-y-6 p-6">
-                <Link
-                    href={dashboard()}
-                    className="text-sm text-muted-foreground underline"
-                >
-                    Back to dashboard
-                </Link>
                 <header>
                     <h1 className="text-2xl font-semibold">
                         Invite an employee

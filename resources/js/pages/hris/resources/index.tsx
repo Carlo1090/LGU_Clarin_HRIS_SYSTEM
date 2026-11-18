@@ -1,6 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { hrisResourceIcon } from '@/lib/hris-icons';
 
 type Field = {
     name: string;
@@ -21,7 +20,6 @@ type HrisRow = {
 type Props = {
     resource: string;
     title: string;
-    resources: { key: string; title: string }[];
     fields: Field[];
     canManage: boolean;
     leaveReviewStage?: [string, string, string] | null;
@@ -51,7 +49,6 @@ const emptyValue = (field: Field): string | number | boolean | null =>
 export default function HrisResourceIndex({
     resource,
     title,
-    resources,
     fields,
     canManage,
     leaveReviewStage,
@@ -206,29 +203,6 @@ export default function HrisResourceIndex({
                             'Manage HRIS records and their linked data.'}
                     </p>
                 </header>
-
-                <nav aria-label="HRIS modules" className="flex flex-wrap gap-2">
-                    {resources.map((item) => {
-                        const Icon = hrisResourceIcon(item.key);
-
-                        return (
-                            <Link
-                                key={item.key}
-                                href={`/hris/${item.key}`}
-                                aria-current={
-                                    resource === item.key ? 'page' : undefined
-                                }
-                                className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground"
-                            >
-                                <Icon
-                                    aria-hidden="true"
-                                    className="size-4 shrink-0"
-                                />
-                                {item.title}
-                            </Link>
-                        );
-                    })}
-                </nav>
 
                 {resource === 'employees' && statusSummary.length > 0 && (
                     <section
