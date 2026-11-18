@@ -1,19 +1,42 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+﻿import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import {
     ArrowUpRight,
+    Building2,
+    CalendarDays,
+    ChartNoAxesColumnIncreasing,
+    ChartPie,
     CheckCircle2,
+    FileText,
     Landmark,
     LayoutGrid,
+    Lightbulb,
     Play,
     ShieldCheck,
-    TrendingUp,
-    UserCheck,
+    Sparkles,
+    Users,
 } from 'lucide-react';
+import GradientASCII from '@/components/GradientASCII';
 import PublicHeader from '@/components/public-header';
+import ScrollReveal from '@/components/ScrollReveal';
+import SpotlightCard from '@/components/SpotlightCard';
+import TechText from '@/components/TechText';
 import { dashboard, login } from '@/routes';
+import './welcome.css';
+
+function RevealWords({ children }: { children: string }) {
+    return children.split(/(\s+)/).map((word, index) =>
+        word.trim() ? (
+            <span className="scroll-reveal-word" key={index}>
+                <span className="scroll-reveal-piece">{word}</span>
+            </span>
+        ) : (
+            word
+        ),
+    );
+}
 
 export default function Welcome() {
     const { auth } = usePage().props;
@@ -27,6 +50,20 @@ export default function Welcome() {
             disable: window.matchMedia('(prefers-reduced-motion: reduce)')
                 .matches,
         });
+
+        let active = true;
+        const refreshAnimations = () => {
+            if (active) AOS.refresh();
+        };
+        const frame = requestAnimationFrame(() => AOS.refreshHard());
+        void document.fonts.ready.then(refreshAnimations);
+        window.addEventListener('load', refreshAnimations);
+
+        return () => {
+            active = false;
+            cancelAnimationFrame(frame);
+            window.removeEventListener('load', refreshAnimations);
+        };
     }, []);
 
     return (
@@ -210,230 +247,437 @@ export default function Welcome() {
                             </span>
                         </div>
 
-                        <h2
+                        <ScrollReveal
                             data-aos="fade-up"
-                            data-aos-delay="100"
-                            className="mt-6 max-w-3xl text-3xl leading-[1.2] font-semibold tracking-tight text-foreground sm:text-4xl"
+                            containerClassName="landing-reveal landing-reveal--features"
+                            textClassName="landing-reveal-text"
+                            scrollContainerRef={null}
+                            baseRotation={0}
+                            baseOpacity={0.2}
+                            blurStrength={3}
+                            smoothing={0.35}
+                            highlightColor="#69B518"
+                            wordAnimationEnd="bottom 65%"
                         >
-                            Achieve{' '}
-                            <span className="text-accent-foreground">
-                                administrative clarity
-                            </span>{' '}
-                            and take control of municipal records with tools
-                            designed to simplify, streamline, and personalize
-                            your{' '}
-                            <span className="text-accent-foreground">
-                                workforce management
-                            </span>{' '}
-                            — all in one secure platform.
-                        </h2>
+                            Achieve administrative clarity and take control of
+                            municipal records with tools designed to simplify,
+                            streamline, and personalize your workforce
+                            management, all in one secure platform.
+                        </ScrollReveal>
 
                         {/* 4 Feature Cards */}
                         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                             {/* Card 1 */}
-                            <div
-                                data-aos="fade-up"
-                                data-aos-delay="0"
-                                className="group relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-[#D7F75B] to-[#B7EA2B] p-6 text-[#142014]"
+                            <SpotlightCard
+                                className="landing-feature"
+                                theme="light"
+                                style={{ backgroundColor: '#D7F75B' }}
+                                spotlightColor="#F2FFD0"
+                                intensity={0.95}
+                                spotlightSize={240}
+                                softness={0.8}
+                                borderGlow={0.85}
+                                smoothing={0.3}
                             >
-                                <div className="relative z-10">
-                                    <span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold text-[#142014]">
-                                        LGU Clarin
-                                    </span>
-                                </div>
-                                <div className="relative z-10 my-auto flex justify-center">
-                                    <div className="flex size-24 items-center justify-center rounded-2xl bg-[#1C4722] text-[#A6EB20] shadow-xl transition group-hover:scale-105">
-                                        <Landmark
-                                            className="size-11"
-                                            strokeWidth={1.6}
-                                        />
+                                <div className="group relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                    <div className="relative z-10">
+                                        <span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold text-[#142014]">
+                                            LGU Clarin
+                                        </span>
                                     </div>
+                                    <div className="relative z-10 my-auto flex justify-center">
+                                        <div className="flex size-24 items-center justify-center rounded-2xl bg-[#1C4722] text-[#A6EB20] shadow-xl transition group-hover:scale-105">
+                                            <Landmark
+                                                className="size-11"
+                                                strokeWidth={1.6}
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="relative z-10 text-xs font-medium text-[#142014]/80">
+                                        Centralized municipal employee portal.
+                                    </p>
                                 </div>
-                                <p className="relative z-10 text-xs font-medium text-[#142014]/80">
-                                    Centralized municipal employee portal.
-                                </p>
-                            </div>
+                            </SpotlightCard>
 
                             {/* Card 2 */}
-                            <div
-                                data-aos="fade-up"
-                                data-aos-delay="100"
-                                className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-[#6CC417] to-[#9CE82A] p-6 text-[#142014]"
+                            <SpotlightCard
+                                className="landing-feature"
+                                theme="light"
+                                style={{ backgroundColor: '#9CE82A' }}
+                                spotlightColor="#F2FFD0"
+                                intensity={0.95}
+                                spotlightSize={240}
+                                softness={0.8}
+                                borderGlow={0.85}
+                                smoothing={0.3}
                             >
-                                <h3 className="relative z-10 text-sm leading-snug font-bold">
-                                    Automated 201 Files &amp; Alerts
-                                </h3>
-                                <ArrowUpRight
-                                    aria-hidden="true"
-                                    className="pointer-events-none absolute -right-6 -bottom-6 size-56 text-[#4D940D]/25"
-                                    strokeWidth={2.5}
-                                />
-                                <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
-                                    Maintain updated employee service records
-                                    and get real-time alerts on step increments
-                                    and documents.
-                                </p>
-                            </div>
+                                <div className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                    <h3 className="relative z-10 text-sm leading-snug font-bold">
+                                        Automated 201 Files &amp; Alerts
+                                    </h3>
+                                    <ArrowUpRight
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute -right-6 -bottom-6 size-56 text-[#4D940D]/25"
+                                        strokeWidth={2.5}
+                                    />
+                                    <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
+                                        Maintain updated employee service
+                                        records and get real-time alerts on step
+                                        increments and documents.
+                                    </p>
+                                </div>
+                            </SpotlightCard>
 
                             {/* Card 3 */}
-                            <div
-                                data-aos="fade-up"
-                                data-aos-delay="200"
-                                className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-[#B4F232] to-[#9BE322] p-6 text-[#142014]"
+                            <SpotlightCard
+                                className="landing-feature"
+                                theme="light"
+                                style={{ backgroundColor: '#B4F232' }}
+                                spotlightColor="#F2FFD0"
+                                intensity={0.95}
+                                spotlightSize={240}
+                                softness={0.8}
+                                borderGlow={0.85}
+                                smoothing={0.3}
                             >
-                                <h3 className="relative z-10 text-sm leading-snug font-bold">
-                                    Unified Department Dashboard
-                                </h3>
-                                <div
-                                    aria-hidden="true"
-                                    className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 -space-x-8"
-                                >
-                                    <span className="size-32 rounded-full bg-[#86CC14]/35" />
-                                    <span className="size-32 rounded-full bg-[#86CC14]/35" />
+                                <div className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                    <h3 className="relative z-10 text-sm leading-snug font-bold">
+                                        Unified Department Dashboard
+                                    </h3>
+                                    <div
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 -space-x-8"
+                                    >
+                                        <span className="size-32 rounded-full bg-[#86CC14]/35" />
+                                        <span className="size-32 rounded-full bg-[#86CC14]/35" />
+                                    </div>
+                                    <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
+                                        View all municipal offices, leave
+                                        credits, and personnel statuses in one
+                                        intuitive interface.
+                                    </p>
                                 </div>
-                                <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
-                                    View all municipal offices, leave credits,
-                                    and personnel statuses in one intuitive
-                                    interface.
-                                </p>
-                            </div>
+                            </SpotlightCard>
 
                             {/* Card 4 */}
-                            <div
-                                data-aos="fade-up"
-                                data-aos-delay="300"
-                                className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-[#DCFA70] to-[#B7EE38] p-6 text-[#142014]"
+                            <SpotlightCard
+                                className="landing-feature"
+                                theme="light"
+                                style={{ backgroundColor: '#DCFA70' }}
+                                spotlightColor="#F2FFD0"
+                                intensity={0.95}
+                                spotlightSize={240}
+                                softness={0.8}
+                                borderGlow={0.85}
+                                smoothing={0.3}
                             >
-                                <h3 className="relative z-10 text-sm leading-snug font-bold">
-                                    Role-Based HR Insights
-                                </h3>
-                                <span
-                                    aria-hidden="true"
-                                    className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[150px] font-black text-[#95CE1B]/30 select-none"
-                                >
-                                    §
-                                </span>
-                                <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
-                                    Access role-specific HR tools and reports
-                                    tailored to employees, department heads, and
-                                    HRMO admins.
-                                </p>
-                            </div>
+                                <div className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                    <h3 className="relative z-10 text-sm leading-snug font-bold">
+                                        Role-Based HR Insights
+                                    </h3>
+                                    <span
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[150px] font-black text-[#95CE1B]/30 select-none"
+                                    >
+                                        §
+                                    </span>
+                                    <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
+                                        Access role-specific HR tools and
+                                        reports tailored to employees,
+                                        department heads, and HRMO admins.
+                                    </p>
+                                </div>
+                            </SpotlightCard>
                         </div>
                     </section>
 
-                    {/* Bright Lime Full-Width Banner Section ("3 Easy Steps") */}
+                    {/* How It Works: HR decisions and overlapping workspace previews */}
                     <section
                         id="how-it-works"
-                        className="relative overflow-hidden bg-[#A6EB20] py-40 text-[#142014]"
+                        aria-labelledby="how-it-works-title"
+                        className="relative overflow-hidden bg-[#A6EB20] py-20 text-[#142014] sm:py-24"
                     >
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-x-0 -bottom-8 text-center text-[130px] leading-none font-black tracking-tighter text-[#93D616] select-none sm:text-[200px]"
-                        >
-                            CLARIN
-                        </div>
+                        <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2 lg:gap-16 lg:px-10">
+                            {/* Headline, benefits, and portal access */}
+                            <div>
+                                <p
+                                    data-aos="fade-up"
+                                    className="mb-5 text-[11px] font-semibold tracking-[0.18em] text-[#1C4722] uppercase"
+                                >
+                                    How it works
+                                </p>
+                                <ScrollReveal
+                                    id="how-it-works-title"
+                                    containerClassName="landing-reveal landing-reveal--how"
+                                    textClassName="landing-reveal-text"
+                                    scrollContainerRef={null}
+                                    baseRotation={0}
+                                    baseOpacity={0.25}
+                                    blurStrength={3}
+                                    effect="rise"
+                                    mode="enter"
+                                    duration={0.7}
+                                    stagger={0.065}
+                                >
+                                    Smarter HR Records Better Decisions
+                                </ScrollReveal>
 
-                        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-6 lg:grid-cols-2 lg:px-10">
-                            {/* Left Dark Widget Card */}
-                            <div
-                                data-aos="fade-up"
-                                className="mx-auto w-full max-w-md rounded-3xl bg-[#1C1D1B] p-7 text-white shadow-2xl"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium">
-                                        <span className="size-2 rounded-full bg-[#A6EB20]" />
-                                        LGU Clarin HRIS
-                                    </span>
-                                    <span className="font-mono text-xs text-neutral-400">
-                                        HRMO Portal
-                                    </span>
+                                <div
+                                    data-aos="fade-up"
+                                    data-aos-delay="100"
+                                    className="mt-6 space-y-5 text-xs leading-relaxed text-[#142014]/80 sm:text-sm"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white/40 text-[#1C4722]">
+                                            <CheckCircle2
+                                                aria-hidden="true"
+                                                className="size-3.5"
+                                            />
+                                        </span>
+                                        <p>
+                                            <strong className="font-semibold text-[#142014]">
+                                                Get clarity on daily DTR logs,
+                                            </strong>{' '}
+                                            track leave credits, and monitor
+                                            service records in one workspace.
+                                        </p>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white/40 text-[#1C4722]">
+                                            <CheckCircle2
+                                                aria-hidden="true"
+                                                className="size-3.5"
+                                            />
+                                        </span>
+                                        <p>
+                                            <strong className="font-semibold text-[#142014]">
+                                                Extra administrative power
+                                            </strong>{' '}
+                                            with role-based HRMO tools for
+                                            employees, department heads, and
+                                            municipal administrators.
+                                        </p>
+                                    </div>
                                 </div>
 
-                                <div className="mt-8">
-                                    <p className="text-xs text-neutral-400">
-                                        Available Leave Credits
-                                    </p>
-                                    <p className="mt-1 text-4xl font-bold tracking-tight">
-                                        24.50 Days
-                                    </p>
-                                </div>
-
-                                <div className="mt-8 flex items-center justify-between gap-2">
-                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15 text-neutral-300">
-                                        <LayoutGrid className="size-4" />
-                                    </span>
-
-                                    <Link
-                                        href={auth.user ? dashboard() : login()}
-                                        className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-2.5 text-xs font-medium transition hover:bg-white/10"
-                                    >
-                                        <CheckCircle2 className="size-3.5 text-[#A6EB20]" />
-                                        File Leave
-                                    </Link>
-
-                                    <Link
-                                        href={auth.user ? dashboard() : login()}
-                                        className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-2.5 text-xs font-medium transition hover:bg-white/10"
-                                    >
-                                        <ArrowUpRight className="size-3.5 text-[#A6EB20]" />
-                                        201 File
-                                    </Link>
-                                </div>
+                                <Link
+                                    href={auth.user ? dashboard() : login()}
+                                    data-aos="fade-up"
+                                    data-aos-delay="200"
+                                    className="group mt-8 inline-flex items-center gap-2 rounded-full bg-[#1C4722] px-6 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#15381B] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1C4722]"
+                                >
+                                    Explore More
+                                    <ArrowUpRight
+                                        aria-hidden="true"
+                                        className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none"
+                                    />
+                                </Link>
                             </div>
 
-                            {/* Right 3 Easy Steps List */}
-                            <div data-aos="fade-up" data-aos-delay="150">
-                                <h2 className="text-3xl leading-tight font-semibold tracking-tight text-[#142014] sm:text-4xl">
-                                    Start Managing Your HR Records in 3 Easy
-                                    Steps
-                                </h2>
-
-                                <div className="mt-8 space-y-6">
-                                    <div className="flex items-start gap-4">
-                                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1C4722] text-white">
-                                            <UserCheck className="size-4" />
-                                        </span>
-                                        <p className="text-xs leading-relaxed font-medium text-[#142014]/90 sm:text-sm">
-                                            <strong className="font-bold">
-                                                Sign In to Your Workspace.
-                                            </strong>{' '}
-                                            Log in using your official LGU
-                                            Clarin credentials. Contact HRMO for
-                                            an account invitation.
-                                        </p>
+                            {/* Overlapping cards inspired by the supplied layout */}
+                            <div className="relative mx-auto w-full max-w-lg">
+                                <div
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute inset-6 rounded-full bg-white/30 blur-3xl"
+                                />
+                                <div className="hr-preview-stage relative isolate min-h-[470px] sm:min-h-[500px]">
+                                    {/* Back card: illustrative attendance overview */}
+                                    <div
+                                        className="hr-overview-card absolute top-0 right-0 z-0 w-[min(18rem,90%)] sm:top-2 sm:w-80"
+                                        data-aos="fade-up"
+                                        data-aos-delay="150"
+                                    >
+                                        <SpotlightCard
+                                            className="landing-hr-spotlight landing-hr-spotlight--back"
+                                            theme="light"
+                                            style={{
+                                                backgroundColor: 'var(--card)',
+                                                color: 'var(--card-foreground)',
+                                            }}
+                                            spotlightColor="#A6EB20"
+                                            intensity={0.9}
+                                            spotlightSize={240}
+                                            softness={0.8}
+                                            borderGlow={0.85}
+                                            smoothing={0.3}
+                                        >
+                                            <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3">
+                                                <div>
+                                                    <p className="text-[11px] font-medium text-muted-foreground">
+                                                        Attendance &amp; DTR
+                                                    </p>
+                                                    <p className="mt-1 text-xl font-bold tracking-tight">
+                                                        Your workweek
+                                                    </p>
+                                                </div>
+                                                <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold">
+                                                    Weekly view
+                                                </span>
+                                            </div>
+                                            <div className="mt-4 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                                                <span className="rounded-md bg-accent px-2 py-0.5 font-semibold text-accent-foreground">
+                                                    DTR logs
+                                                </span>
+                                                <span>
+                                                    Mon &middot; Tue &middot;
+                                                    Wed &middot; Thu &middot;
+                                                    Fri
+                                                </span>
+                                            </div>
+                                            <div
+                                                className="mt-3 h-20 w-full"
+                                                aria-hidden="true"
+                                            >
+                                                <svg
+                                                    viewBox="0 0 240 80"
+                                                    className="h-full w-full"
+                                                    preserveAspectRatio="none"
+                                                >
+                                                    <defs>
+                                                        <linearGradient
+                                                            id="hr-attendance-fill"
+                                                            x1="0"
+                                                            y1="0"
+                                                            x2="0"
+                                                            y2="1"
+                                                        >
+                                                            <stop
+                                                                offset="0%"
+                                                                stopColor="#69B518"
+                                                                stopOpacity="0.22"
+                                                            />
+                                                            <stop
+                                                                offset="100%"
+                                                                stopColor="#69B518"
+                                                                stopOpacity="0"
+                                                            />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <path
+                                                        d="M 0 62 Q 45 12 90 42 T 165 28 T 240 12 L 240 80 L 0 80 Z"
+                                                        fill="url(#hr-attendance-fill)"
+                                                    />
+                                                    <path
+                                                        d="M 0 62 Q 45 12 90 42 T 165 28 T 240 12"
+                                                        fill="none"
+                                                        stroke="#69B518"
+                                                        strokeWidth="2.5"
+                                                        strokeLinecap="round"
+                                                    />
+                                                </svg>
+                                            </div>
+                                        </SpotlightCard>
                                     </div>
 
-                                    <div className="flex items-start gap-4">
-                                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1C4722] text-white">
-                                            <TrendingUp className="size-4" />
-                                        </span>
-                                        <p className="text-xs leading-relaxed font-medium text-[#142014]/90 sm:text-sm">
-                                            <strong className="font-bold">
-                                                Access Role-Based HR
-                                                Information.
-                                            </strong>{' '}
-                                            View your personal service records,
-                                            attendance summaries, and leave
-                                            balances anytime.
-                                        </p>
+                                    {/* Transparent portrait between the floating cards */}
+                                    <div
+                                        className="hr-preview-hero"
+                                        aria-hidden="true"
+                                        data-aos="fade-up"
+                                        data-aos-delay="200"
+                                    >
+                                        <img
+                                            src="/images/how-it-works-hero.png"
+                                            alt=""
+                                            width={1000}
+                                            height={1000}
+                                            loading="lazy"
+                                            decoding="async"
+                                            draggable={false}
+                                        />
                                     </div>
 
-                                    <div className="flex items-start gap-4">
-                                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1C4722] text-white">
-                                            <ShieldCheck className="size-4" />
-                                        </span>
-                                        <p className="text-xs leading-relaxed font-medium text-[#142014]/90 sm:text-sm">
-                                            <strong className="font-bold">
-                                                Submit &amp; Track Requests
-                                                Seamlessly.
-                                            </strong>{' '}
-                                            Coordinate directly with the Human
-                                            Resource Management Office with
-                                            transparent status updates.
-                                        </p>
+                                    {/* Front card: links to employee records and leave tools */}
+                                    <div
+                                        className="hr-records-card absolute bottom-0 left-0 z-10 w-[min(18rem,90%)] sm:bottom-2 sm:w-80"
+                                        data-aos="fade-up"
+                                        data-aos-delay="250"
+                                    >
+                                        <SpotlightCard
+                                            className="landing-hr-spotlight landing-hr-spotlight--front"
+                                            theme="light"
+                                            style={{
+                                                backgroundColor: 'var(--card)',
+                                                color: 'var(--card-foreground)',
+                                            }}
+                                            spotlightColor="#A6EB20"
+                                            intensity={0.9}
+                                            spotlightSize={240}
+                                            softness={0.8}
+                                            borderGlow={0.85}
+                                            smoothing={0.3}
+                                        >
+                                            <div className="flex items-center justify-between gap-3 pb-4">
+                                                <p className="text-xs font-bold">
+                                                    Your HR workspace
+                                                </p>
+                                                <Link
+                                                    href={
+                                                        auth.user
+                                                            ? dashboard()
+                                                            : login()
+                                                    }
+                                                    className="rounded text-[11px] font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                                                >
+                                                    View all
+                                                </Link>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <Link
+                                                    href={
+                                                        auth.user
+                                                            ? dashboard()
+                                                            : login()
+                                                    }
+                                                    className="group flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/40 p-3 transition hover:border-[#69B518]/60 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                                >
+                                                    <div>
+                                                        <p className="text-sm font-bold tracking-tight">
+                                                            201 File
+                                                        </p>
+                                                        <p className="mt-1 text-[10px] text-muted-foreground">
+                                                            Service records
+                                                            &amp; documents
+                                                        </p>
+                                                    </div>
+                                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                                                        <FileText
+                                                            aria-hidden="true"
+                                                            className="size-4"
+                                                        />
+                                                    </span>
+                                                </Link>
+                                                <Link
+                                                    href={
+                                                        auth.user
+                                                            ? dashboard()
+                                                            : login()
+                                                    }
+                                                    className="group flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/40 p-3 transition hover:border-[#69B518]/60 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                                >
+                                                    <div>
+                                                        <p className="text-sm font-bold tracking-tight">
+                                                            Leave credits
+                                                        </p>
+                                                        <p className="mt-1 text-[10px] text-muted-foreground">
+                                                            Balances &amp;
+                                                            applications
+                                                        </p>
+                                                    </div>
+                                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                                                        <CalendarDays
+                                                            aria-hidden="true"
+                                                            className="size-4"
+                                                        />
+                                                    </span>
+                                                </Link>
+                                            </div>
+                                        </SpotlightCard>
                                     </div>
                                 </div>
+                                <p className="mt-5 text-center text-[10px] font-medium tracking-wide text-[#1C4722]/80">
+                                    Illustrative HR workspace preview
+                                </p>
                             </div>
                         </div>
                     </section>
@@ -481,28 +725,193 @@ export default function Welcome() {
                         </ul>
                     </section>
 
-                    {/* Bottom Info / Help Section */}
+                    {/* About Us: municipal workforce bento cards */}
                     <section
                         id="about"
-                        data-aos="fade-up"
+                        aria-labelledby="about-title"
                         className="mx-auto max-w-6xl px-6 py-20 lg:px-10"
                     >
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <span className="rounded-full bg-[#1C4722] px-4 py-1 text-[11px] font-semibold text-white">
-                                Support &amp; Access
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                                Official Municipal System · Clarin, Bohol
-                            </span>
+                        <div className="mx-auto max-w-3xl text-center">
+                            <p
+                                data-aos="fade-up"
+                                className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] text-muted-foreground uppercase"
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className="size-1 rounded-full bg-foreground"
+                                />
+                                About us
+                            </p>
+                            <ScrollReveal
+                                data-aos="fade-up"
+                                containerClassName="landing-reveal landing-reveal--features"
+                                textClassName="landing-reveal-text"
+                                scrollContainerRef={null}
+                                baseRotation={0}
+                                baseOpacity={0.2}
+                                blurStrength={3}
+                                smoothing={0.35}
+                                highlightColor="#69B518"
+                                wordAnimationEnd="bottom 65%"
+                            >
+                                <RevealWords>Supporting our people</RevealWords>
+                                <br className="hidden sm:inline" />{' '}
+                                <RevealWords>with</RevealWords>{' '}
+                                <span
+                                    aria-hidden="true"
+                                    className="inline-flex size-9 -translate-y-0.5 items-center justify-center rounded-full bg-[#38BDF8] align-middle text-white sm:size-10"
+                                >
+                                    <ChartPie className="size-5" />
+                                </span>{' '}
+                                <RevealWords>smarter HR</RevealWords>
+                                <br className="hidden sm:inline" />
+                                <span className="text-muted-foreground">
+                                    {' '}
+                                    <RevealWords>and</RevealWords>{' '}
+                                    <span
+                                        aria-hidden="true"
+                                        className="inline-flex size-9 -translate-y-0.5 items-center justify-center rounded-full bg-[#C7FA50] align-middle text-[#142014] sm:size-10"
+                                    >
+                                        <Lightbulb className="size-5" />
+                                    </span>{' '}
+                                    <RevealWords>
+                                        better public service.
+                                    </RevealWords>
+                                </span>
+                            </ScrollReveal>
+                        </div>
+
+                        <div className="about-bento mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+                            {/* Portrait with a floating employee records card */}
+                            <article
+                                data-aos="fade-up"
+                                className="about-bento-portrait relative flex min-h-[380px] flex-col justify-between overflow-hidden rounded-[1.75rem] bg-[#1C4722] p-4 shadow-xs"
+                            >
+                                <div
+                                    aria-hidden="true"
+                                    className="absolute inset-0 bg-gradient-to-b from-[#89D91B] via-[#69B518] to-[#1C4722]"
+                                />
+                                <img
+                                    src="/images/black_hero.png"
+                                    alt=""
+                                    width={403}
+                                    height={612}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="absolute inset-0 size-full object-cover object-top"
+                                />
+                                <div
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[#1C4722]/40"
+                                />
+                                <div className="relative z-10 flex items-center justify-between gap-3 px-2 pt-1">
+                                    <span className="text-sm font-extrabold tracking-tight text-white">
+                                        LGU CLARIN
+                                    </span>
+                                    <span
+                                        aria-hidden="true"
+                                        className="flex size-9 items-center justify-center rounded-xl bg-white text-[#142014] shadow-sm"
+                                    >
+                                        <ChartNoAxesColumnIncreasing className="size-4" />
+                                    </span>
+                                </div>
+                                <div className="relative z-10 mt-auto rounded-2xl bg-white p-6 shadow-lg">
+                                    <h3 className="text-4xl font-medium tracking-tight text-[#142014]">
+                                        201 files
+                                    </h3>
+                                    <p className="mt-2.5 text-xs leading-relaxed text-neutral-600">
+                                        Employee records, service history, and
+                                        supporting documents in one place.
+                                    </p>
+                                </div>
+                            </article>
+
+                            {/* People-first mission and connected municipal offices */}
+                            <article
+                                data-aos="fade-up"
+                                data-aos-delay="100"
+                                className="about-bento-mission flex min-h-[380px] flex-col justify-between rounded-[1.75rem] bg-muted p-7"
+                            >
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        Built for our public servants
+                                    </p>
+                                    <h3 className="mt-2 text-4xl font-medium tracking-tight text-foreground lg:text-[42px]">
+                                        People first
+                                    </h3>
+                                </div>
+                                <div className="mt-10">
+                                    <div
+                                        className="flex -space-x-2.5"
+                                        aria-hidden="true"
+                                    >
+                                        <span className="flex size-10 items-center justify-center rounded-full border-2 border-muted bg-[#DDF5B4] text-[#1C4722]">
+                                            <Users className="size-4" />
+                                        </span>
+                                        <span className="flex size-10 items-center justify-center rounded-full border-2 border-muted bg-[#C6E9FA] text-[#1C4722]">
+                                            <Building2 className="size-4" />
+                                        </span>
+                                        <span className="flex size-10 items-center justify-center rounded-full border-2 border-muted bg-[#1C4722] text-[#A6EB20]">
+                                            <ShieldCheck className="size-4" />
+                                        </span>
+                                        <span className="flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-muted bg-white p-1">
+                                            <img
+                                                src="/images/clarin_logo.png"
+                                                alt=""
+                                                width={32}
+                                                height={32}
+                                                loading="lazy"
+                                                className="size-full object-contain"
+                                            />
+                                        </span>
+                                    </div>
+                                    <p className="mt-4 text-xs leading-relaxed font-medium text-muted-foreground">
+                                        Supporting the people who serve our
+                                        community, with clearer records and
+                                        simpler daily HR work across municipal
+                                        offices.
+                                    </p>
+                                </div>
+                            </article>
+
+                            {/* Lime platform card and charcoal municipal badge */}
+                            <div
+                                data-aos="fade-up"
+                                data-aos-delay="200"
+                                className="about-bento-platform flex min-h-[380px] flex-col gap-4"
+                            >
+                                <article className="flex flex-1 flex-col justify-between rounded-[1.75rem] bg-[#A6EB20] p-7 text-[#142014]">
+                                    <div>
+                                        <p className="text-xs font-medium text-[#142014]/80">
+                                            Connected workforce tools
+                                        </p>
+                                        <h3 className="mt-2 text-4xl font-medium tracking-tight lg:text-[42px]">
+                                            One portal
+                                        </h3>
+                                    </div>
+                                    <p className="mt-8 text-xs leading-relaxed font-medium text-[#142014]/80">
+                                        Records, attendance, leave, and HR
+                                        administration in a shared municipal
+                                        workspace.
+                                    </p>
+                                </article>
+                                <div className="flex items-center justify-between gap-3 rounded-[1.5rem] bg-[#111111] px-7 py-6 text-white">
+                                    <span className="text-xs font-medium text-neutral-400">
+                                        Our municipality
+                                    </span>
+                                    <span className="text-3xl font-medium tracking-tight">
+                                        Clarin
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
                         <p
                             id="contact"
-                            className="mt-5 max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                            className="mt-8 rounded-2xl border border-border bg-muted/50 px-6 py-5 text-xs leading-relaxed text-muted-foreground sm:text-sm"
                         >
-                            Supporting the people who serve our community. Need
-                            help with your account or role permissions? Contact
-                            the{' '}
+                            Need help with your account or role permissions?
+                            Contact the{' '}
                             <strong className="font-semibold text-foreground">
                                 Human Resource Management Office (HRMO)
                             </strong>{' '}
@@ -512,6 +921,207 @@ export default function Welcome() {
                             </strong>
                             .
                         </p>
+                    </section>
+
+                    {/* Employee showcase on a white background */}
+                    <section
+                        id="ai-employee-showcase"
+                        aria-labelledby="employee-showcase-title"
+                        className="employee-showcase bg-white py-12 text-[#142014]"
+                    >
+                        <div className="mx-auto max-w-6xl px-6 lg:px-10">
+                            <div className="relative overflow-hidden rounded-[2.5rem] border border-[#E4E9DF] bg-white px-6 pt-8 pb-0 text-[#142014] shadow-xl shadow-[#142014]/5 sm:px-12 sm:pt-10">
+                                {/* Subtle Top & Bottom Radial Ambient Glow */}
+                                <div
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute top-1/2 left-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#A6EB20]/10 blur-3xl"
+                                />
+
+                                {/* Centered Headline with Highlighted Pill Word */}
+                                <div className="relative z-10 mx-auto mt-12 max-w-2xl text-center">
+                                    <ScrollReveal
+                                        data-aos="fade-up"
+                                        containerClassName="landing-reveal landing-reveal--features"
+                                        textClassName="landing-reveal-text"
+                                        scrollContainerRef={null}
+                                        baseRotation={0}
+                                        baseOpacity={0.2}
+                                        blurStrength={3}
+                                        smoothing={0.35}
+                                        highlightColor="#69B518"
+                                        wordAnimationEnd="bottom 65%"
+                                    >
+                                        <RevealWords>
+                                            A municipal portal with memory,
+                                        </RevealWords>{' '}
+                                        <span className="inline-block rounded-full border border-[#69B518]/25 bg-[#A6EB20]/25 px-4 py-0.5 text-[#3C6A0D]">
+                                            <RevealWords>
+                                                accountability
+                                            </RevealWords>
+                                        </span>{' '}
+                                        <RevealWords>&amp; clarity</RevealWords>
+                                    </ScrollReveal>
+                                </div>
+
+                                {/* Centerpiece Portrait + 3 Overlapping Floating Cards */}
+                                <div className="employee-showcase-stage">
+                                    {/* Center Dark Gray Circle Backdrop Behind Person */}
+                                    <div
+                                        aria-hidden="true"
+                                        className="employee-showcase-backdrop"
+                                    />
+
+                                    {/* Center Person Image */}
+                                    <div
+                                        className="employee-showcase-portrait"
+                                        data-aos="fade-up"
+                                        data-aos-delay="100"
+                                    >
+                                        <img
+                                            src="/images/how-it-works-hero.png"
+                                            alt=""
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="h-full w-auto max-w-full object-contain object-bottom drop-shadow-2xl"
+                                        />
+                                    </div>
+
+                                    {/* 1. Left Floating White Card ("Learns from documents...") */}
+                                    <div
+                                        className="employee-showcase-card employee-showcase-card--records"
+                                        data-aos="fade-up"
+                                        data-aos-delay="150"
+                                    >
+                                        <SpotlightCard
+                                            className="employee-showcase-spotlight"
+                                            theme="light"
+                                            style={{
+                                                backgroundColor: '#FFFFFF',
+                                                color: '#142014',
+                                            }}
+                                            spotlightColor="#A6EB20"
+                                            intensity={0.95}
+                                            spotlightSize={240}
+                                            softness={0.8}
+                                            borderGlow={0.85}
+                                            smoothing={0.3}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="flex size-7 items-center justify-center rounded-full bg-[#142014] text-xs font-bold text-white shadow-md shadow-[#A6EB20]/40">
+                                                    <CheckCircle2
+                                                        aria-hidden="true"
+                                                        className="size-4"
+                                                    />
+                                                </span>
+                                                {/* Overlapping Mini Avatar / Icon Stack */}
+                                                <div className="flex -space-x-2">
+                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-[9px] font-bold text-white">
+                                                        201
+                                                    </span>
+                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-[9px] font-bold text-white">
+                                                        DTR
+                                                    </span>
+                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-[#A6EB20] text-[9px] font-bold text-[#142014]">
+                                                        HR
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <p className="mt-5 text-xs leading-relaxed font-medium text-neutral-700">
+                                                Organizes <br />
+                                                <strong className="font-semibold text-neutral-950">
+                                                    201 files, SOPs
+                                                </strong>{' '}
+                                                and service records
+                                            </p>
+                                        </SpotlightCard>
+                                    </div>
+
+                                    {/* 2. Top-Right Floating White Card ("Connects and acts...") */}
+                                    <div
+                                        className="employee-showcase-card employee-showcase-card--connect"
+                                        data-aos="fade-up"
+                                        data-aos-delay="200"
+                                    >
+                                        <SpotlightCard
+                                            className="employee-showcase-spotlight"
+                                            theme="light"
+                                            style={{
+                                                backgroundColor: '#FFFFFF',
+                                                backgroundImage:
+                                                    'linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 50%, #F2FFD9 100%)',
+                                                color: '#142014',
+                                            }}
+                                            spotlightColor="#A6EB20"
+                                            intensity={0.95}
+                                            spotlightSize={240}
+                                            softness={0.8}
+                                            borderGlow={0.85}
+                                            smoothing={0.3}
+                                        >
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <span className="rounded-full bg-[#142014] px-3 py-1 text-[11px] font-semibold text-white">
+                                                    Connects
+                                                </span>
+                                                <span className="flex size-6 items-center justify-center rounded-full border border-neutral-200 bg-white text-[10px] font-bold shadow-2xs">
+                                                    <Sparkles
+                                                        aria-hidden="true"
+                                                        className="size-3"
+                                                    />
+                                                </span>
+                                                <span className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[10px] font-medium text-neutral-600 shadow-2xs">
+                                                    HRMO Sync
+                                                </span>
+                                                <span className="rounded-full bg-[#142014] px-3 py-1 text-[11px] font-semibold text-white">
+                                                    and acts
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-4 text-xs leading-relaxed font-medium text-neutral-600">
+                                                across municipal <br />
+                                                offices &amp; divisions
+                                            </p>
+                                        </SpotlightCard>
+                                    </div>
+
+                                    {/* 3. Bottom-Right Floating Lime Green Card ("Auditable & secure by design") */}
+                                    <div
+                                        className="employee-showcase-card employee-showcase-card--secure"
+                                        data-aos="fade-up"
+                                        data-aos-delay="250"
+                                    >
+                                        <SpotlightCard
+                                            className="employee-showcase-spotlight"
+                                            theme="light"
+                                            style={{
+                                                backgroundColor: '#B8F53B',
+                                                color: '#142014',
+                                            }}
+                                            spotlightColor="#F2FFD0"
+                                            intensity={0.95}
+                                            spotlightSize={240}
+                                            softness={0.8}
+                                            borderGlow={0.85}
+                                            smoothing={0.3}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className="text-xs leading-snug font-bold text-[#142014]">
+                                                    Auditable <br />
+                                                    &amp; secure <br />
+                                                    by design
+                                                </p>
+                                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-[#142014] shadow-xs">
+                                                    <CheckCircle2
+                                                        aria-hidden="true"
+                                                        className="size-4"
+                                                    />
+                                                </span>
+                                            </div>
+                                        </SpotlightCard>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </section>
                 </main>
 
@@ -626,11 +1236,56 @@ export default function Welcome() {
                             </div>
                         </div>
 
-                        {/* Huge Bold Typography Banner at Bottom */}
-                        <div className="overflow-hidden pt-12 text-center select-none">
-                            <h2 className="text-[15vw] leading-none font-black tracking-tighter text-foreground uppercase opacity-90 lg:text-[180px]">
-                                CLARIN
-                            </h2>
+                        {/* Animated municipal wordmark */}
+                        <div className="relative isolate -mx-6 mt-12 -mb-12 overflow-hidden bg-white sm:-mx-10 lg:-mx-14">
+                            <div
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-0"
+                            >
+                                <GradientASCII
+                                    colors={[
+                                        '#69B518',
+                                        '#A6EB20',
+                                        '#D9FF80',
+                                        '#FFFFFF',
+                                    ]}
+                                    shape="pinch"
+                                    cellSize={12}
+                                    density={0.85}
+                                    glyphOpacity={0.45}
+                                    gradientOpacity={0.7}
+                                    softness={0.8}
+                                    glow={0.1}
+                                    grain={0.025}
+                                    speed={0.45}
+                                    lightMode
+                                    mouseInteraction={false}
+                                    clickEffect="none"
+                                    intro={false}
+                                    dpr={1.5}
+                                    style={{ height: '100%' }}
+                                />
+                            </div>
+                            <h2 className="sr-only">CLARIN</h2>
+                            <div className="relative h-[clamp(10rem,24vw,18rem)] text-[#142014]">
+                                <div aria-hidden="true" className="h-full">
+                                    <TechText
+                                        text="CLARIN"
+                                        fontWeight={900}
+                                        fontSize={180}
+                                        letterSpacing={-0.06}
+                                        color="#142014"
+                                        accentColor="#1C4722"
+                                        intro="assemble"
+                                        introDuration={1.6}
+                                        sweep={false}
+                                        draggable={false}
+                                        clickKick={false}
+                                        labels={false}
+                                        style={{ height: '100%' }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </footer>
