@@ -355,3 +355,52 @@
         font-size: 17px;
     }
 }
+
+/* Alternate the metric cards through the landing palette and a soft cream. */
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 1),
+.dark .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 1) {
+    --metric-text: #f8faf2;
+    --metric-muted: #c0c8b9;
+    --metric-icon: #a6eb20;
+    background: #171b18;
+    border-color: #303a2e;
+}
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 2),
+.dark .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 2) {
+    --metric-text: #17200d;
+    --metric-muted: #42552e;
+    --metric-icon: #284d0c;
+    background: #a6eb20;
+    border-color: #96d91a;
+}
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 3),
+.dark .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 3) {
+    --metric-text: #262719;
+    --metric-muted: #686958;
+    --metric-icon: #5b711c;
+    background: #f8f5e7;
+    border-color: #e8e4cf;
+}
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 4),
+.dark .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 4) {
+    --metric-text: #17200d;
+    --metric-muted: #56634c;
+    --metric-icon: #4e8117;
+    background: #eff8dc;
+    border-color: #d7e9bc;
+}
+.dashboard-metrics-banner .dashboard-metric {
+    color: var(--metric-text);
+}
+.dashboard-metrics-banner .dashboard-metric h2 {
+    color: var(--metric-text);
+}
+.dashboard-metrics-banner .dashboard-metric p.text-muted-foreground {
+    color: var(--metric-muted);
+}
+.dashboard-metrics-banner .dashboard-metric svg {
+    color: var(--metric-icon);
+}
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 2) p span {
+    background: #284d0c;
+}
