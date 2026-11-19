@@ -114,11 +114,11 @@ class PortalController extends Controller
             $records = Department::query()
                 ->withCount('employees')
                 ->withCount(['vacancies as open_vacancies_count' => fn ($query) => $query->where('status', 'open')])
-                ->orderBy('name')->orderBy('id')->simplePaginate(20)
-                ->through(fn (Department $department) => [
-                    $department->name, $department->code,
-                    $department->employees_count, $department->open_vacancies_count,
-                ]);
+                ->orderBy('name')->orderBy('id')->simplePaginate(20);
+            $records->setCollection($records->getCollection()->map(fn (Department $department) => [
+                $department->name, $department->code,
+                $department->getAttribute('employees_count'), $department->getAttribute('open_vacancies_count'),
+            ]));
 
             return Inertia::render('hris/portal', [
                 'title' => $title,
@@ -133,10 +133,12 @@ class PortalController extends Controller
                 ->withSum(['plantillaItems as allocated' => fn ($query) => $query->where('fiscal_year', now()->year)->where('status', 'active')], 'allocated_count')
                 ->withSum(['plantillaItems as filled' => fn ($query) => $query->where('fiscal_year', now()->year)->where('status', 'active')], 'filled_count')
                 ->orderBy('name')->orderBy('id')->simplePaginate(20)
-                ->through(fn (Department $department) => [
-                    $department->name, (int) $department->allocated, (int) $department->filled,
-                    max(0, (int) $department->allocated - (int) $department->filled),
-                ]);
+                ->through(function (Department $department) {
+                    $allocated = (int) $department->getAttribute('allocated');
+                    $filled = (int) $department->getAttribute('filled');
+
+                    return [$department->name, $allocated, $filled, max(0, $allocated - $filled)];
+                });
 
             return Inertia::render('hris/portal', [
                 'title' => $title,
@@ -171,6 +173,7 @@ class PortalController extends Controller
             'my-leave-requests' => ['Track the status of your recorded leave applications.', ['Leave type', 'From', 'To', 'Days', 'Status'],
                 $employee?->leaveApplications()->with('leaveType')->latest('id')->simplePaginate(20)
                     ->through(fn ($row) => [$row->leaveType?->name, $row->start_date, $row->end_date, $row->days_requested, $row->status])],
+            default => abort(403),
         };
 
         return Inertia::render('hris/portal', [

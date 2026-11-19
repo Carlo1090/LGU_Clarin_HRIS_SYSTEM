@@ -26,7 +26,7 @@ class BiometricLinkController
                     return;
                 }
 
-                $employee->biometric_id = $id;
+                $employee->forceFill(['biometric_id' => $id]);
                 $employee->biometric_status = 'pending';
                 $employee->biometric_note = null;
                 $employee->biometric_verified_at = null;

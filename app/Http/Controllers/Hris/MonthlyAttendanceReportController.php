@@ -11,11 +11,13 @@ use Illuminate\Database\Query\JoinClause;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
+use stdClass;
 
 class MonthlyAttendanceReportController
 {
@@ -107,6 +109,10 @@ class MonthlyAttendanceReportController
             END AS lateness", [AttendancePunch::DTR_PUNCH_COUNT]);
     }
 
+    /**
+     * @param  'asc'|'desc'  $direction
+     * @return LengthAwarePaginator<array-key, array{id: mixed, employee_number: mixed, name: string, days_attended: int, late_arrivals: int, undetermined_days: int}>
+     */
     private function summary(Builder $daily, string $month, string $sort, string $direction): LengthAwarePaginator
     {
         $totals = DB::query()->fromSub($daily, 'daily')->groupBy('employee_id')
@@ -114,24 +120,26 @@ class MonthlyAttendanceReportController
                 SUM(CASE WHEN lateness = 'late' THEN 1 ELSE 0 END) AS late_arrivals,
                 SUM(CASE WHEN lateness = 'undetermined' THEN 1 ELSE 0 END) AS undetermined_days");
 
-        return DB::table('employees')->leftJoinSub($totals, 'totals', 'totals.employee_id', '=', 'employees.id')
+        $summary = DB::table('employees')->leftJoinSub($totals, 'totals', 'totals.employee_id', '=', 'employees.id')
             ->select(['employees.id', 'employees.employee_number', 'employees.first_name', 'employees.last_name'])
             ->selectRaw('COALESCE(totals.days_attended, 0) AS days_attended, COALESCE(totals.late_arrivals, 0) AS late_arrivals, COALESCE(totals.undetermined_days, 0) AS undetermined_days')
             ->when($sort === 'late_arrivals', fn (Builder $query) => $query
                 ->orderByRaw('CASE WHEN totals.days_attended = totals.undetermined_days THEN 1 ELSE 0 END'))
             ->orderBy($sort, $direction)
             ->orderBy('employees.last_name')->orderBy('employees.first_name')->orderBy('employees.id')
-            ->paginate(20)->appends(compact('month', 'sort', 'direction'))
-            ->through(fn (object $row) => [
-                'id' => $row->id,
-                'employee_number' => $row->employee_number,
-                'name' => "{$row->last_name}, {$row->first_name}",
-                'days_attended' => (int) $row->days_attended,
-                'late_arrivals' => (int) $row->late_arrivals,
-                'undetermined_days' => (int) $row->undetermined_days,
-            ]);
+            ->paginate(20)->appends(compact('month', 'sort', 'direction'));
+
+        return $summary->setCollection($summary->getCollection()->map(fn (stdClass $row) => [
+            'id' => $row->id,
+            'employee_number' => $row->employee_number,
+            'name' => "{$row->last_name}, {$row->first_name}",
+            'days_attended' => (int) $row->days_attended,
+            'late_arrivals' => (int) $row->late_arrivals,
+            'undetermined_days' => (int) $row->undetermined_days,
+        ]));
     }
 
+    /** @return array{id: int, name: string, has_biometric_id: bool, rule: AttendanceClockInRule|null, days: Collection<int, stdClass>} */
     private function employeeDetail(int $id, Builder $daily, string $lastDay): array
     {
         $employee = Employee::query()->findOrFail($id, ['id', 'first_name', 'last_name', 'biometric_id']);

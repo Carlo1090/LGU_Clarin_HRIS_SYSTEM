@@ -19,7 +19,7 @@ class BiometricLinkVerifier
                     $verified = false;
                     if ($count === 0) {
                         $note = 'No imported punches for this biometric ID.';
-                    } elseif ($employee->date_hired && substr($employee->first_punch, 0, 10) < $employee->date_hired->toDateString()) {
+                    } elseif ($employee->date_hired && substr($employee->getAttribute('first_punch'), 0, 10) < $employee->date_hired->toDateString()) {
                         $note = 'Imported punches include a date before the employee was hired.';
                     } else {
                         $verified = true;
