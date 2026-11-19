@@ -1,7 +1,7 @@
 export default function AppLogo() {
     return (
         <>
-            <div className="flex aspect-square size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white sm:size-10">
+            <div className="app-logo-mark flex aspect-square size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white sm:size-10">
                 <img
                     src="/images/clarin_logo.png"
                     alt=""
@@ -10,7 +10,7 @@ export default function AppLogo() {
                     className="size-full object-contain"
                 />
             </div>
-            <div className="grid min-w-0 text-left">
+            <div className="app-logo-copy grid min-w-0 text-left">
                 <span className="truncate text-sm leading-tight font-semibold text-foreground">
                     LGU Clarin
                 </span>

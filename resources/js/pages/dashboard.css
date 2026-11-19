@@ -621,3 +621,105 @@
         height: 140px;
     }
 }
+
+/* Match the landing page typography and keep the sidebar comfortable in both states. */
+.dashboard-shell,
+.dashboard-sidebar,
+.dashboard-popover {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+}
+.portal-sidebar [data-sidebar='header'] {
+    padding: 12px 8px 8px;
+}
+.portal-sidebar [data-sidebar='content'] [data-sidebar='menu'] {
+    gap: 4px;
+}
+.portal-sidebar [data-sidebar='content'] [data-sidebar='menu-button'] {
+    min-height: 38px;
+    height: auto;
+    padding: 9px 10px;
+    gap: 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 500;
+}
+.portal-sidebar [data-sidebar='group-label'] {
+    height: 32px;
+    padding-inline: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+}
+.portal-sidebar .app-logo-mark {
+    transition:
+        width 0.24s ease,
+        height 0.24s ease;
+}
+.portal-sidebar .app-logo-copy {
+    min-width: 0;
+    max-width: 175px;
+    opacity: 1;
+    overflow: hidden;
+    transition:
+        max-width 0.2s ease,
+        opacity 0.15s ease;
+}
+[data-collapsible='icon']
+    .portal-sidebar
+    [data-sidebar='header']
+    [data-sidebar='menu-button'] {
+    justify-content: center;
+}
+[data-collapsible='icon'] .portal-sidebar .app-logo-mark {
+    width: 28px;
+    height: 28px;
+}
+[data-collapsible='icon'] .portal-sidebar .app-logo-copy {
+    max-width: 0;
+    opacity: 0;
+}
+[data-collapsible='icon'] .portal-sidebar [data-test='sidebar-menu-button'] {
+    justify-content: center;
+}
+[data-collapsible='icon']
+    .portal-sidebar
+    [data-test='sidebar-menu-button']
+    > div,
+[data-collapsible='icon']
+    .portal-sidebar
+    [data-test='sidebar-menu-button']
+    > svg {
+    display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+    [data-slot='sidebar'][data-variant='inset'] > div {
+        transition-duration: 0.26s;
+        transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .portal-sidebar .app-logo-mark,
+    .portal-sidebar .app-logo-copy {
+        transition: none;
+    }
+}
+
+[data-collapsible='icon']
+    .portal-sidebar
+    [data-sidebar='header']
+    [data-sidebar='menu-button'] {
+    gap: 0;
+}
+[data-collapsible='icon']
+    .portal-sidebar
+    [data-sidebar='content']
+    [data-sidebar='menu-button'] {
+    min-height: 32px;
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-slot='sidebar'][data-variant='inset'] > div {
+        transition-duration: 0.01ms;
+    }
+}
