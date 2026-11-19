@@ -457,3 +457,56 @@
 .dashboard-task {
     border-radius: 1.25rem;
 }
+
+/* Landing-page bento treatment for the analytics and action cards. */
+#dashboard-overview > .dashboard-panel {
+    border: 1px solid var(--border);
+    border-radius: 1.75rem;
+    box-shadow: 0 12px 36px -26px rgba(28, 71, 34, 0.35);
+}
+#dashboard-overview > .dashboard-panel:nth-child(2) {
+    background: #f3f5ef;
+}
+#dashboard-overview > .dashboard-panel:nth-child(4) {
+    background: #f1f9e7;
+}
+#dashboard-overview > .dashboard-panel:nth-child(5) {
+    background: #f6f8f3;
+}
+.dark #dashboard-overview > .dashboard-panel:nth-child(2),
+.dark #dashboard-overview > .dashboard-panel:nth-child(4),
+.dark #dashboard-overview > .dashboard-panel:nth-child(5) {
+    background: #203024;
+}
+#dashboard-overview .dashboard-panel [data-slot='card-title'] {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+}
+#dashboard-overview .dashboard-panel [data-slot='card-description'] {
+    line-height: 1.6;
+}
+.dashboard-task {
+    background: var(--muted);
+    border-color: var(--border);
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+.dashboard-task:hover {
+    border-color: #69b518;
+    box-shadow: 0 8px 24px -18px rgba(28, 71, 34, 0.5);
+}
+.dashboard-task:nth-child(2) {
+    background: #f0f8e2;
+}
+.dashboard-task:nth-child(3) {
+    background: #e4f4cf;
+}
+.dark .dashboard-task:nth-child(2),
+.dark .dashboard-task:nth-child(3) {
+    background: #263820;
+}
+.dashboard-footer > div {
+    border-radius: 2.5rem;
+}

@@ -1,3 +1,5 @@
+import GradientASCII from '@/components/GradientASCII';
+import TechText from '@/components/TechText';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import SpotlightCard from '@/components/SpotlightCard';
@@ -1423,6 +1425,167 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                         </CardContent>
                     </Card>
                 )}
+                <footer
+                    className="dashboard-footer pt-4 pb-8"
+                    data-aos="fade-up"
+                >
+                    <div className="relative overflow-hidden rounded-[3rem] border border-border/80 bg-muted px-6 pt-16 pb-12 text-foreground shadow-sm sm:px-10 lg:px-14">
+                        {/* Top Info & Navigation Row */}
+                        <div className="grid items-start gap-12 border-b border-border pb-16 lg:grid-cols-[1.5fr_1fr_1fr_1.5fr]">
+                            {/* Col 1: Bio / Tagline */}
+                            <div>
+                                <p className="text-base leading-relaxed font-normal text-muted-foreground">
+                                    LGU Clarin is dedicated to progressive
+                                    public service, administrative transparency,
+                                    and empowered workforce management.
+                                </p>
+                            </div>
+
+                            {/* Col 2: Explore Links */}
+                            <div>
+                                <p className="mb-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    Explore
+                                </p>
+                                <ul className="space-y-3 text-xs font-medium text-muted-foreground">
+                                    <li>
+                                        <a
+                                            href="/#about"
+                                            className="transition hover:text-foreground"
+                                        >
+                                            About LGU
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a
+                                            href="/#features"
+                                            className="transition hover:text-foreground"
+                                        >
+                                            Portal Features
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a
+                                            href="/#contact"
+                                            className="transition hover:text-foreground"
+                                        >
+                                            Contact Office
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {/* Col 3: Employee access Pill Badges */}
+                            <div>
+                                <p className="mb-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    Employee access
+                                </p>
+                                <div className="flex flex-col items-start gap-3 text-sm">
+                                    <Link
+                                        href="/dashboard"
+                                        className="text-muted-foreground hover:text-accent-foreground"
+                                    >
+                                        Dashboard
+                                    </Link>
+                                    <a
+                                        href="/#contact"
+                                        className="text-muted-foreground hover:text-accent-foreground"
+                                    >
+                                        Account support
+                                    </a>
+                                </div>
+                            </div>
+
+                            {/* Col 4: Action Buttons (Call Office / Tools) */}
+                            <div className="flex flex-col gap-4">
+                                <Link
+                                    href="/settings/profile"
+                                    className="group flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-[#69B518]"
+                                >
+                                    <div>
+                                        <p className="text-sm font-bold text-foreground transition group-hover:text-accent-foreground">
+                                            Account settings
+                                        </p>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Manage your profile
+                                        </p>
+                                    </div>
+                                    <span className="flex size-9 items-center justify-center rounded-full bg-[#69B518] text-white transition-transform group-hover:scale-105">
+                                        <ArrowUpRight className="size-4" />
+                                    </span>
+                                </Link>
+
+                                <a
+                                    href="/#features"
+                                    className="group flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-neutral-400"
+                                >
+                                    <div>
+                                        <p className="text-sm font-bold text-foreground">
+                                            Portal Tools &amp; Logs
+                                        </p>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Employee resources
+                                        </p>
+                                    </div>
+                                    <span className="flex size-9 items-center justify-center rounded-full bg-neutral-900 text-white transition-transform group-hover:scale-105">
+                                        <ArrowUpRight className="size-4" />
+                                    </span>
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Animated municipal wordmark */}
+                        <div className="relative isolate -mx-6 mt-12 -mb-12 overflow-hidden bg-white sm:-mx-10 lg:-mx-14">
+                            <div
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-0"
+                            >
+                                <GradientASCII
+                                    colors={[
+                                        '#69B518',
+                                        '#A6EB20',
+                                        '#D9FF80',
+                                        '#FFFFFF',
+                                    ]}
+                                    shape="pinch"
+                                    cellSize={12}
+                                    density={0.85}
+                                    glyphOpacity={0.45}
+                                    gradientOpacity={0.7}
+                                    softness={0.8}
+                                    glow={0.1}
+                                    grain={0.025}
+                                    speed={0.45}
+                                    lightMode
+                                    mouseInteraction={false}
+                                    clickEffect="none"
+                                    intro={false}
+                                    dpr={1.5}
+                                    style={{ height: '100%' }}
+                                />
+                            </div>
+                            <h2 className="sr-only">CLARIN</h2>
+                            <div className="relative h-[clamp(10rem,24vw,18rem)] text-[#142014]">
+                                <div aria-hidden="true" className="h-full">
+                                    <TechText
+                                        text="CLARIN"
+                                        fontWeight={900}
+                                        fontSize={180}
+                                        letterSpacing={-0.06}
+                                        color="#142014"
+                                        accentColor="#1C4722"
+                                        intro="assemble"
+                                        introDuration={1.6}
+                                        sweep={false}
+                                        draggable={false}
+                                        clickKick={false}
+                                        labels={false}
+                                        style={{ height: '100%' }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
             </div>
         </>
     );
