@@ -278,7 +278,7 @@ export default function Welcome() {
                                 borderGlow={0.85}
                                 smoothing={0.3}
                             >
-                                <div className="relative flex h-full min-h-80 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                <div className="relative flex h-full min-h-72 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <div className="relative z-10">
                                         <span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold text-[#142014]">
                                             LGU Clarin
@@ -291,7 +291,7 @@ export default function Welcome() {
                                         height={1254}
                                         loading="lazy"
                                         decoding="async"
-                                        className="pointer-events-none mx-auto h-36 w-full object-contain"
+                                        className="pointer-events-none mx-auto h-28 w-full shrink-0 object-contain"
                                     />
                                     <p className="relative z-10 text-xs font-medium text-[#142014]/80">
                                         Centralized municipal employee portal.
@@ -311,7 +311,7 @@ export default function Welcome() {
                                 borderGlow={0.85}
                                 smoothing={0.3}
                             >
-                                <div className="relative flex h-full min-h-80 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                <div className="relative flex h-full min-h-72 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <h3 className="relative z-10 text-sm leading-snug font-bold">
                                         Automated 201 Files &amp; Alerts
                                     </h3>
@@ -322,7 +322,7 @@ export default function Welcome() {
                                         height={1254}
                                         loading="lazy"
                                         decoding="async"
-                                        className="pointer-events-none mx-auto h-36 w-full object-contain"
+                                        className="pointer-events-none mx-auto h-28 w-full shrink-0 object-contain"
                                     />
                                     <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
                                         Maintain updated employee service
@@ -344,7 +344,7 @@ export default function Welcome() {
                                 borderGlow={0.85}
                                 smoothing={0.3}
                             >
-                                <div className="relative flex h-full min-h-80 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                <div className="relative flex h-full min-h-72 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <h3 className="relative z-10 text-sm leading-snug font-bold">
                                         Unified Department Dashboard
                                     </h3>
@@ -355,7 +355,7 @@ export default function Welcome() {
                                         height={1254}
                                         loading="lazy"
                                         decoding="async"
-                                        className="pointer-events-none mx-auto h-36 w-full object-contain"
+                                        className="pointer-events-none mx-auto h-28 w-full shrink-0 object-contain"
                                     />
                                     <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
                                         View all municipal offices, leave
@@ -377,7 +377,7 @@ export default function Welcome() {
                                 borderGlow={0.85}
                                 smoothing={0.3}
                             >
-                                <div className="relative flex h-full min-h-80 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                <div className="relative flex h-full min-h-72 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <h3 className="relative z-10 text-sm leading-snug font-bold">
                                         Role-Based HR Insights
                                     </h3>
@@ -388,7 +388,7 @@ export default function Welcome() {
                                         height={1254}
                                         loading="lazy"
                                         decoding="async"
-                                        className="pointer-events-none mx-auto h-36 w-full object-contain"
+                                        className="pointer-events-none mx-auto h-28 w-full shrink-0 object-contain"
                                     />
                                     <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
                                         Access role-specific HR tools and
