@@ -301,12 +301,20 @@ export default function MonthlyAttendanceReport({
                     </label>
                     <input type="hidden" name="sort" value={sort} />
                     <input type="hidden" name="direction" value={direction} />
-                    <Button type="submit" variant="outline">
+                    <Button
+                        type="submit"
+                        variant="outline"
+                        className="min-w-28"
+                    >
                         Show month
                     </Button>
                 </Form>
                 {unlinkedIds > 0 && (
-                    <Button asChild variant="outline">
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="h-11 rounded-full"
+                    >
                         <Link
                             href="/hris/attendance/logs"
                             data={{ unassigned: 1, month }}
@@ -420,6 +428,7 @@ export default function MonthlyAttendanceReport({
                                                 asChild
                                                 variant="outline"
                                                 size="sm"
+                                                className="w-28 aria-expanded:border-primary aria-expanded:bg-accent aria-expanded:text-accent-foreground"
                                             >
                                                 <Link
                                                     href={reportUrl}
@@ -477,21 +486,32 @@ export default function MonthlyAttendanceReport({
                     aria-label="Report pagination"
                     className="flex gap-3 text-sm"
                 >
-                    {summary.prev_page_url && (
-                        <Link
-                            className="underline"
-                            href={summary.prev_page_url}
-                        >
-                            Previous
-                        </Link>
-                    )}
-                    {summary.next_page_url && (
-                        <Link
-                            className="underline"
-                            href={summary.next_page_url}
-                        >
-                            Next
-                        </Link>
+                    {[
+                        { label: 'Previous', href: summary.prev_page_url },
+                        { label: 'Next', href: summary.next_page_url },
+                    ].map(({ label, href }) =>
+                        href ? (
+                            <Button
+                                key={label}
+                                asChild
+                                size="sm"
+                                variant="outline"
+                                className="min-w-20"
+                            >
+                                <Link href={href}>{label}</Link>
+                            </Button>
+                        ) : (
+                            <Button
+                                key={label}
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="min-w-20"
+                                disabled
+                            >
+                                {label}
+                            </Button>
+                        ),
                     )}
                 </nav>
             )}
