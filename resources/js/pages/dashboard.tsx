@@ -1,3 +1,4 @@
+import SpotlightCard from '@/components/SpotlightCard';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowDownToLine,
@@ -222,18 +223,27 @@ function AnalyticsCard({
                 className,
             )}
         >
-            <CardHeader className="flex-row items-start justify-between gap-3 px-4">
-                <div className="min-w-0 space-y-1.5">
-                    <CardTitle className="text-[13px] leading-5">
-                        <h2>{title}</h2>
-                    </CardTitle>
-                    <CardDescription className="text-[11px] leading-4">
-                        {description}
-                    </CardDescription>
-                </div>
-                {accessory}
-            </CardHeader>
-            <CardContent className="min-w-0 px-4">{children}</CardContent>
+            <SpotlightCard
+                className="dashboard-spotlight"
+                style={{}}
+                theme="light"
+                spotlightColor="#A6EB20"
+                intensity={0.45}
+                proximity={0}
+            >
+                <CardHeader className="flex-row items-start justify-between gap-3 px-4">
+                    <div className="min-w-0 space-y-1.5">
+                        <CardTitle className="text-[13px] leading-5">
+                            <h2>{title}</h2>
+                        </CardTitle>
+                        <CardDescription className="text-[11px] leading-4">
+                            {description}
+                        </CardDescription>
+                    </div>
+                    {accessory}
+                </CardHeader>
+                <CardContent className="min-w-0 px-4">{children}</CardContent>
+            </SpotlightCard>
         </Card>
     );
 }
@@ -473,7 +483,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                 <div>
                                     <h2>Your workspace at a glance</h2>
                                     <p>
-                                        {analytics.scope} ? Current key
+                                        {analytics.scope} &middot; Current key
                                         information
                                     </p>
                                 </div>
@@ -496,32 +506,41 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                             key={card.label}
                                             className="dashboard-metric gap-0 rounded-lg py-0 shadow-none"
                                         >
-                                            <CardContent className="p-4">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <h2 className="text-[11px] font-medium">
-                                                        {card.label}
-                                                    </h2>
-                                                    <Icon
-                                                        className="size-4 shrink-0 text-muted-foreground"
-                                                        aria-hidden="true"
-                                                    />
-                                                </div>
-                                                <p className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                                    <span
-                                                        className="size-1 rounded-full bg-primary"
-                                                        aria-hidden="true"
-                                                    />
-                                                    Current{' '}
-                                                    {card.value.startsWith(
-                                                        'PHP',
-                                                    )
-                                                        ? 'recorded amount'
-                                                        : 'total'}
-                                                </p>
-                                                <p className="mt-5 text-[27px] leading-none font-semibold tracking-tight tabular-nums">
-                                                    {card.value}
-                                                </p>
-                                            </CardContent>
+                                            <SpotlightCard
+                                                className="dashboard-spotlight dashboard-metric-light"
+                                                style={{}}
+                                                theme="light"
+                                                spotlightColor="#A6EB20"
+                                                intensity={0.5}
+                                                proximity={0}
+                                            >
+                                                <CardContent className="p-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <h2 className="text-[11px] font-medium">
+                                                            {card.label}
+                                                        </h2>
+                                                        <Icon
+                                                            className="size-4 shrink-0 text-muted-foreground"
+                                                            aria-hidden="true"
+                                                        />
+                                                    </div>
+                                                    <p className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                                        <span
+                                                            className="size-1 rounded-full bg-primary"
+                                                            aria-hidden="true"
+                                                        />
+                                                        Current{' '}
+                                                        {card.value.startsWith(
+                                                            'PHP',
+                                                        )
+                                                            ? 'recorded amount'
+                                                            : 'total'}
+                                                    </p>
+                                                    <p className="mt-5 text-[27px] leading-none font-semibold tracking-tight tabular-nums">
+                                                        {card.value}
+                                                    </p>
+                                                </CardContent>
+                                            </SpotlightCard>
                                         </Card>
                                     );
                                 })}
