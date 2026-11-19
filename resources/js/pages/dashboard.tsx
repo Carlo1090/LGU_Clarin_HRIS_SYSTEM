@@ -466,49 +466,66 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                         </nav>
 
                         <section
+                            className="dashboard-metrics-banner"
                             aria-label="Key information"
-                            className={cn(
-                                'grid gap-3 sm:grid-cols-2',
-                                cards.length > 4
-                                    ? 'xl:grid-cols-5'
-                                    : 'xl:grid-cols-4',
-                            )}
                         >
-                            {cards.map((card) => {
-                                const Icon =
-                                    cardIcons[card.label] ?? LayoutDashboard;
-                                return (
-                                    <Card
-                                        key={card.label}
-                                        className="dashboard-metric gap-0 rounded-lg py-0 shadow-none"
-                                    >
-                                        <CardContent className="p-4">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <h2 className="text-[11px] font-medium">
-                                                    {card.label}
-                                                </h2>
-                                                <Icon
-                                                    className="size-4 shrink-0 text-muted-foreground"
-                                                    aria-hidden="true"
-                                                />
-                                            </div>
-                                            <p className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                                <span
-                                                    className="size-1 rounded-full bg-primary"
-                                                    aria-hidden="true"
-                                                />
-                                                Current{' '}
-                                                {card.value.startsWith('PHP')
-                                                    ? 'recorded amount'
-                                                    : 'total'}
-                                            </p>
-                                            <p className="mt-5 text-[27px] leading-none font-semibold tracking-tight tabular-nums">
-                                                {card.value}
-                                            </p>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
+                            <div className="dashboard-banner-heading">
+                                <div>
+                                    <h2>Your workspace at a glance</h2>
+                                    <p>
+                                        {analytics.scope} ? Current key
+                                        information
+                                    </p>
+                                </div>
+                                <span>{role}</span>
+                            </div>
+                            <div
+                                className={cn(
+                                    'grid gap-3 sm:grid-cols-2',
+                                    cards.length > 4
+                                        ? 'xl:grid-cols-5'
+                                        : 'xl:grid-cols-4',
+                                )}
+                            >
+                                {cards.map((card) => {
+                                    const Icon =
+                                        cardIcons[card.label] ??
+                                        LayoutDashboard;
+                                    return (
+                                        <Card
+                                            key={card.label}
+                                            className="dashboard-metric gap-0 rounded-lg py-0 shadow-none"
+                                        >
+                                            <CardContent className="p-4">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <h2 className="text-[11px] font-medium">
+                                                        {card.label}
+                                                    </h2>
+                                                    <Icon
+                                                        className="size-4 shrink-0 text-muted-foreground"
+                                                        aria-hidden="true"
+                                                    />
+                                                </div>
+                                                <p className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                                    <span
+                                                        className="size-1 rounded-full bg-primary"
+                                                        aria-hidden="true"
+                                                    />
+                                                    Current{' '}
+                                                    {card.value.startsWith(
+                                                        'PHP',
+                                                    )
+                                                        ? 'recorded amount'
+                                                        : 'total'}
+                                                </p>
+                                                <p className="mt-5 text-[27px] leading-none font-semibold tracking-tight tabular-nums">
+                                                    {card.value}
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
                         </section>
 
                         <section
