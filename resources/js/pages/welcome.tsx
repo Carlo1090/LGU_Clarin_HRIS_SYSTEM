@@ -585,10 +585,11 @@ export default function Welcome() {
                                         data-aos-delay="200"
                                     >
                                         <img
-                                            src="/images/clarin-uniform-portrait.png"
+                                            src="/images/clarin_female_uni.png"
                                             alt=""
-                                            width={1536}
-                                            height={1024}
+                                            width={1164}
+                                            height={1351}
+                                            className="aspect-[3/2] object-contain object-right"
                                             loading="lazy"
                                             decoding="async"
                                             draggable={false}
