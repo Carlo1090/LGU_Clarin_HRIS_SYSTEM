@@ -990,7 +990,9 @@ export default function Welcome() {
                                             alt=""
                                             loading="lazy"
                                             decoding="async"
-                                            className="h-full w-auto max-w-full object-contain object-bottom drop-shadow-2xl"
+                                            width={1536}
+                                            height={1024}
+                                            className="h-auto w-full object-contain drop-shadow-2xl"
                                         />
                                     </div>
 

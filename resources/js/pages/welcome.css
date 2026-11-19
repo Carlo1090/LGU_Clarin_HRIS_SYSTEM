@@ -51,8 +51,8 @@
     position: absolute;
     z-index: 5;
     right: 0;
-    bottom: 5.5rem;
-    width: min(76%, 20rem);
+    bottom: 3.75rem;
+    width: min(96%, 28rem);
     pointer-events: none;
     user-select: none;
 }
@@ -64,10 +64,10 @@
     -webkit-mask-image: linear-gradient(
         to bottom,
         #000 0%,
-        #000 72%,
+        #000 82%,
         transparent 100%
     );
-    mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%);
     filter: drop-shadow(0 20px 24px rgb(28 71 34 / 18%));
 }
 
@@ -112,9 +112,9 @@
 .employee-showcase-backdrop {
     position: absolute;
     z-index: 0;
-    top: 2rem;
+    top: 1.5rem;
     left: 50%;
-    width: min(100%, 20.625rem);
+    width: min(85%, 24rem);
     aspect-ratio: 1;
     transform: translateX(-50%);
     border-radius: 50%;
@@ -127,8 +127,8 @@
     z-index: 10;
     display: flex;
     justify-content: center;
-    height: 20rem;
-    overflow: hidden;
+    width: min(100%, 48rem);
+    margin-inline: auto;
 }
 
 .employee-showcase-card {
@@ -139,12 +139,6 @@
 
 .employee-showcase-card--records {
     margin-top: -3rem;
-}
-
-@media (min-width: 640px) {
-    .employee-showcase-portrait {
-        height: 23.75rem;
-    }
 }
 
 @media (min-width: 768px) {
@@ -159,11 +153,7 @@
     .employee-showcase-backdrop {
         top: auto;
         bottom: -2.5rem;
-        width: 26.25rem;
-    }
-
-    .employee-showcase-portrait {
-        height: 26.875rem;
+        width: min(75%, 31rem);
     }
 
     .employee-showcase-card {
