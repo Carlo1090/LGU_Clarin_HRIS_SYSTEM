@@ -42,6 +42,10 @@ export function AppSidebarHeader() {
         hrisNavigation: Destination[];
         notifications: NotificationFeed;
     }>().props;
+    const isDashboard = usePage().component === 'dashboard';
+    const surface = isDashboard
+        ? 'public-surface dashboard-popover'
+        : 'public-surface';
     const [searchOpen, setSearchOpen] = useState(false);
     const [updating, setUpdating] = useState(false);
     const initials = useInitials();
@@ -127,7 +131,10 @@ export function AppSidebarHeader() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                         align="end"
-                        className="public-surface w-[min(22rem,calc(100vw-2rem))] rounded-xl p-0"
+                        className={
+                            surface +
+                            ' w-[min(22rem,calc(100vw-2rem))] rounded-xl p-0'
+                        }
                     >
                         <div className="flex items-center justify-between gap-2 px-4 py-3">
                             <DropdownMenuLabel className="p-0">
@@ -251,7 +258,7 @@ export function AppSidebarHeader() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                             align="end"
-                            className="public-surface min-w-60 rounded-xl"
+                            className={surface + ' min-w-60 rounded-xl'}
                         >
                             <UserMenuContent user={auth.user} />
                         </DropdownMenuContent>
@@ -263,7 +270,7 @@ export function AppSidebarHeader() {
                 onOpenChange={setSearchOpen}
                 title="Search your workspace"
                 description="Find and open the pages and tools available to your account."
-                className="public-surface rounded-xl"
+                className={surface + ' rounded-xl'}
             >
                 <CommandInput
                     placeholder="Search pages and tools..."

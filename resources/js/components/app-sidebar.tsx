@@ -25,6 +25,7 @@ const mainNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const isDashboard = usePage().component === 'dashboard';
     const { hrisNavigation, isHrmoWorkspace } = usePage<{
         isHrmoWorkspace: boolean;
         hrisNavigation: { title: string; href: string }[];
@@ -38,7 +39,13 @@ export function AppSidebar() {
     ];
 
     return (
-        <Sidebar collapsible="icon" variant="inset" className="portal-sidebar">
+        <Sidebar
+            collapsible="icon"
+            variant="inset"
+            className={
+                'portal-sidebar' + (isDashboard ? ' dashboard-sidebar' : '')
+            }
+        >
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>

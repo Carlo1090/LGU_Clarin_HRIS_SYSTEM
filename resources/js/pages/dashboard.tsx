@@ -207,15 +207,22 @@ function AnalyticsCard({
     description,
     children,
     accessory,
+    className,
 }: {
     title: string;
     description: string;
     children: ReactNode;
     accessory?: ReactNode;
+    className?: string;
 }) {
     return (
-        <Card className="min-w-0 gap-4 rounded-xl py-5 shadow-none">
-            <CardHeader className="flex-row items-start justify-between gap-3 px-5">
+        <Card
+            className={cn(
+                'dashboard-panel min-w-0 gap-4 rounded-lg py-4 shadow-none',
+                className,
+            )}
+        >
+            <CardHeader className="flex-row items-start justify-between gap-3 px-4">
                 <div className="min-w-0 space-y-1.5">
                     <CardTitle className="text-[13px] leading-5">
                         <h2>{title}</h2>
@@ -226,7 +233,7 @@ function AnalyticsCard({
                 </div>
                 {accessory}
             </CardHeader>
-            <CardContent className="min-w-0 px-5">{children}</CardContent>
+            <CardContent className="min-w-0 px-4">{children}</CardContent>
         </Card>
     );
 }
@@ -270,6 +277,15 @@ const cardIcons: Record<string, LucideIcon> = {
     'Payroll net total': Wallet,
 };
 
+const chartColors = [
+    'var(--dashboard-chart-1)',
+    'var(--dashboard-chart-2)',
+    'var(--dashboard-chart-3)',
+    'var(--dashboard-chart-4)',
+    'var(--dashboard-chart-5)',
+    'var(--dashboard-chart-6)',
+];
+
 export default function Dashboard({ role, office, cards, analytics }: Props) {
     const { auth } = usePage().props;
     const [query, setQuery] = useState('');
@@ -300,13 +316,16 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
         value: { label: analytics.distribution.unit },
     } satisfies ChartConfig;
     const barsConfig: ChartConfig = Object.fromEntries(
-        analytics.bars.series.map((series) => [
+        analytics.bars.series.map((series, index) => [
             series.key,
-            { label: series.label, color: series.color },
+            {
+                label: series.label,
+                color: chartColors[index % chartColors.length],
+            },
         ]),
     );
     const activityConfig = {
-        value: { label: 'Records', color: '#69b518' },
+        value: { label: 'Records', color: 'var(--dashboard-chart-1)' },
     } satisfies ChartConfig;
     const filteredRows = analytics.records.data.filter(
         (row) =>
@@ -354,26 +373,25 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
         <>
             <Head title={title} />
             <div
-                className="mx-auto w-full max-w-[1440px] space-y-6 p-4 sm:p-6 lg:p-7"
+                className="dashboard-page mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-5 lg:p-6"
                 aria-busy={loading}
             >
-                <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                <header className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <div className="flex flex-wrap items-center gap-2.5">
-                            <h1 className="text-2xl font-semibold tracking-tight">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h1 className="text-xl font-semibold tracking-tight">
                                 {title}
                             </h1>
                             <Badge
                                 variant="outline"
-                                className="rounded-md border-border text-[10px] font-medium text-muted-foreground"
+                                className="rounded-md text-[10px] font-normal text-muted-foreground"
                             >
                                 {role}
                             </Badge>
                         </div>
-                        <p className="mt-1.5 text-xs text-muted-foreground">
+                        <p className="mt-1 text-[11px] text-muted-foreground">
                             Welcome back, {firstName}.{' '}
-                            {office ??
-                                'Here is the latest from your workspace.'}
+                            {office ?? 'Here is your workspace at a glance.'}
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -383,7 +401,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                             disabled={loading}
                         >
                             <SelectTrigger
-                                className="h-9 w-40 rounded-lg bg-card text-xs"
+                                className="h-8 w-36 rounded-md bg-card text-[11px]"
                                 aria-label="Reporting period"
                             >
                                 <CalendarDays
@@ -392,7 +410,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                 />
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="public-surface">
+                            <SelectContent className="public-surface dashboard-popover">
                                 <SelectItem value="3">Last 3 months</SelectItem>
                                 <SelectItem value="6">Last 6 months</SelectItem>
                                 <SelectItem value="12">
@@ -403,24 +421,54 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                         <Button
                             type="button"
                             size="sm"
-                            className="h-9 rounded-lg bg-foreground text-xs text-background hover:bg-foreground/90"
+                            className="dashboard-action h-8 rounded-md text-[11px]"
                             onClick={() => downloadReport(cards, analytics)}
                         >
                             <ArrowDownToLine
                                 className="size-3.5"
                                 aria-hidden="true"
-                            />
-                            Download report
+                            />{' '}
+                            Export report
                         </Button>
                     </div>
                 </header>
 
                 {cards.length ? (
                     <>
+                        <nav
+                            aria-label="Dashboard sections"
+                            className="flex w-fit max-w-full flex-wrap gap-1 rounded-md border border-border bg-muted/50 p-1"
+                        >
+                            <Button
+                                asChild
+                                variant="secondary"
+                                size="sm"
+                                className="h-6 rounded-sm px-2.5 text-[11px] shadow-sm"
+                            >
+                                <a href="#dashboard-overview">Overview</a>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 rounded-sm px-2.5 text-[11px] text-muted-foreground"
+                            >
+                                <a href="#dashboard-queue">Work queue</a>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 rounded-sm px-2.5 text-[11px] text-muted-foreground"
+                            >
+                                <a href="#dashboard-records">Records</a>
+                            </Button>
+                        </nav>
+
                         <section
                             aria-label="Key information"
                             className={cn(
-                                'grid gap-4 sm:grid-cols-2',
+                                'grid gap-3 sm:grid-cols-2',
                                 cards.length > 4
                                     ? 'xl:grid-cols-5'
                                     : 'xl:grid-cols-4',
@@ -432,26 +480,21 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                 return (
                                     <Card
                                         key={card.label}
-                                        className="gap-0 rounded-xl py-0 shadow-none"
+                                        className="dashboard-metric gap-0 rounded-lg py-0 shadow-none"
                                     >
-                                        <CardContent className="p-5">
+                                        <CardContent className="p-4">
                                             <div className="flex items-start justify-between gap-3">
-                                                <h2 className="text-xs leading-5 font-medium text-muted-foreground">
+                                                <h2 className="text-[11px] font-medium">
                                                     {card.label}
                                                 </h2>
-                                                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                                                    <Icon
-                                                        className="size-3.5 text-muted-foreground"
-                                                        aria-hidden="true"
-                                                    />
-                                                </span>
+                                                <Icon
+                                                    className="size-4 shrink-0 text-muted-foreground"
+                                                    aria-hidden="true"
+                                                />
                                             </div>
-                                            <p className="mt-2 text-[28px] leading-tight font-semibold tracking-tight tabular-nums">
-                                                {card.value}
-                                            </p>
-                                            <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                            <p className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
                                                 <span
-                                                    className="size-1.5 rounded-full bg-[#69b518]"
+                                                    className="size-1 rounded-full bg-primary"
                                                     aria-hidden="true"
                                                 />
                                                 Current{' '}
@@ -459,33 +502,398 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                                     ? 'recorded amount'
                                                     : 'total'}
                                             </p>
+                                            <p className="mt-5 text-[27px] leading-none font-semibold tracking-tight tabular-nums">
+                                                {card.value}
+                                            </p>
                                         </CardContent>
                                     </Card>
                                 );
                             })}
                         </section>
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                            <p>{analytics.scope}</p>
-                            <p>
-                                {analytics.period.label}
-                                <span className="hidden sm:inline">
-                                    {' '}
-                                    &middot; Charts reflect the selected period
-                                </span>
-                            </p>
-                        </div>
 
                         <section
+                            id="dashboard-overview"
                             aria-label="Dashboard charts"
-                            className="grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+                            className="grid scroll-mt-20 gap-3 md:grid-cols-2 xl:grid-cols-12"
                         >
                             <AnalyticsCard
+                                className="md:col-span-2 xl:col-span-8"
+                                title={analytics.activity.title}
+                                description={analytics.activity.description}
+                                accessory={
+                                    <div
+                                        className="flex shrink-0 flex-wrap gap-0.5 rounded-md border border-border p-0.5"
+                                        role="group"
+                                        aria-label="Chart reporting period"
+                                    >
+                                        {[3, 6, 12].map((months) => (
+                                            <Button
+                                                key={months}
+                                                size="sm"
+                                                variant="ghost"
+                                                disabled={loading}
+                                                aria-pressed={
+                                                    analytics.period.months ===
+                                                    months
+                                                }
+                                                className={cn(
+                                                    'h-6 rounded-sm px-2 text-[10px]',
+                                                    analytics.period.months ===
+                                                        months &&
+                                                        'bg-secondary text-foreground shadow-sm',
+                                                )}
+                                                onClick={() =>
+                                                    changePeriod(String(months))
+                                                }
+                                            >
+                                                {months}m
+                                            </Button>
+                                        ))}
+                                    </div>
+                                }
+                            >
+                                <div className="relative">
+                                    <ChartContainer
+                                        config={activityConfig}
+                                        className="aspect-auto h-[230px] min-h-[230px] w-full"
+                                    >
+                                        <AreaChart
+                                            accessibilityLayer
+                                            data={analytics.activity.data}
+                                            margin={{
+                                                top: 12,
+                                                right: 8,
+                                                left: -10,
+                                                bottom: 0,
+                                            }}
+                                        >
+                                            <defs>
+                                                <linearGradient
+                                                    id="dashboard-activity-fill"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="0%"
+                                                        stopColor="var(--dashboard-chart-1)"
+                                                        stopOpacity={0.38}
+                                                    />
+                                                    <stop
+                                                        offset="100%"
+                                                        stopColor="var(--dashboard-chart-1)"
+                                                        stopOpacity={0.015}
+                                                    />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid
+                                                vertical={false}
+                                                strokeDasharray="3 4"
+                                            />
+                                            <XAxis
+                                                dataKey="month"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={12}
+                                                tick={{ fontSize: 10 }}
+                                                minTickGap={12}
+                                            />
+                                            <YAxis
+                                                tickLine={false}
+                                                axisLine={false}
+                                                allowDecimals={false}
+                                                width={42}
+                                                tick={{ fontSize: 10 }}
+                                            />
+                                            <ChartTooltip
+                                                content={
+                                                    <ChartTooltipContent indicator="line" />
+                                                }
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="value"
+                                                stroke="var(--color-value)"
+                                                fill="url(#dashboard-activity-fill)"
+                                                strokeWidth={1.5}
+                                                dot={false}
+                                                activeDot={{ r: 4 }}
+                                                isAnimationActive={false}
+                                            />
+                                        </AreaChart>
+                                    </ChartContainer>
+                                    {activityTotal === 0 && (
+                                        <p className="pointer-events-none absolute inset-x-0 top-1/2 text-center text-[11px] text-muted-foreground">
+                                            No activity in this period.
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="mt-3 flex flex-wrap justify-between gap-2 border-t border-border pt-3 text-[10px] text-muted-foreground">
+                                    <span>{analytics.period.label}</span>
+                                    <span>
+                                        <span className="font-medium text-foreground">
+                                            {number.format(activityTotal)}
+                                        </span>{' '}
+                                        records in this period
+                                    </span>
+                                </div>
+                            </AnalyticsCard>
+
+                            <AnalyticsCard
+                                className="md:col-span-2 xl:col-span-4"
+                                title="Workspace snapshot"
+                                description={analytics.scope}
+                            >
+                                <p className="text-[32px] leading-none font-semibold tracking-tight tabular-nums">
+                                    {number.format(distributionTotal)}
+                                </p>
+                                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                                    {analytics.distribution.unit} &middot;{' '}
+                                    {analytics.distribution.title.toLowerCase()}
+                                </p>
+                                <div className="mt-5 flex items-center gap-2.5">
+                                    <Avatar className="size-8 border border-border">
+                                        <AvatarFallback className="bg-accent text-[10px] font-semibold text-accent-foreground">
+                                            {auth.user.name
+                                                .split(/\s+/)
+                                                .filter(Boolean)
+                                                .slice(0, 2)
+                                                .map((word) => word[0])
+                                                .join('')}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[11px] font-medium">
+                                            {auth.user.name}
+                                        </p>
+                                        <p className="truncate text-[10px] text-muted-foreground">
+                                            {role}
+                                        </p>
+                                    </div>
+                                </div>
+                                <h3 className="mt-5 text-[10px] font-semibold">
+                                    Highlights
+                                </h3>
+                                <dl className="mt-1 divide-y divide-border text-[11px]">
+                                    <div className="flex justify-between gap-3 py-2.5">
+                                        <dt className="text-muted-foreground">
+                                            Activity this period
+                                        </dt>
+                                        <dd className="font-medium tabular-nums">
+                                            {number.format(activityTotal)}
+                                        </dd>
+                                    </div>
+                                    <div className="flex justify-between gap-3 py-2.5">
+                                        <dt className="text-muted-foreground">
+                                            Work queue records
+                                        </dt>
+                                        <dd className="font-medium tabular-nums">
+                                            {number.format(tasksTotal)}
+                                        </dd>
+                                    </div>
+                                    <div className="flex justify-between gap-3 py-2.5">
+                                        <dt className="text-muted-foreground">
+                                            Recent records shown
+                                        </dt>
+                                        <dd className="font-medium tabular-nums">
+                                            {analytics.records.data.length}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </AnalyticsCard>
+
+                            <AnalyticsCard
+                                className="md:col-span-2 xl:col-span-6"
+                                title="Your work queue"
+                                description="Open a workspace to review your next actions."
+                                accessory={
+                                    <Badge
+                                        variant="outline"
+                                        className="rounded-md text-[10px]"
+                                    >
+                                        {number.format(tasksTotal)} records
+                                    </Badge>
+                                }
+                            >
+                                <div
+                                    id="dashboard-queue"
+                                    className="scroll-mt-24"
+                                >
+                                    {analytics.tasks.length ? (
+                                        <div className="grid gap-2.5 sm:grid-cols-3">
+                                            {analytics.tasks.map((task) => (
+                                                <Link
+                                                    key={task.title}
+                                                    href={task.href}
+                                                    className="dashboard-task group flex min-w-0 flex-col rounded-lg border border-border p-3"
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                                            <span
+                                                                className={cn(
+                                                                    'size-1.5 rounded-full',
+                                                                    task.count
+                                                                        ? 'bg-primary'
+                                                                        : 'bg-muted-foreground/50',
+                                                                )}
+                                                                aria-hidden="true"
+                                                            />
+                                                            {task.count
+                                                                ? 'Follow up'
+                                                                : 'Up to date'}
+                                                        </span>
+                                                        <ArrowUpRight
+                                                            className="size-3.5 text-muted-foreground transition group-hover:text-primary"
+                                                            aria-hidden="true"
+                                                        />
+                                                    </div>
+                                                    <p className="mt-5 text-[26px] leading-none font-semibold tabular-nums">
+                                                        {number.format(
+                                                            task.count,
+                                                        )}
+                                                    </p>
+                                                    <h3 className="mt-3 text-[11px] leading-4 font-medium">
+                                                        {task.title}
+                                                    </h3>
+                                                    <p className="mt-1 mb-5 text-[10px] leading-relaxed text-muted-foreground">
+                                                        {task.description}
+                                                    </p>
+                                                    <span className="mt-auto w-fit rounded border border-primary/20 bg-accent px-2 py-1 text-[9px] font-medium text-accent-foreground">
+                                                        Open workspace
+                                                    </span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex min-h-48 flex-col items-center justify-center text-center">
+                                            <CheckCircle2
+                                                className="mb-3 size-7 text-primary"
+                                                aria-hidden="true"
+                                            />
+                                            <p className="text-sm font-medium">
+                                                You're all caught up
+                                            </p>
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                No pending actions for this
+                                                workspace.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </AnalyticsCard>
+
+                            <AnalyticsCard
+                                className="xl:col-span-3"
+                                title={analytics.bars.title}
+                                description={analytics.bars.description}
+                            >
+                                <div className="relative">
+                                    <ChartContainer
+                                        config={barsConfig}
+                                        className="aspect-auto h-[185px] min-h-[185px] w-full"
+                                    >
+                                        <BarChart
+                                            accessibilityLayer
+                                            data={analytics.bars.data}
+                                            margin={{
+                                                top: 8,
+                                                right: 2,
+                                                left: -10,
+                                                bottom: 0,
+                                            }}
+                                        >
+                                            <CartesianGrid
+                                                vertical={false}
+                                                strokeDasharray="3 4"
+                                            />
+                                            <XAxis
+                                                dataKey="month"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={10}
+                                                tick={{ fontSize: 9 }}
+                                                minTickGap={12}
+                                            />
+                                            <YAxis
+                                                tickLine={false}
+                                                axisLine={false}
+                                                allowDecimals={false}
+                                                width={42}
+                                                tick={{ fontSize: 9 }}
+                                                tickFormatter={(
+                                                    value: number,
+                                                ) => compact.format(value)}
+                                            />
+                                            <ChartTooltip
+                                                cursor={{
+                                                    fill: 'var(--muted)',
+                                                    opacity: 0.5,
+                                                }}
+                                                content={
+                                                    <ChartTooltipContent />
+                                                }
+                                            />
+                                            {analytics.bars.series.map(
+                                                (series) => (
+                                                    <Bar
+                                                        key={series.key}
+                                                        dataKey={series.key}
+                                                        name={series.label}
+                                                        fill={
+                                                            'var(--color-' +
+                                                            series.key +
+                                                            ')'
+                                                        }
+                                                        radius={[2, 2, 0, 0]}
+                                                        maxBarSize={14}
+                                                        isAnimationActive={
+                                                            false
+                                                        }
+                                                    />
+                                                ),
+                                            )}
+                                        </BarChart>
+                                    </ChartContainer>
+                                    {!hasBars && (
+                                        <p className="pointer-events-none absolute inset-x-0 top-1/2 text-center text-[10px] text-muted-foreground">
+                                            No entries in this period.
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                    {analytics.bars.series.map(
+                                        (series, index) => (
+                                            <span
+                                                key={series.key}
+                                                className="inline-flex items-center gap-1.5 text-[9px] text-muted-foreground"
+                                            >
+                                                <span
+                                                    className="size-1.5 rounded-full"
+                                                    style={{
+                                                        backgroundColor:
+                                                            chartColors[
+                                                                index %
+                                                                    chartColors.length
+                                                            ],
+                                                    }}
+                                                    aria-hidden="true"
+                                                />
+                                                {series.label}
+                                            </span>
+                                        ),
+                                    )}
+                                </div>
+                            </AnalyticsCard>
+
+                            <AnalyticsCard
+                                className="xl:col-span-3"
                                 title={analytics.distribution.title}
                                 description={analytics.distribution.description}
                             >
                                 <ChartContainer
                                     config={distributionConfig}
-                                    className="mx-auto aspect-auto h-[184px] min-h-[184px] w-full max-w-[260px]"
+                                    className="mx-auto aspect-auto h-[180px] min-h-[180px] w-full max-w-[240px]"
                                 >
                                     <PieChart accessibilityLayer>
                                         {distributionTotal > 0 && (
@@ -502,22 +910,29 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                         <Pie
                                             data={
                                                 distributionTotal
-                                                    ? analytics.distribution
-                                                          .data
+                                                    ? analytics.distribution.data.map(
+                                                          (item, index) => ({
+                                                              ...item,
+                                                              fill: chartColors[
+                                                                  index %
+                                                                      chartColors.length
+                                                              ],
+                                                          }),
+                                                      )
                                                     : [
                                                           {
                                                               label: 'No records',
                                                               value: 1,
-                                                              fill: '#e3e9df',
+                                                              fill: 'var(--muted)',
                                                           },
                                                       ]
                                             }
                                             dataKey="value"
                                             nameKey="label"
-                                            innerRadius={59}
-                                            outerRadius={81}
+                                            innerRadius={55}
+                                            outerRadius={76}
                                             paddingAngle={
-                                                distributionTotal ? 2 : 0
+                                                distributionTotal ? 3 : 0
                                             }
                                             strokeWidth={0}
                                             isAnimationActive={false}
@@ -545,8 +960,8 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                                                 x={Number(
                                                                     viewBox.cx,
                                                                 )}
-                                                                dy="-5"
-                                                                className="fill-foreground text-[28px] font-semibold"
+                                                                dy="-3"
+                                                                className="fill-foreground text-[27px] font-semibold"
                                                             >
                                                                 {number.format(
                                                                     distributionTotal,
@@ -556,8 +971,8 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                                                 x={Number(
                                                                     viewBox.cx,
                                                                 )}
-                                                                dy="22"
-                                                                className="fill-muted-foreground text-[10px]"
+                                                                dy="21"
+                                                                className="fill-muted-foreground text-[9px]"
                                                             >
                                                                 {
                                                                     analytics
@@ -573,25 +988,28 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                     </PieChart>
                                 </ChartContainer>
                                 {analytics.distribution.data.length ? (
-                                    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
+                                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
                                         {analytics.distribution.data.map(
-                                            (item) => (
+                                            (item, index) => (
                                                 <div
                                                     key={item.label}
-                                                    className="flex min-w-0 items-center gap-2 text-[10px]"
+                                                    className="flex min-w-0 items-center gap-1.5 text-[9px]"
                                                 >
                                                     <span
-                                                        className="size-2 shrink-0 rounded-full"
+                                                        className="size-1.5 shrink-0 rounded-full"
                                                         style={{
                                                             backgroundColor:
-                                                                item.fill,
+                                                                chartColors[
+                                                                    index %
+                                                                        chartColors.length
+                                                                ],
                                                         }}
                                                         aria-hidden="true"
                                                     />
                                                     <span className="truncate text-muted-foreground">
                                                         {item.label}
                                                     </span>
-                                                    <span className="ml-auto font-semibold tabular-nums">
+                                                    <span className="ml-auto font-medium tabular-nums">
                                                         {number.format(
                                                             item.value,
                                                         )}
@@ -601,597 +1019,318 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                         )}
                                     </div>
                                 ) : (
-                                    <p className="mt-3 text-center text-xs text-muted-foreground">
+                                    <p className="mt-2 text-center text-[10px] text-muted-foreground">
                                         No records in this workspace yet.
                                     </p>
                                 )}
                             </AnalyticsCard>
-
-                            <AnalyticsCard
-                                title={analytics.bars.title}
-                                description={analytics.bars.description}
-                            >
-                                <div className="relative">
-                                    <ChartContainer
-                                        config={barsConfig}
-                                        className="aspect-auto h-[200px] min-h-[200px] w-full"
-                                    >
-                                        <BarChart
-                                            accessibilityLayer
-                                            data={analytics.bars.data}
-                                            margin={{
-                                                top: 8,
-                                                right: 0,
-                                                left: -12,
-                                                bottom: 0,
-                                            }}
-                                        >
-                                            <CartesianGrid
-                                                vertical={false}
-                                                strokeDasharray="3 3"
-                                            />
-                                            <XAxis
-                                                dataKey="month"
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickMargin={10}
-                                                tick={{ fontSize: 10 }}
-                                                minTickGap={0}
-                                            />
-                                            <YAxis
-                                                tickLine={false}
-                                                axisLine={false}
-                                                allowDecimals={false}
-                                                width={40}
-                                                tick={{ fontSize: 10 }}
-                                                tickFormatter={(
-                                                    value: number,
-                                                ) => compact.format(value)}
-                                            />
-                                            <ChartTooltip
-                                                cursor={{
-                                                    fill: 'var(--muted)',
-                                                    opacity: 0.5,
-                                                }}
-                                                content={
-                                                    <ChartTooltipContent />
-                                                }
-                                            />
-                                            {analytics.bars.series.map(
-                                                (series) => (
-                                                    <Bar
-                                                        key={series.key}
-                                                        dataKey={series.key}
-                                                        name={series.label}
-                                                        fill={`var(--color-${series.key})`}
-                                                        radius={[3, 3, 0, 0]}
-                                                        maxBarSize={18}
-                                                        isAnimationActive={
-                                                            false
-                                                        }
-                                                    />
-                                                ),
-                                            )}
-                                        </BarChart>
-                                    </ChartContainer>
-                                    {!hasBars && (
-                                        <div className="pointer-events-none absolute inset-x-0 top-1/2 text-center text-[11px] text-muted-foreground">
-                                            No entries in this period.
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
-                                    {analytics.bars.series.map((series) => (
-                                        <span
-                                            key={series.key}
-                                            className="inline-flex items-center gap-1.5 text-[9px] text-muted-foreground"
-                                        >
-                                            <span
-                                                className="size-1.5 rounded-full"
-                                                style={{
-                                                    backgroundColor:
-                                                        series.color,
-                                                }}
-                                                aria-hidden="true"
-                                            />
-                                            {series.label}
-                                        </span>
-                                    ))}
-                                </div>
-                            </AnalyticsCard>
-
-                            <AnalyticsCard
-                                title={analytics.activity.title}
-                                description={analytics.activity.description}
-                                accessory={
-                                    <span className="rounded-md bg-accent px-2 py-1 text-xs font-semibold text-accent-foreground tabular-nums">
-                                        {number.format(activityTotal)}
-                                    </span>
-                                }
-                            >
-                                <div className="relative">
-                                    <ChartContainer
-                                        config={activityConfig}
-                                        className="aspect-auto h-[200px] min-h-[200px] w-full"
-                                    >
-                                        <AreaChart
-                                            accessibilityLayer
-                                            data={analytics.activity.data}
-                                            margin={{
-                                                top: 8,
-                                                right: 4,
-                                                left: -12,
-                                                bottom: 0,
-                                            }}
-                                        >
-                                            <defs>
-                                                <linearGradient
-                                                    id="dashboard-activity-fill"
-                                                    x1="0"
-                                                    y1="0"
-                                                    x2="0"
-                                                    y2="1"
-                                                >
-                                                    <stop
-                                                        offset="0%"
-                                                        stopColor="#69b518"
-                                                        stopOpacity={0.3}
-                                                    />
-                                                    <stop
-                                                        offset="100%"
-                                                        stopColor="#69b518"
-                                                        stopOpacity={0.02}
-                                                    />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid
-                                                vertical={false}
-                                                strokeDasharray="3 3"
-                                            />
-                                            <XAxis
-                                                dataKey="month"
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickMargin={10}
-                                                tick={{ fontSize: 10 }}
-                                                minTickGap={0}
-                                            />
-                                            <YAxis
-                                                tickLine={false}
-                                                axisLine={false}
-                                                allowDecimals={false}
-                                                width={38}
-                                                tick={{ fontSize: 10 }}
-                                            />
-                                            <ChartTooltip
-                                                content={
-                                                    <ChartTooltipContent indicator="line" />
-                                                }
-                                            />
-                                            <Area
-                                                type="monotone"
-                                                dataKey="value"
-                                                stroke="var(--color-value)"
-                                                fill="url(#dashboard-activity-fill)"
-                                                strokeWidth={2}
-                                                dot={false}
-                                                activeDot={{ r: 4 }}
-                                                isAnimationActive={false}
-                                            />
-                                        </AreaChart>
-                                    </ChartContainer>
-                                    {activityTotal === 0 && (
-                                        <div className="pointer-events-none absolute inset-x-0 top-1/2 text-center text-[11px] text-muted-foreground">
-                                            No activity in this period.
-                                        </div>
-                                    )}
-                                </div>
-                                <p className="mt-3 text-center text-[10px] text-muted-foreground">
-                                    {analytics.period.label}
-                                </p>
-                            </AnalyticsCard>
                         </section>
-
-                        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2.1fr)]">
-                            <AnalyticsCard
-                                title="Your work queue"
-                                description="A few things that may need your attention."
-                                accessory={
-                                    <Badge
-                                        variant="secondary"
-                                        className="rounded-md text-[10px]"
-                                    >
-                                        {number.format(tasksTotal)}
-                                    </Badge>
-                                }
-                            >
-                                {analytics.tasks.length ? (
-                                    <div className="space-y-3">
-                                        {analytics.tasks.map((task) => (
-                                            <Link
-                                                key={task.title}
-                                                href={task.href}
-                                                className="group block rounded-lg border border-border/70 p-3 transition hover:border-[#69b518]/50 hover:bg-accent/30"
-                                            >
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <p className="text-xs font-medium group-hover:text-accent-foreground">
-                                                        {task.title}
-                                                    </p>
-                                                    <ArrowUpRight
-                                                        className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-                                                        aria-hidden="true"
-                                                    />
-                                                </div>
-                                                <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                                                    {task.description}
-                                                </p>
-                                                <div className="mt-2 flex items-center gap-2">
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={cn(
-                                                            'rounded px-1.5 py-0 text-[9px]',
-                                                            task.count
-                                                                ? task.tone ===
-                                                                  'amber'
-                                                                    ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300'
-                                                                    : 'border-border bg-accent text-accent-foreground'
-                                                                : 'border-border bg-muted text-muted-foreground',
-                                                        )}
-                                                    >
-                                                        {task.count
-                                                            ? 'Follow up'
-                                                            : 'Up to date'}
-                                                    </Badge>
-                                                    <span className="text-[10px] font-medium tabular-nums">
-                                                        {number.format(
-                                                            task.count,
-                                                        )}{' '}
-                                                        {task.count === 1
-                                                            ? 'record'
-                                                            : 'records'}
-                                                    </span>
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center py-8 text-center">
-                                        <CheckCircle2
-                                            className="mb-3 size-8 text-[#69b518]"
-                                            aria-hidden="true"
-                                        />
-                                        <p className="text-sm font-medium">
-                                            You're all caught up
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            No pending actions for this
-                                            workspace.
-                                        </p>
-                                    </div>
-                                )}
-                            </AnalyticsCard>
-
-                            <Card className="min-w-0 gap-0 rounded-xl py-0 shadow-none">
-                                <CardHeader className="gap-1 px-5 pt-5 pb-4">
-                                    <CardTitle className="text-[13px]">
-                                        <h2>{analytics.records.title}</h2>
-                                    </CardTitle>
-                                    <CardDescription className="text-[11px]">
-                                        {analytics.records.description}
-                                    </CardDescription>
-                                </CardHeader>
-                                <div className="flex flex-wrap items-center gap-2 px-5 pb-4">
-                                    <div className="relative min-w-0 flex-1">
-                                        <Search
-                                            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-                                            aria-hidden="true"
-                                        />
-                                        <Input
-                                            value={query}
-                                            onChange={(event) => {
-                                                setQuery(event.target.value);
-                                                setPage(1);
-                                            }}
-                                            placeholder="Filter records..."
-                                            aria-label="Filter dashboard records"
-                                            className="h-8 rounded-lg pl-8 text-xs"
-                                        />
-                                    </div>
-                                    <Select
-                                        value={status}
-                                        onValueChange={(value) => {
-                                            setStatus(value);
+                        <Card
+                            id="dashboard-records"
+                            className="dashboard-panel min-w-0 scroll-mt-20 gap-0 rounded-lg py-0 shadow-none"
+                        >
+                            <CardHeader className="gap-1 px-4 pt-4 pb-4">
+                                <CardTitle className="text-[13px]">
+                                    <h2>{analytics.records.title}</h2>
+                                </CardTitle>
+                                <CardDescription className="text-[11px]">
+                                    {analytics.records.description}
+                                </CardDescription>
+                            </CardHeader>
+                            <div className="flex flex-wrap items-center gap-2 px-4 pb-4">
+                                <div className="relative min-w-0 flex-1">
+                                    <Search
+                                        className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+                                        aria-hidden="true"
+                                    />
+                                    <Input
+                                        value={query}
+                                        onChange={(event) => {
+                                            setQuery(event.target.value);
                                             setPage(1);
                                         }}
-                                    >
-                                        <SelectTrigger
-                                            className="h-8 w-[130px] rounded-lg text-xs"
-                                            aria-label="Filter by status"
-                                        >
-                                            <SelectValue placeholder="All statuses" />
-                                        </SelectTrigger>
-                                        <SelectContent className="public-surface">
-                                            <SelectItem value="all">
-                                                All statuses
-                                            </SelectItem>
-                                            {statuses.map((value) => (
-                                                <SelectItem
-                                                    key={value}
-                                                    value={value}
-                                                >
-                                                    {statusLabel(value)}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-8 rounded-lg text-xs"
-                                            >
-                                                <Columns3
-                                                    className="size-3.5"
-                                                    aria-hidden="true"
-                                                />
-                                                <span className="hidden sm:inline">
-                                                    Columns
-                                                </span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent
-                                            align="end"
-                                            className="public-surface"
-                                        >
-                                            <DropdownMenuLabel>
-                                                Visible columns
-                                            </DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
-                                            {(
-                                                [
-                                                    'status',
-                                                    'date',
-                                                    'value',
-                                                ] as const
-                                            ).map((key) => (
-                                                <DropdownMenuCheckboxItem
-                                                    key={key}
-                                                    checked={columns[key]}
-                                                    onCheckedChange={(
-                                                        checked,
-                                                    ) =>
-                                                        setColumns(
-                                                            (current) => ({
-                                                                ...current,
-                                                                [key]: checked,
-                                                            }),
-                                                        )
-                                                    }
-                                                >
-                                                    {key === 'value'
-                                                        ? analytics.records
-                                                              .valueLabel
-                                                        : statusLabel(key)}
-                                                </DropdownMenuCheckboxItem>
-                                            ))}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                        placeholder="Filter records..."
+                                        aria-label="Filter dashboard records"
+                                        className="h-8! rounded-md! pl-8 text-xs"
+                                    />
                                 </div>
-                                <div className="min-w-0 px-5">
-                                    <Table className="min-w-[560px] text-xs">
-                                        <TableHeader>
-                                            <TableRow className="hover:bg-transparent">
-                                                <TableHead className="h-9 pl-0 text-[10px] font-medium">
-                                                    Record
-                                                </TableHead>
+                                <Select
+                                    value={status}
+                                    onValueChange={(value) => {
+                                        setStatus(value);
+                                        setPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger
+                                        className="h-8 w-[130px] rounded-lg text-xs"
+                                        aria-label="Filter by status"
+                                    >
+                                        <SelectValue placeholder="All statuses" />
+                                    </SelectTrigger>
+                                    <SelectContent className="public-surface dashboard-popover">
+                                        <SelectItem value="all">
+                                            All statuses
+                                        </SelectItem>
+                                        {statuses.map((value) => (
+                                            <SelectItem
+                                                key={value}
+                                                value={value}
+                                            >
+                                                {statusLabel(value)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 rounded-lg text-xs"
+                                        >
+                                            <Columns3
+                                                className="size-3.5"
+                                                aria-hidden="true"
+                                            />
+                                            <span className="hidden sm:inline">
+                                                Columns
+                                            </span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                        align="end"
+                                        className="public-surface dashboard-popover"
+                                    >
+                                        <DropdownMenuLabel>
+                                            Visible columns
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {(
+                                            ['status', 'date', 'value'] as const
+                                        ).map((key) => (
+                                            <DropdownMenuCheckboxItem
+                                                key={key}
+                                                checked={columns[key]}
+                                                onCheckedChange={(checked) =>
+                                                    setColumns((current) => ({
+                                                        ...current,
+                                                        [key]: checked,
+                                                    }))
+                                                }
+                                            >
+                                                {key === 'value'
+                                                    ? analytics.records
+                                                          .valueLabel
+                                                    : statusLabel(key)}
+                                            </DropdownMenuCheckboxItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            <div className="min-w-0 px-4">
+                                <Table className="min-w-[560px] text-xs">
+                                    <TableHeader>
+                                        <TableRow className="hover:bg-transparent">
+                                            <TableHead className="h-9 pl-0 text-[10px] font-medium">
+                                                Record
+                                            </TableHead>
+                                            <TableHead className="h-9 text-[10px] font-medium">
+                                                Type
+                                            </TableHead>
+                                            {columns.status && (
                                                 <TableHead className="h-9 text-[10px] font-medium">
-                                                    Type
+                                                    Status
                                                 </TableHead>
-                                                {columns.status && (
-                                                    <TableHead className="h-9 text-[10px] font-medium">
-                                                        Status
-                                                    </TableHead>
-                                                )}
-                                                {columns.date && (
-                                                    <TableHead className="h-9 text-[10px] font-medium">
-                                                        Date
-                                                    </TableHead>
-                                                )}
-                                                {columns.value && (
-                                                    <TableHead className="h-9 text-right text-[10px] font-medium">
-                                                        {
-                                                            analytics.records
-                                                                .valueLabel
-                                                        }
-                                                    </TableHead>
-                                                )}
-                                                <TableHead className="h-9 pr-0">
-                                                    <span className="sr-only">
-                                                        Open record workspace
-                                                    </span>
+                                            )}
+                                            {columns.date && (
+                                                <TableHead className="h-9 text-[10px] font-medium">
+                                                    Date
                                                 </TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {visibleRows.length ? (
-                                                visibleRows.map((row) => (
-                                                    <TableRow key={row.id}>
-                                                        <TableCell className="py-3 pl-0">
-                                                            <div className="flex items-center gap-2.5">
-                                                                <Avatar className="size-7">
-                                                                    <AvatarFallback className="bg-muted text-[9px] font-semibold">
-                                                                        {row.subject
-                                                                            .split(
-                                                                                /\s+/,
-                                                                            )
-                                                                            .filter(
-                                                                                Boolean,
-                                                                            )
-                                                                            .slice(
-                                                                                0,
-                                                                                2,
-                                                                            )
-                                                                            .map(
-                                                                                (
-                                                                                    word,
-                                                                                ) =>
-                                                                                    word[0],
-                                                                            )
-                                                                            .join(
-                                                                                '',
-                                                                            )
-                                                                            .toUpperCase()}
-                                                                    </AvatarFallback>
-                                                                </Avatar>
-                                                                <div className="min-w-0">
-                                                                    <p className="max-w-40 truncate text-[11px] font-medium">
-                                                                        {
-                                                                            row.subject
-                                                                        }
-                                                                    </p>
-                                                                    <p className="mt-0.5 text-[9px] text-muted-foreground">
-                                                                        {
-                                                                            row.reference
-                                                                        }
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="max-w-36 truncate text-[10px] text-muted-foreground">
-                                                            {row.description}
-                                                        </TableCell>
-                                                        {columns.status && (
-                                                            <TableCell>
-                                                                <Badge
-                                                                    variant="outline"
-                                                                    className={cn(
-                                                                        'rounded-md px-1.5 py-0.5 text-[9px] font-medium whitespace-nowrap',
-                                                                        statusStyle(
-                                                                            row.status,
-                                                                        ),
-                                                                    )}
-                                                                >
-                                                                    {statusLabel(
-                                                                        row.status,
-                                                                    )}
-                                                                </Badge>
-                                                            </TableCell>
-                                                        )}
-                                                        {columns.date && (
-                                                            <TableCell className="text-[10px] whitespace-nowrap text-muted-foreground">
-                                                                {formatDate(
-                                                                    row.date,
-                                                                )}
-                                                            </TableCell>
-                                                        )}
-                                                        {columns.value && (
-                                                            <TableCell className="text-right text-[11px] tabular-nums">
-                                                                {number.format(
-                                                                    row.value,
-                                                                )}
-                                                            </TableCell>
-                                                        )}
-                                                        <TableCell className="pr-0 text-right">
-                                                            <Button
-                                                                asChild
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="size-7 rounded-md"
-                                                            >
-                                                                <Link
-                                                                    href={
-                                                                        row.href
+                                            )}
+                                            {columns.value && (
+                                                <TableHead className="h-9 text-right text-[10px] font-medium">
+                                                    {
+                                                        analytics.records
+                                                            .valueLabel
+                                                    }
+                                                </TableHead>
+                                            )}
+                                            <TableHead className="h-9 pr-0">
+                                                <span className="sr-only">
+                                                    Open record workspace
+                                                </span>
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {visibleRows.length ? (
+                                            visibleRows.map((row) => (
+                                                <TableRow key={row.id}>
+                                                    <TableCell className="py-3 pl-0">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <Avatar className="size-7">
+                                                                <AvatarFallback className="bg-muted text-[9px] font-semibold">
+                                                                    {row.subject
+                                                                        .split(
+                                                                            /\s+/,
+                                                                        )
+                                                                        .filter(
+                                                                            Boolean,
+                                                                        )
+                                                                        .slice(
+                                                                            0,
+                                                                            2,
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                word,
+                                                                            ) =>
+                                                                                word[0],
+                                                                        )
+                                                                        .join(
+                                                                            '',
+                                                                        )
+                                                                        .toUpperCase()}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="min-w-0">
+                                                                <p className="max-w-40 truncate text-[11px] font-medium">
+                                                                    {
+                                                                        row.subject
                                                                     }
-                                                                    aria-label={`Open ${row.reference} workspace`}
-                                                                >
-                                                                    <ArrowUpRight
-                                                                        className="size-3.5"
-                                                                        aria-hidden="true"
-                                                                    />
-                                                                </Link>
-                                                            </Button>
+                                                                </p>
+                                                                <p className="mt-0.5 text-[9px] text-muted-foreground">
+                                                                    {
+                                                                        row.reference
+                                                                    }
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="max-w-36 truncate text-[10px] text-muted-foreground">
+                                                        {row.description}
+                                                    </TableCell>
+                                                    {columns.status && (
+                                                        <TableCell>
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={cn(
+                                                                    'rounded-md px-1.5 py-0.5 text-[9px] font-medium whitespace-nowrap',
+                                                                    statusStyle(
+                                                                        row.status,
+                                                                    ),
+                                                                )}
+                                                            >
+                                                                {statusLabel(
+                                                                    row.status,
+                                                                )}
+                                                            </Badge>
                                                         </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell
-                                                        colSpan={
-                                                            3 +
-                                                            Number(
-                                                                columns.status,
-                                                            ) +
-                                                            Number(
-                                                                columns.date,
-                                                            ) +
-                                                            Number(
-                                                                columns.value,
-                                                            )
-                                                        }
-                                                        className="h-36 text-center text-xs text-muted-foreground"
-                                                    >
-                                                        {query ||
-                                                        status !== 'all'
-                                                            ? 'No records match your filters.'
-                                                            : 'No records available for this period.'}
+                                                    )}
+                                                    {columns.date && (
+                                                        <TableCell className="text-[10px] whitespace-nowrap text-muted-foreground">
+                                                            {formatDate(
+                                                                row.date,
+                                                            )}
+                                                        </TableCell>
+                                                    )}
+                                                    {columns.value && (
+                                                        <TableCell className="text-right text-[11px] tabular-nums">
+                                                            {number.format(
+                                                                row.value,
+                                                            )}
+                                                        </TableCell>
+                                                    )}
+                                                    <TableCell className="pr-0 text-right">
+                                                        <Button
+                                                            asChild
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="size-7 rounded-md"
+                                                        >
+                                                            <Link
+                                                                href={row.href}
+                                                                aria-label={`Open ${row.reference} workspace`}
+                                                            >
+                                                                <ArrowUpRight
+                                                                    className="size-3.5"
+                                                                    aria-hidden="true"
+                                                                />
+                                                            </Link>
+                                                        </Button>
                                                     </TableCell>
                                                 </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={
+                                                        3 +
+                                                        Number(columns.status) +
+                                                        Number(columns.date) +
+                                                        Number(columns.value)
+                                                    }
+                                                    className="h-36 text-center text-xs text-muted-foreground"
+                                                >
+                                                    {query || status !== 'all'
+                                                        ? 'No records match your filters.'
+                                                        : 'No records available for this period.'}
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
+                                <p className="text-[10px] text-muted-foreground">
+                                    {filteredRows.length
+                                        ? `${(currentPage - 1) * 5 + 1}-${Math.min(currentPage * 5, filteredRows.length)}`
+                                        : '0'}{' '}
+                                    of {filteredRows.length} records
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <span className="mr-1 text-[10px] text-muted-foreground">
+                                        Page {currentPage} of {pages}
+                                    </span>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="size-7 rounded-md"
+                                        aria-label="Previous records page"
+                                        disabled={currentPage <= 1}
+                                        onClick={() => setPage(currentPage - 1)}
+                                    >
+                                        <ChevronLeft
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="size-7 rounded-md"
+                                        aria-label="Next records page"
+                                        disabled={currentPage >= pages}
+                                        onClick={() => setPage(currentPage + 1)}
+                                    >
+                                        <ChevronRight
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </Button>
                                 </div>
-                                <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3">
-                                    <p className="text-[10px] text-muted-foreground">
-                                        {filteredRows.length
-                                            ? `${(currentPage - 1) * 5 + 1}-${Math.min(currentPage * 5, filteredRows.length)}`
-                                            : '0'}{' '}
-                                        of {filteredRows.length} records
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <span className="mr-1 text-[10px] text-muted-foreground">
-                                            Page {currentPage} of {pages}
-                                        </span>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            className="size-7 rounded-md"
-                                            aria-label="Previous records page"
-                                            disabled={currentPage <= 1}
-                                            onClick={() =>
-                                                setPage(currentPage - 1)
-                                            }
-                                        >
-                                            <ChevronLeft
-                                                className="size-3.5"
-                                                aria-hidden="true"
-                                            />
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            className="size-7 rounded-md"
-                                            aria-label="Next records page"
-                                            disabled={currentPage >= pages}
-                                            onClick={() =>
-                                                setPage(currentPage + 1)
-                                            }
-                                        >
-                                            <ChevronRight
-                                                className="size-3.5"
-                                                aria-hidden="true"
-                                            />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
+                            </div>
+                        </Card>
+                        <p className="pb-1 text-[10px] text-muted-foreground">
+                            {analytics.scope} &middot; Charts reflect the
+                            selected reporting period.
+                        </p>
                     </>
                 ) : (
-                    <Card className="rounded-xl shadow-none">
+                    <Card className="dashboard-panel rounded-lg shadow-none">
                         <CardContent className="flex items-start gap-4">
                             <ShieldCheck
                                 className="size-6 shrink-0 text-muted-foreground"
