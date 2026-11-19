@@ -553,10 +553,10 @@ export default function HrisResourceIndex({
                                 </label>
                             )}
                             <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
-                                <button
+                                <Button
                                     type="submit"
                                     disabled={form.processing}
-                                    className="rounded-full bg-primary px-5 py-2 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                                    className="rounded-full"
                                 >
                                     {form.processing
                                         ? 'Saving…'
@@ -565,15 +565,16 @@ export default function HrisResourceIndex({
                                           : resource === 'employees'
                                             ? 'Create account'
                                             : 'Create record'}
-                                </button>
+                                </Button>
                                 {editingId && (
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={cancelEdit}
-                                        className="rounded-full border px-4 py-2 hover:bg-muted"
+                                        variant="outline"
+                                        className="rounded-full"
                                     >
                                         Cancel
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </form>
@@ -830,24 +831,28 @@ export default function HrisResourceIndex({
                                                 {canManage &&
                                                     row.canManage !== false && (
                                                         <>
-                                                            <button
+                                                            <Button
                                                                 type="button"
                                                                 onClick={() =>
                                                                     edit(row)
                                                                 }
-                                                                className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="mr-2 rounded-full"
                                                             >
                                                                 Edit
-                                                            </button>
-                                                            <button
+                                                            </Button>
+                                                            <Button
                                                                 type="button"
                                                                 onClick={() =>
                                                                     remove(row)
                                                                 }
-                                                                className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
                                                             >
                                                                 Delete
-                                                            </button>
+                                                            </Button>
                                                         </>
                                                     )}
                                             </td>
@@ -874,20 +879,51 @@ export default function HrisResourceIndex({
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex flex-wrap gap-2 border-t p-3">
-                        {records.links.map((link, index) => (
-                            <Link
-                                key={`${link.label}-${index}`}
-                                href={link.url ?? '#'}
-                                preserveScroll
-                                className={`rounded border px-3 py-1 text-sm ${link.active ? 'bg-primary text-primary-foreground' : ''} ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
-                            >
-                                {link.label
+                    {records.links.length > 0 && (
+                        <nav
+                            aria-label="Record pages"
+                            className="flex flex-wrap gap-2 border-t p-3"
+                        >
+                            {records.links.map((link, index) => {
+                                const label = link.label
                                     .replace(/&laquo;|&raquo;/g, '')
-                                    .trim()}
-                            </Link>
-                        ))}
-                    </div>
+                                    .trim();
+                                const variant = link.active
+                                    ? 'default'
+                                    : 'outline';
+                                const key = `${link.label}-${index}`;
+
+                                return link.url ? (
+                                    <Button
+                                        key={key}
+                                        asChild
+                                        variant={variant}
+                                        size="sm"
+                                    >
+                                        <Link
+                                            href={link.url}
+                                            preserveScroll
+                                            aria-current={
+                                                link.active ? 'page' : undefined
+                                            }
+                                        >
+                                            {label}
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        key={key}
+                                        type="button"
+                                        variant={variant}
+                                        size="sm"
+                                        disabled
+                                    >
+                                        {label}
+                                    </Button>
+                                );
+                            })}
+                        </nav>
+                    )}
                 </section>
             </div>
         </>
