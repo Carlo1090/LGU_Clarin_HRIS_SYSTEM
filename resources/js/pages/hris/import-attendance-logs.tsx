@@ -56,10 +56,7 @@ export default function ImportAttendanceLogs({
     punches: Page<{ id: number; punched_at: string }> | null;
 }) {
     const inputRef = useRef<HTMLInputElement>(null);
-    const form = useForm<{ file: File | null; clock_offset_seconds: string }>({
-        file: null,
-        clock_offset_seconds: '',
-    });
+    const form = useForm<{ file: File | null }>({ file: null });
     const monthFilter = month ? { month } : {};
 
     function upload(event: FormEvent<HTMLFormElement>) {
@@ -94,69 +91,33 @@ export default function ImportAttendanceLogs({
                 onSubmit={upload}
                 className="space-y-4 rounded-xl border bg-card p-5"
             >
-                <div className="grid items-start gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                        <label
-                            htmlFor="attendance-log"
-                            className="text-sm font-medium"
-                        >
-                            Biometric log file (.dat or .txt)
-                        </label>
-                        <Input
-                            id="attendance-log"
-                            ref={inputRef}
-                            type="file"
-                            accept=".dat,.txt"
-                            required
-                            disabled={form.processing}
-                            onChange={(event) => {
-                                form.setData(
-                                    'file',
-                                    event.target.files?.[0] ?? null,
-                                );
-                                form.clearErrors('file');
-                            }}
-                        />
-                        {form.errors.file && (
-                            <p
-                                role="alert"
-                                className="text-sm text-destructive"
-                            >
-                                {form.errors.file}
-                            </p>
-                        )}
-                    </div>
-                    <div className="space-y-2">
-                        <label
-                            htmlFor="clock-offset"
-                            className="text-sm font-medium"
-                        >
-                            Clock offset in seconds (optional)
-                        </label>
-                        <Input
-                            id="clock-offset"
-                            type="number"
-                            min={-86400}
-                            max={86400}
-                            placeholder="0"
-                            disabled={form.processing}
-                            value={form.data.clock_offset_seconds}
-                            onChange={(event) =>
-                                form.setData(
-                                    'clock_offset_seconds',
-                                    event.target.value,
-                                )
-                            }
-                        />
-                        {form.errors.clock_offset_seconds && (
-                            <p
-                                role="alert"
-                                className="text-sm text-destructive"
-                            >
-                                {form.errors.clock_offset_seconds}
-                            </p>
-                        )}
-                    </div>
+                <div className="max-w-xl space-y-2">
+                    <label
+                        htmlFor="attendance-log"
+                        className="text-sm font-medium"
+                    >
+                        Biometric log file (.dat or .txt)
+                    </label>
+                    <Input
+                        id="attendance-log"
+                        ref={inputRef}
+                        type="file"
+                        accept=".dat,.txt"
+                        required
+                        disabled={form.processing}
+                        onChange={(event) => {
+                            form.setData(
+                                'file',
+                                event.target.files?.[0] ?? null,
+                            );
+                            form.clearErrors('file');
+                        }}
+                    />
+                    {form.errors.file && (
+                        <p role="alert" className="text-sm text-destructive">
+                            {form.errors.file}
+                        </p>
+                    )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <Button
