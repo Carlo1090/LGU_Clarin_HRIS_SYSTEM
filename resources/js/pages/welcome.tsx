@@ -800,10 +800,10 @@ export default function Welcome() {
                                     className="absolute inset-0 bg-gradient-to-b from-[#89D91B] via-[#69B518] to-[#1C4722]"
                                 />
                                 <img
-                                    src="/images/black_hero.png"
+                                    src="/images/clarin-team-portrait.png"
                                     alt=""
-                                    width={403}
-                                    height={612}
+                                    width={1122}
+                                    height={1402}
                                     loading="lazy"
                                     decoding="async"
                                     className="absolute inset-0 size-full object-cover object-top"
