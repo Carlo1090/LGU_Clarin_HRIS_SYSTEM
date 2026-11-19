@@ -47,49 +47,14 @@
     }
 }
 
-.hr-preview-stage {
-    position: relative;
-    isolation: isolate;
-    display: grid;
-    container-type: inline-size;
-}
-
-.hr-overview-card,
-.hr-records-card {
-    z-index: 1;
-    width: min(92%, 18rem);
-}
-
-.hr-overview-card {
-    justify-self: end;
-}
-
 .hr-preview-hero {
-    justify-self: end;
-    align-self: center;
-    width: min(58%, 12rem);
-    margin: -0.75rem 0;
+    position: absolute;
+    z-index: 5;
+    right: 0;
+    bottom: 3.75rem;
+    width: min(96%, 28rem);
     pointer-events: none;
     user-select: none;
-}
-
-@container (min-width: 25rem) {
-    .hr-overview-card,
-    .hr-records-card {
-        width: min(63%, 19rem);
-    }
-
-    .hr-overview-card {
-        justify-self: start;
-        margin: 0 0 1rem 6%;
-    }
-
-    .hr-preview-hero {
-        position: absolute;
-        right: 0;
-        width: 49%;
-        margin: 0;
-    }
 }
 
 .hr-preview-hero img {

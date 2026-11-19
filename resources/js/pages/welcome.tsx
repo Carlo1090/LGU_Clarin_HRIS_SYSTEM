@@ -488,10 +488,10 @@ export default function Welcome() {
                                     aria-hidden="true"
                                     className="pointer-events-none absolute inset-6 rounded-full bg-white/30 blur-3xl"
                                 />
-                                <div className="hr-preview-stage">
+                                <div className="hr-preview-stage relative isolate min-h-[470px] sm:min-h-[500px]">
                                     {/* Back card: illustrative attendance overview */}
                                     <div
-                                        className="hr-overview-card"
+                                        className="hr-overview-card absolute top-0 right-0 z-0 w-[min(18rem,90%)] sm:top-2 sm:w-80"
                                         data-aos="fade-up"
                                         data-aos-delay="150"
                                     >
@@ -585,10 +585,10 @@ export default function Welcome() {
                                         data-aos-delay="200"
                                     >
                                         <img
-                                            src="/images/how-it-works-portrait.png"
+                                            src="/images/clarin-uniform-portrait.png"
                                             alt=""
-                                            width={1164}
-                                            height={1351}
+                                            width={1536}
+                                            height={1024}
                                             loading="lazy"
                                             decoding="async"
                                             draggable={false}
@@ -597,7 +597,7 @@ export default function Welcome() {
 
                                     {/* Front card: links to employee records and leave tools */}
                                     <div
-                                        className="hr-records-card"
+                                        className="hr-records-card absolute bottom-0 left-0 z-10 w-[min(18rem,90%)] sm:bottom-2 sm:w-80"
                                         data-aos="fade-up"
                                         data-aos-delay="250"
                                     >
