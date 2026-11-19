@@ -6,6 +6,7 @@ export type EmployeeBiometricLink = {
 };
 
 export type ImportBatchSummary = {
+    id: number;
     file_name: string;
     total_lines: number;
     inserted_count: number;

@@ -57,6 +57,7 @@ export default function ImportAttendanceLogs({
 }) {
     const inputRef = useRef<HTMLInputElement>(null);
     const form = useForm<{ file: File | null }>({ file: null });
+    const removal = useForm({});
     const monthFilter = month ? { month } : {};
 
     function upload(event: FormEvent<HTMLFormElement>) {
@@ -122,7 +123,11 @@ export default function ImportAttendanceLogs({
                 <div className="flex flex-wrap items-center gap-3">
                     <Button
                         type="submit"
-                        disabled={!form.data.file || form.processing}
+                        disabled={
+                            !form.data.file ||
+                            form.processing ||
+                            removal.processing
+                        }
                     >
                         Import log
                     </Button>
@@ -144,9 +149,34 @@ export default function ImportAttendanceLogs({
                     className="space-y-3 rounded-xl border bg-card p-5"
                     aria-labelledby="import-summary"
                 >
-                    <h2 id="import-summary" className="text-lg font-semibold">
-                        Import summary
-                    </h2>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h2
+                            id="import-summary"
+                            className="text-lg font-semibold"
+                        >
+                            Import summary
+                        </h2>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            disabled={removal.processing || form.processing}
+                            onClick={() => {
+                                const count = batch.inserted_count;
+                                const punches =
+                                    count === 1 ? 'punch' : 'punches';
+                                if (
+                                    window.confirm(
+                                        `Remove "${batch.file_name}"? This will delete the ${count} attendance ${punches} added by this import.`,
+                                    )
+                                ) {
+                                    removal.delete(`${logsUrl}/${batch.id}`);
+                                }
+                            }}
+                        >
+                            {removal.processing ? 'Removing…' : 'Remove import'}
+                        </Button>
+                    </div>
                     <p className="text-sm break-all text-muted-foreground">
                         {batch.file_name}
                     </p>
