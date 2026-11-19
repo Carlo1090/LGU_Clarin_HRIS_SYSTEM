@@ -1,6 +1,8 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
-import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
+import LeaveFormPreviewDialog, {
+    type LeaveApplicant,
+} from '@/components/leave-form-preview-dialog';
 
 type Cell = string | number | null;
 
@@ -18,13 +20,15 @@ type Props = {
     dtrPreviewUrl?: string | null;
     dtrDemoUrl?: string | null;
     leaveTypes?: { id: number; name: string }[] | null;
-    canPreviewLeaveForm?: boolean;
+    leaveApplicant?: LeaveApplicant | null;
 };
 
 function LeaveRequestForm({
     types,
+    applicant,
 }: {
     types: { id: number; name: string }[];
+    applicant: LeaveApplicant;
 }) {
     const form = useForm({
         leave_type_id: '',
@@ -137,6 +141,21 @@ function LeaveRequestForm({
                         )}
                     </label>
                     <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+                        <LeaveFormPreviewDialog
+                            draft={{
+                                applicant,
+                                leaveType:
+                                    types.find(
+                                        ({ id }) =>
+                                            String(id) ===
+                                            form.data.leave_type_id,
+                                    )?.name ?? '',
+                                startDate: form.data.start_date,
+                                endDate: form.data.end_date,
+                                daysRequested: form.data.days_requested,
+                                reason: form.data.reason,
+                            }}
+                        />
                         <button
                             type="submit"
                             disabled={form.processing}
@@ -174,7 +193,7 @@ export default function PortalPage({
     dtrPreviewUrl,
     dtrDemoUrl,
     leaveTypes,
-    canPreviewLeaveForm,
+    leaveApplicant,
 }: Props) {
     return (
         <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
@@ -186,10 +205,14 @@ export default function PortalPage({
                     </h1>
                     <p className="mt-2 text-sm text-white/80">{description}</p>
                 </div>
-                {canPreviewLeaveForm && <LeaveFormDemoDialog />}
             </header>
 
-            {leaveTypes && <LeaveRequestForm types={leaveTypes} />}
+            {leaveTypes && leaveApplicant && (
+                <LeaveRequestForm
+                    types={leaveTypes}
+                    applicant={leaveApplicant}
+                />
+            )}
             {dtrDemoUrl && (
                 <div className="flex flex-wrap gap-2">
                     {dtrPreviewUrl && (

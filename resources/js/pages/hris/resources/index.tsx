@@ -3,7 +3,7 @@ import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BiometricIdField from '@/components/biometric-id-field';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
-import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
+import LeaveFormPreviewDialog from '@/components/leave-form-preview-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -284,7 +284,7 @@ export default function HrisResourceIndex({
                             </Button>
                         )}
                         {resource === 'leave-applications' && (
-                            <LeaveFormDemoDialog />
+                            <LeaveFormPreviewDialog />
                         )}
                     </div>
                 </header>
