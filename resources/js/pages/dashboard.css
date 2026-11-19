@@ -384,3 +384,76 @@
 .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 2) p span {
     background: #284d0c;
 }
+
+/* About-section bento cards, adapted to the dashboard's live metrics. */
+.dashboard-metrics-banner {
+    border-radius: 2rem;
+    background: linear-gradient(135deg, var(--card), var(--muted));
+}
+.dashboard-banner-heading h2 {
+    font-size: clamp(1.25rem, 2vw, 1.7rem);
+    font-weight: 600;
+    letter-spacing: -0.035em;
+}
+.dashboard-metrics-banner .dashboard-metric {
+    border-radius: 1.75rem;
+    min-height: 175px;
+    box-shadow: 0 10px 32px -24px rgba(20, 32, 20, 0.28);
+}
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 1),
+.dark .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 1) {
+    --metric-text: #ffffff;
+    --metric-muted: #e1f2d8;
+    --metric-icon: #ffffff;
+    background: linear-gradient(145deg, #69b518, #1c4722);
+    border-color: #4e8b34;
+}
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 2),
+.dark .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 2) {
+    --metric-text: #142014;
+    --metric-muted: #5b6758;
+    --metric-icon: #1c4722;
+    background: #f3f5ef;
+    border-color: #e4e9df;
+}
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 3),
+.dark .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 3) {
+    --metric-text: #142014;
+    --metric-muted: #3c4b26;
+    --metric-icon: #1c4722;
+    background: #a6eb20;
+    border-color: #a6eb20;
+}
+.dashboard-metrics-banner .dashboard-metric:nth-child(4n + 4),
+.dark .dashboard-metrics-banner .dashboard-metric:nth-child(4n + 4) {
+    --metric-text: #ffffff;
+    --metric-muted: #c1c5be;
+    --metric-icon: #a6eb20;
+    background: #111111;
+    border-color: #292e27;
+}
+.dashboard-metric .dashboard-spotlight [data-slot='card-content'] {
+    padding: 24px;
+}
+.dashboard-metric h2 {
+    font-size: 12px;
+    font-weight: 500;
+}
+.dashboard-metric p.tabular-nums {
+    font-size: 2.15rem;
+    font-weight: 500;
+    letter-spacing: -0.035em;
+}
+.dashboard-metric svg {
+    width: 2.15rem;
+    height: 2.15rem;
+    padding: 0.55rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.2);
+}
+.dashboard-panel {
+    border-radius: 1.75rem;
+}
+.dashboard-task {
+    border-radius: 1.25rem;
+}
