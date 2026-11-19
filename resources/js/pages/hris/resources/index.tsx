@@ -259,69 +259,11 @@ export default function HrisResourceIndex({
                         month={attendanceMonth}
                         canManage={canManageAttendance}
                     />
-<<<<<<< HEAD
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
-                    />
-                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-                        <div>
-                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                {title}
-                            </h1>
-                            <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                                {moduleDescriptions[resource] ??
-                                    'Manage HRIS records and their linked data.'}
-                            </p>
-                        </div>
-                        {resource === 'employees' && canImport && (
-                            <Button
-                                asChild
-                                size="lg"
-                                className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
-                            >
-                                <Link href="/hris/employees/import">
-                                    <FileUp aria-hidden="true" />
-                                    Bulk Import Employees
-                                </Link>
-                            </Button>
-                        )}
-                        {resource === 'leave-applications' && (
-                            <LeaveFormPreviewDialog />
-                        )}
-                    </div>
-                </header>
-
-                {isAttendance && (
-                    <nav
-                        aria-label="Attendance views"
-                        className="flex flex-wrap gap-2"
-                    >
-                        <Button
-                            asChild
-                            variant={
-                                attendanceDirectory ? 'default' : 'outline'
-                            }
-                        >
-                            <Link
-                                href="/hris/attendance"
-                                aria-current={
-                                    attendanceDirectory ? 'page' : undefined
-                                }
-                            >
-                                Employees
-                            </Link>
-                        </Button>
-                        <DailyTimeRecordDialog
-                            url="/hris/attendance/dtr/demo"
-                            demo
-=======
                 ) : (
                     <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
                         <div
                             aria-hidden="true"
                             className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
->>>>>>> 4e024174e5c58e0d84d16e6172ef87aaba91c296
                         />
                         <div
                             aria-hidden="true"
@@ -350,7 +292,7 @@ export default function HrisResourceIndex({
                                 </Button>
                             )}
                             {resource === 'leave-applications' && (
-                                <LeaveFormDemoDialog />
+                                <LeaveFormPreviewDialog />
                             )}
                         </div>
                     </header>
