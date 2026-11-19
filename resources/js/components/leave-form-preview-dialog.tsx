@@ -8,7 +8,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 
-const leaveTypes = [
+export const leaveTypes = [
     [
         'Vacation Leave',
         'Sec. 51, Rule XVI, Omnibus Rules Implementing E.O. No. 292',

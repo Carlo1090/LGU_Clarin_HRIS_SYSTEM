@@ -1,6 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormPreviewDialog, {
+    leaveTypes as formLeaveTypes,
     type LeaveApplicant,
 } from '@/components/leave-form-preview-dialog';
 
@@ -60,38 +61,84 @@ function LeaveRequestForm({
                     className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
                     onSubmit={(event) => {
                         event.preventDefault();
+                        if (!form.data.leave_type_id) {
+                            form.setError(
+                                'leave_type_id',
+                                'Select a leave type.',
+                            );
+                            return;
+                        }
                         form.post('/hris/portal/my-leave-requests', {
                             preserveScroll: true,
                             onSuccess: () => form.reset(),
                         });
                     }}
                 >
-                    <label className="grid gap-1 text-sm">
-                        Leave type
-                        <select
-                            required
-                            className={fieldClass}
-                            value={form.data.leave_type_id}
-                            onChange={(event) =>
-                                form.setData(
-                                    'leave_type_id',
-                                    event.target.value,
-                                )
-                            }
-                        >
-                            <option value="">Select a leave type</option>
-                            {types.map((type) => (
-                                <option key={type.id} value={type.id}>
-                                    {type.name}
-                                </option>
-                            ))}
-                        </select>
+                    <fieldset className="rounded-lg border p-4 sm:col-span-2 xl:col-span-4">
+                        <legend className="px-1 text-sm font-semibold">
+                            Type of leave
+                        </legend>
+                        <p className="mb-3 text-sm text-muted-foreground">
+                            Select one leave type.
+                        </p>
+                        <div className="grid gap-2 lg:grid-cols-2">
+                            {types.map(({ id, name }) => {
+                                const reference = formLeaveTypes.find(
+                                    ([label]) =>
+                                        label.toLowerCase() ===
+                                        name.trim().toLowerCase(),
+                                )?.[1];
+                                return (
+                                    <label
+                                        key={id}
+                                        className="flex cursor-pointer items-start gap-2 text-sm"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            className="mt-0.5 size-4 shrink-0 accent-primary"
+                                            checked={
+                                                form.data.leave_type_id ===
+                                                String(id)
+                                            }
+                                            onChange={(event) => {
+                                                form.setData(
+                                                    'leave_type_id',
+                                                    event.target.checked
+                                                        ? String(id)
+                                                        : '',
+                                                );
+                                                form.clearErrors(
+                                                    'leave_type_id',
+                                                );
+                                            }}
+                                            aria-describedby={
+                                                form.errors.leave_type_id
+                                                    ? 'leave-type-error'
+                                                    : undefined
+                                            }
+                                        />
+                                        <span>
+                                            {name}
+                                            {reference && (
+                                                <small className="ml-1 text-muted-foreground">
+                                                    ({reference})
+                                                </small>
+                                            )}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
                         {form.errors.leave_type_id && (
-                            <span className="text-destructive">
+                            <p
+                                id="leave-type-error"
+                                role="alert"
+                                className="mt-2 text-sm text-destructive"
+                            >
                                 {form.errors.leave_type_id}
-                            </span>
+                            </p>
                         )}
-                    </label>
+                    </fieldset>
                     {(
                         [
                             ['start_date', 'Start date'],
