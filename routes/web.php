@@ -1,17 +1,27 @@
 <?php
 
+use App\Http\Controllers\Auth\GoogleLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Hris\AccountInvitationController;
 use App\Http\Controllers\Hris\AttendanceCorrectionController;
+use App\Http\Controllers\Hris\AttendanceLogImportController;
+use App\Http\Controllers\Hris\BiometricLinkController;
+use App\Http\Controllers\Hris\DailyTimeRecordController;
 use App\Http\Controllers\Hris\EmployeeImportController;
 use App\Http\Controllers\Hris\HrisResourceController;
 use App\Http\Controllers\Hris\LeaveReviewController;
+use App\Http\Controllers\Hris\MonthlyAttendanceReportController;
 use App\Http\Controllers\Hris\PortalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Middleware\EnsureHrisAccountReady;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
+    Route::get('auth/google', [GoogleLoginController::class, 'redirect'])->name('google.redirect');
+    Route::get('auth/google/callback', [GoogleLoginController::class, 'callback'])->name('google.callback');
+});
 
 Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -37,6 +47,15 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
         Route::post('portal/my-leave-requests', [PortalController::class, 'submitLeave'])
             ->name('portal.leave.store');
         Route::post('leave-applications/{leave}/review', LeaveReviewController::class)->name('leave.review');
+        Route::get('attendance/logs', [AttendanceLogImportController::class, 'index'])->name('attendance-logs.index');
+        Route::post('attendance/logs', [AttendanceLogImportController::class, 'store'])->name('attendance-logs.store');
+        Route::delete('attendance/logs/{batch}', [AttendanceLogImportController::class, 'destroy'])->whereNumber('batch')->name('attendance-logs.destroy');
+        Route::get('attendance/monthly-report', [MonthlyAttendanceReportController::class, 'index'])->name('attendance-report.index');
+        Route::put('attendance/monthly-report/{employee}/clock-in-rule', [MonthlyAttendanceReportController::class, 'saveRule'])->whereNumber('employee')->name('attendance-report.clock-in-rule.update');
+        Route::put('employees/{employee}/biometric-id', BiometricLinkController::class)->whereNumber('employee')->name('employees.biometric-id.update');
+        Route::patch('employees/{employee}/biometric-id/lock', [BiometricLinkController::class, 'setLock'])->whereNumber('employee')->name('employees.biometric-id.lock');
+        Route::get('attendance/dtr/demo', [DailyTimeRecordController::class, 'demo'])->name('attendance.dtr.demo');
+        Route::get('attendance/dtr/{employee}', DailyTimeRecordController::class)->whereNumber('employee')->name('attendance.dtr');
         Route::get('attendance-corrections', [AttendanceCorrectionController::class, 'index'])->name('attendance-corrections.index');
         Route::post('attendance-corrections', [AttendanceCorrectionController::class, 'store'])->name('attendance-corrections.store');
         Route::post('attendance-corrections/{correction}/review', [AttendanceCorrectionController::class, 'review'])->name('attendance-corrections.review');

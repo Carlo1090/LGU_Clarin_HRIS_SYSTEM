@@ -10,7 +10,10 @@ use Illuminate\Support\Facades\DB;
 class DemoPortalAccountSeeder extends Seeder
 {
     private const ACCOUNTS = [
+        'demo-employee@example.com' => 'Employee',
         'department-head@example.com' => 'Department Head',
+        'hr-officer@example.com' => 'HR Officer',
+        'hrmo-head@example.com' => 'HRMO Head',
         'payroll@example.com' => 'Payroll Officer',
         'accountant@example.com' => 'Accountant',
         'treasurer@example.com' => 'Treasurer',

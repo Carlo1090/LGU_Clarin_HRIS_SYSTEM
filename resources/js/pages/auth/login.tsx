@@ -1,20 +1,31 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
-import PasskeyVerify from '@/components/passkey-verify';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
+import { redirect as googleRedirect } from '@/routes/google';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
-type Props = { status?: string; canResetPassword: boolean };
+type Props = {
+    status?: string;
+    canResetPassword: boolean;
+    canSignInWithGoogle: boolean;
+};
 
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login({
+    status,
+    canResetPassword,
+    canSignInWithGoogle,
+}: Props) {
+    const googleError = usePage().props.errors.google;
+
     return (
         <>
             <Head title="Log in" />
@@ -26,7 +37,37 @@ export default function Login({ status, canResetPassword }: Props) {
                     {status}
                 </div>
             )}
-            <PasskeyVerify />
+            {googleError && <InputError message={googleError} role="alert" />}
+            <div className="grid gap-2">
+                {canSignInWithGoogle ? (
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="h-11 w-full rounded-full"
+                    >
+                        <a href={googleRedirect.url()}>Continue with Google</a>
+                    </Button>
+                ) : (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 w-full rounded-full"
+                        disabled
+                    >
+                        Continue with Google
+                    </Button>
+                )}
+                {!canSignInWithGoogle && (
+                    <p className="text-center text-xs text-muted-foreground">
+                        Google sign-in is currently unavailable.
+                    </p>
+                )}
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <Separator className="flex-1" />
+                Or sign in with your password
+                <Separator className="flex-1" />
+            </div>
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}

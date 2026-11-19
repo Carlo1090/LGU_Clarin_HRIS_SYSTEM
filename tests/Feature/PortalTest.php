@@ -29,10 +29,102 @@ test('employee portal returns only the signed-in employee records', function () 
     $this->actingAs($user)->get('/hris/portal/my-attendance')
         ->assertInertia(fn (Assert $page) => $page
             ->component('hris/portal')
+            ->where('hrisNavigation.0.href', '/hris/portal/my-attendance')
+            ->where('hrisNavigation.1.href', '/hris/portal/my-leave-requests')
+            ->where('dtrPreviewUrl', "/hris/attendance/dtr/{$employee->id}")
+            ->where('dtrDemoUrl', '/hris/attendance/dtr/demo')
+            ->where('canPreviewLeaveForm', false)
             ->has('records.data', 1)
             ->where('records.data.0.0', '2026-11-03'));
 
     $this->get('/hris/portal/staffing')->assertForbidden();
+});
+
+test('HR navigation puts daily work before attendance corrections', function () {
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+
+    $this->actingAs($hr)->get('/hris/attendance')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('hrisNavigation.0.href', '/hris/attendance')
+            ->where('hrisNavigation.1.href', '/hris/employees')
+            ->where('hrisNavigation.2.href', '/hris/leave-applications')
+            ->where('hrisNavigation.3.href', '/hris/attendance-corrections'));
+});
+
+test('DTR preview returns the selected cutoff and respects attendance access', function () {
+    $this->withoutVite();
+
+    $employeeRole = Role::factory()->create(['name' => 'Employee']);
+    $user = User::factory()->create(['role_id' => $employeeRole->id]);
+    $employee = Employee::factory()->create(['user_id' => $user->id]);
+    $user->forceFill(['employee_id' => $employee->id])->save();
+    $other = Employee::factory()->create();
+
+    foreach (['2026-10-15', '2026-10-16', '2026-11-01'] as $date) {
+        AttendanceRecord::factory()->create([
+            'employee_id' => $employee->id,
+            'attendance_date' => $date,
+            'time_in' => $date.' 07:35:21',
+            'time_out' => null,
+            'status' => 'on_leave',
+        ]);
+    }
+
+    $url = "/hris/attendance/dtr/{$employee->id}?month=2026-10&period=second";
+    $this->actingAs($user)->get($url)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('hris/daily-time-record')
+            ->where('periodLabel', 'October 16–31, 2026')
+            ->has('records', 1)
+            ->where('records.16.amIn', '07:35')
+            ->where('records.16.pmOut', null)
+            ->where('records.16.remarks', 'On leave'));
+    $this->getJson($url)
+        ->assertOk()
+        ->assertJsonPath('period', 'second')
+        ->assertJsonCount(1, 'records')
+        ->assertJsonPath('records.16.amIn', '07:35');
+    $this->getJson("/hris/attendance/dtr/{$employee->id}?period=invalid")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('period');
+    $this->get("/hris/attendance/dtr/{$other->id}")->assertForbidden();
+    $this->getJson("/hris/attendance/dtr/{$other->id}")->assertForbidden();
+
+    $departmentHeadRole = Role::factory()->create(['name' => 'Department Head']);
+    $head = User::factory()->create(['role_id' => $departmentHeadRole->id, 'employee_id' => $employee->id]);
+    $this->actingAs($head)->get($url)->assertOk();
+    $this->get("/hris/attendance/dtr/{$other->id}")->assertForbidden();
+
+    $hrRole = Role::factory()->create(['name' => 'HR Officer']);
+    $hr = User::factory()->create(['role_id' => $hrRole->id]);
+    $this->actingAs($hr)->get($url)->assertOk();
+});
+
+test('DTR demo shows a sample workday, undertime and leave without creating attendance', function () {
+    $this->withoutVite();
+    $hr = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'HR Officer'])->id]);
+
+    $this->actingAs($hr)->get('/hris/attendance/dtr/demo')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('hris/daily-time-record')
+            ->where('demo', true)
+            ->where('officialHours', '08:00–12:00 / 13:00–17:00')
+            ->where('records.19', ['amIn' => '07:55', 'amOut' => '12:02', 'pmIn' => '12:58', 'pmOut' => '17:05'])
+            ->where('records.20.undertimeHours', 0)
+            ->where('records.20.undertimeMinutes', 20)
+            ->where('records.21.remarks', 'PM vacation leave')
+            ->missing('records.21.pmIn'));
+    $this->assertDatabaseCount('attendance_records', 0);
+    $this->getJson('/hris/attendance/dtr/demo')
+        ->assertOk()
+        ->assertJsonPath('demo', true)
+        ->assertJsonPath('records.20.undertimeMinutes', 20);
+
+    $other = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'Accountant'])->id]);
+    $this->actingAs($other)->getJson('/hris/attendance/dtr/demo')->assertForbidden();
 });
 
 test('mayor staffing shows summary counts and employee pages are forbidden', function () {
@@ -119,6 +211,7 @@ test('employees can submit pending leave for themselves and cannot submit overla
     $this->post($url, $data)->assertSessionHasErrors('start_date');
     $this->assertDatabaseCount('leave_applications', 1);
     $this->get($url)->assertInertia(fn (Assert $page) => $page
+        ->where('canPreviewLeaveForm', true)
         ->has('records.data', 1)
         ->where('records.data.0.4', 'pending'));
 });

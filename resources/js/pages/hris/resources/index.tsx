@@ -1,12 +1,20 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Form, Head, Link, router, useForm } from '@inertiajs/react';
+import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import BiometricIdField from '@/components/biometric-id-field';
+import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
+import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
+import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type Field = {
     name: string;
     label: string;
     type: string;
     required?: boolean;
-    options?: { value: number; label: string }[];
+    options?: { value: string | number; label: string }[];
 };
 
 type HrisValue = string | number | boolean | null | undefined;
@@ -25,7 +33,19 @@ type Props = {
     leaveReviewStage?: [string, string, string] | null;
     canImport?: boolean;
     officeDirectory?: boolean;
+    attendanceDirectory?: boolean;
+    attendanceMonth?: string;
+    canManageAttendance?: boolean;
+    canLinkBiometricIds?: boolean;
     statusSummary?: { status: string; total: number }[];
+    createdAccountCredentials?: {
+        employee_number: string;
+        username: string;
+        name: string;
+        temporary_password: string;
+        email: string | null;
+    } | null;
+    accountSetupEmailSent?: boolean | null;
     records: {
         data: HrisRow[];
         links: { url: string | null; label: string; active: boolean }[];
@@ -46,6 +66,35 @@ type FormData = Record<string, string | number | boolean | null>;
 const emptyValue = (field: Field): string | number | boolean | null =>
     field.type === 'checkbox' ? false : '';
 
+function AttendanceBadge({
+    complete,
+    review,
+}: {
+    complete: number;
+    review: number;
+}) {
+    return (
+        <div className="space-y-1">
+            {review > 0 ? (
+                <Badge className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                    Needs review
+                </Badge>
+            ) : complete > 0 ? (
+                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                    Complete logs
+                </Badge>
+            ) : (
+                <Badge variant="secondary">No work logs</Badge>
+            )}
+            {complete + review > 0 && (
+                <p className="text-xs text-muted-foreground tabular-nums">
+                    {complete} complete · {review} to review
+                </p>
+            )}
+        </div>
+    );
+}
+
 export default function HrisResourceIndex({
     resource,
     title,
@@ -54,12 +103,19 @@ export default function HrisResourceIndex({
     leaveReviewStage,
     canImport = false,
     officeDirectory = false,
+    attendanceDirectory = false,
+    attendanceMonth,
+    canManageAttendance = false,
+    canLinkBiometricIds = false,
     statusSummary = [],
+    createdAccountCredentials = null,
+    accountSetupEmailSent = null,
     records,
 }: Props) {
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
-    const hasActions = canManage || Boolean(leaveReviewStage);
+    const isAttendance = resource === 'attendance';
+    const hasActions = canManage || Boolean(leaveReviewStage) || isAttendance;
 
     function reviewLeave(id: number, decision: 'advance' | 'reject') {
         if (
@@ -97,6 +153,7 @@ export default function HrisResourceIndex({
         [fields],
     );
     const form = useForm<FormData>(initialData);
+    const [accountEmail, setAccountEmail] = useState('');
 
     useEffect(() => {
         form.setData(initialData);
@@ -115,7 +172,17 @@ export default function HrisResourceIndex({
                 },
             });
         } else {
-            form.post(url, { onSuccess: () => form.reset() });
+            form.transform((data) =>
+                resource === 'employees'
+                    ? { ...data, account_email: accountEmail || null }
+                    : data,
+            );
+            form.post(url, {
+                onSuccess: () => {
+                    form.reset();
+                    setAccountEmail('');
+                },
+            });
         }
     };
 
@@ -168,8 +235,8 @@ export default function HrisResourceIndex({
                         E: 'Elected',
                         T: 'Temporary',
                         S: 'Substitute',
-                        CT: 'Casual Temporary',
-                        PA: 'Permanent Acting',
+                        CT: 'Coterminous',
+                        PA: 'Presidential Appointee',
                         FT: 'Fixed Term',
                     } as Record<string, string>
                 )[String(value)] ?? String(value)
@@ -186,23 +253,75 @@ export default function HrisResourceIndex({
         <>
             <Head title={title} />
             <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
-                <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
+                {isAttendance ? (
+                    <AttendanceWorkspaceHeader
+                        active="records"
+                        month={attendanceMonth}
+                        canManage={canManageAttendance}
                     />
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
-                    />
-                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                        {title}
-                    </h1>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                        {moduleDescriptions[resource] ??
-                            'Manage HRIS records and their linked data.'}
-                    </p>
-                </header>
+                ) : (
+                    <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
+                        />
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
+                        />
+                        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+                            <div>
+                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                                    {title}
+                                </h1>
+                                <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+                                    {moduleDescriptions[resource] ??
+                                        'Manage HRIS records and their linked data.'}
+                                </p>
+                            </div>
+                            {resource === 'employees' && canImport && (
+                                <Button
+                                    asChild
+                                    size="lg"
+                                    className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
+                                >
+                                    <Link href="/hris/employees/import">
+                                        <FileUp aria-hidden="true" />
+                                        Bulk Import Employees
+                                    </Link>
+                                </Button>
+                            )}
+                            {resource === 'leave-applications' && (
+                                <LeaveFormDemoDialog />
+                            )}
+                        </div>
+                    </header>
+                )}
+
+                {attendanceMonth && (
+                    <Form
+                        key={attendanceMonth}
+                        action="/hris/attendance"
+                        method="get"
+                        className="flex flex-wrap items-end gap-3"
+                    >
+                        <label className="space-y-1 text-sm font-medium">
+                            <span>Attendance month</span>
+                            <Input
+                                name="month"
+                                type="month"
+                                defaultValue={attendanceMonth}
+                                required
+                            />
+                        </label>
+                        <Button type="submit" variant="outline">
+                            Show month
+                        </Button>
+                        <p className="basis-full text-sm text-muted-foreground">
+                            Badges summarize recorded workdays for this month.
+                        </p>
+                    </Form>
+                )}
 
                 {resource === 'employees' && statusSummary.length > 0 && (
                     <section
@@ -228,8 +347,34 @@ export default function HrisResourceIndex({
                         className="scroll-mt-20 rounded-2xl border bg-card p-5 sm:p-6"
                     >
                         <h2 className="mb-4 text-lg font-medium">
-                            {editingId ? 'Edit record' : 'Add record'}
+                            {editingId
+                                ? 'Edit record'
+                                : resource === 'employees'
+                                  ? 'Create employee account'
+                                  : 'Add record'}
                         </h2>
+                        {resource === 'employees' && (
+                            <div className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                                <p>
+                                    Creating this record also creates a login
+                                    account. The employee number is the
+                                    username. The temporary password is shown
+                                    once after saving.
+                                </p>
+                                {canImport && (
+                                    <p className="mt-1">
+                                        For multiple accounts, use{' '}
+                                        <Link
+                                            href="/hris/employees/import"
+                                            className="font-medium text-foreground underline underline-offset-4"
+                                        >
+                                            employee bulk import
+                                        </Link>
+                                        . Email is optional.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         <form
                             onSubmit={submit}
                             className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
@@ -255,12 +400,13 @@ export default function HrisResourceIndex({
                                             onChange={(event) =>
                                                 form.setData(
                                                     field.name,
-                                                    event.target.value
-                                                        ? Number(
-                                                              event.target
-                                                                  .value,
-                                                          )
-                                                        : null,
+                                                    field.options?.find(
+                                                        (option) =>
+                                                            String(
+                                                                option.value,
+                                                            ) ===
+                                                            event.target.value,
+                                                    )?.value ?? null,
                                                 )
                                             }
                                             required={field.required}
@@ -349,45 +495,106 @@ export default function HrisResourceIndex({
                                     )}
                                 </label>
                             ))}
+                            {resource === 'employees' && !editingId && (
+                                <label className="space-y-1 text-sm">
+                                    <span>Email (optional)</span>
+                                    <input
+                                        type="email"
+                                        value={accountEmail}
+                                        onChange={(event) =>
+                                            setAccountEmail(event.target.value)
+                                        }
+                                        className="w-full rounded-xl border border-input bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-ring"
+                                    />
+                                    {form.errors.account_email && (
+                                        <span className="block text-sm text-destructive">
+                                            {form.errors.account_email}
+                                        </span>
+                                    )}
+                                </label>
+                            )}
                             <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
-                                <button
+                                <Button
                                     type="submit"
                                     disabled={form.processing}
-                                    className="rounded-full bg-primary px-5 py-2 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                                    className="rounded-full"
                                 >
                                     {form.processing
                                         ? 'Saving…'
                                         : editingId
                                           ? 'Save changes'
-                                          : 'Create record'}
-                                </button>
+                                          : resource === 'employees'
+                                            ? 'Create account'
+                                            : 'Create record'}
+                                </Button>
                                 {editingId && (
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={cancelEdit}
-                                        className="rounded-full border px-4 py-2 hover:bg-muted"
+                                        variant="outline"
+                                        className="rounded-full"
                                     >
                                         Cancel
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </form>
                     </section>
                 )}
 
-                {resource === 'employees' && canImport && (
-                    <Link
-                        href="/hris/employees/import"
-                        className="inline-flex rounded-md border px-3 py-2 text-sm hover:bg-muted"
-                    >
-                        Bulk import Plantilla Excel
-                    </Link>
+                {resource === 'employees' && createdAccountCredentials && (
+                    <section className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-5">
+                        <h2 className="font-semibold">
+                            Employee account created
+                        </h2>
+                        <p>Name: {createdAccountCredentials.name}</p>
+                        <p>
+                            Employee number:{' '}
+                            <span className="font-mono">
+                                {createdAccountCredentials.employee_number}
+                            </span>
+                        </p>
+                        <p>
+                            Username:{' '}
+                            <span className="font-mono">
+                                {createdAccountCredentials.username}
+                            </span>
+                        </p>
+                        <p>
+                            Temporary password:{' '}
+                            <span className="font-mono">
+                                {createdAccountCredentials.temporary_password}
+                            </span>
+                        </p>
+                        {createdAccountCredentials.email && (
+                            <p>
+                                {accountSetupEmailSent
+                                    ? 'Setup link sent to'
+                                    : 'Setup link could not be sent to'}{' '}
+                                {createdAccountCredentials.email}.
+                            </p>
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                            Share these credentials privately. The employee must
+                            change the temporary password and enroll in
+                            two-factor authentication.
+                        </p>
+                    </section>
                 )}
 
                 {officeDirectory && (
                     <p className="text-sm text-muted-foreground">
                         Fixed municipal offices from the approved 2025
                         plantilla.
+                    </p>
+                )}
+
+                {canLinkBiometricIds && (
+                    <p className="text-sm text-muted-foreground">
+                        Use the ID shown on the biometric device. Save checks
+                        imported logs for a match. Lock prevents changes until
+                        you unlock the ID. To remove an unlocked ID, clear the
+                        field and save.
                     </p>
                 )}
 
@@ -405,7 +612,7 @@ export default function HrisResourceIndex({
                             id="records-heading"
                             className="text-lg font-semibold tracking-tight"
                         >
-                            Records
+                            {attendanceDirectory ? 'Employees' : 'Records'}
                         </h2>
                         <span className="text-sm text-muted-foreground">
                             {records.data.length} on this page
@@ -415,9 +622,19 @@ export default function HrisResourceIndex({
                         <table className="w-full text-left text-sm">
                             <thead className="bg-muted text-muted-foreground">
                                 <tr>
-                                    <th className="px-3 py-3 font-medium">
-                                        ID
-                                    </th>
+                                    {canLinkBiometricIds && (
+                                        <th
+                                            scope="col"
+                                            className="px-3 py-3 font-medium"
+                                        >
+                                            Biometric ID
+                                        </th>
+                                    )}
+                                    {!attendanceDirectory && (
+                                        <th className="px-3 py-3 font-medium">
+                                            ID
+                                        </th>
+                                    )}
                                     {fields.map((field) => (
                                         <th
                                             key={field.name}
@@ -428,7 +645,9 @@ export default function HrisResourceIndex({
                                     ))}
                                     {hasActions && (
                                         <th className="px-3 py-3 font-medium">
-                                            Actions
+                                            {attendanceDirectory
+                                                ? 'DTR'
+                                                : 'Actions'}
                                         </th>
                                     )}
                                 </tr>
@@ -439,15 +658,63 @@ export default function HrisResourceIndex({
                                         key={row.id}
                                         className="border-t transition-colors hover:bg-muted/60"
                                     >
-                                        <td className="px-3 py-3">{row.id}</td>
+                                        {canLinkBiometricIds &&
+                                            typeof row.id === 'number' && (
+                                                <td className="px-3 py-3">
+                                                    <BiometricIdField
+                                                        key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
+                                                        employeeId={row.id}
+                                                        employeeNumber={String(
+                                                            row.employee_number,
+                                                        )}
+                                                        link={{
+                                                            id:
+                                                                typeof row.biometric_id ===
+                                                                'number'
+                                                                    ? row.biometric_id
+                                                                    : null,
+                                                            locked:
+                                                                row.biometric_locked ===
+                                                                true,
+                                                            status:
+                                                                row.biometric_status ===
+                                                                'verified'
+                                                                    ? 'verified'
+                                                                    : 'pending',
+                                                            note:
+                                                                typeof row.biometric_note ===
+                                                                'string'
+                                                                    ? row.biometric_note
+                                                                    : null,
+                                                        }}
+                                                    />
+                                                </td>
+                                            )}
+                                        {!attendanceDirectory && (
+                                            <td className="px-3 py-3">
+                                                {row.id}
+                                            </td>
+                                        )}
                                         {fields.map((field) => (
                                             <td
                                                 key={field.name}
                                                 className="max-w-64 truncate px-3 py-3"
                                             >
-                                                {resource === 'employees' &&
-                                                field.name ===
-                                                    'employment_status' ? (
+                                                {field.name ===
+                                                'attendance_summary' ? (
+                                                    <AttendanceBadge
+                                                        complete={Number(
+                                                            row.attendance_complete_days ??
+                                                                0,
+                                                        )}
+                                                        review={Number(
+                                                            row.attendance_review_days ??
+                                                                0,
+                                                        )}
+                                                    />
+                                                ) : resource === 'employees' &&
+                                                  field.name ===
+                                                      'employment_status' ? (
                                                     <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">
                                                         {displayValue(
                                                             field,
@@ -510,28 +777,45 @@ export default function HrisResourceIndex({
                                         )}
                                         {hasActions && !leaveReviewStage && (
                                             <td className="px-3 py-3 whitespace-nowrap">
-                                                {row.canManage !== false && (
-                                                    <>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                edit(row)
+                                                {isAttendance && (
+                                                    <span className="mr-2">
+                                                        <DailyTimeRecordDialog
+                                                            url={
+                                                                typeof row.dtr_url ===
+                                                                'string'
+                                                                    ? row.dtr_url
+                                                                    : `/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`
                                                             }
-                                                            className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                remove(row)
-                                                            }
-                                                            className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </>
+                                                        />
+                                                    </span>
                                                 )}
+                                                {canManage &&
+                                                    row.canManage !== false && (
+                                                        <>
+                                                            <Button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    edit(row)
+                                                                }
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="mr-2 rounded-full"
+                                                            >
+                                                                Edit
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    remove(row)
+                                                                }
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                            >
+                                                                Delete
+                                                            </Button>
+                                                        </>
+                                                    )}
                                             </td>
                                         )}
                                     </tr>
@@ -541,31 +825,66 @@ export default function HrisResourceIndex({
                                         <td
                                             colSpan={
                                                 fields.length +
-                                                (hasActions ? 2 : 1)
+                                                Number(!attendanceDirectory) +
+                                                Number(canLinkBiometricIds) +
+                                                Number(hasActions)
                                             }
                                             className="px-3 py-8 text-center text-muted-foreground"
                                         >
-                                            No records found.
+                                            {attendanceDirectory
+                                                ? 'No employees found.'
+                                                : 'No records found.'}
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex flex-wrap gap-2 border-t p-3">
-                        {records.links.map((link, index) => (
-                            <Link
-                                key={`${link.label}-${index}`}
-                                href={link.url ?? '#'}
-                                preserveScroll
-                                className={`rounded border px-3 py-1 text-sm ${link.active ? 'bg-primary text-primary-foreground' : ''} ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
-                            >
-                                {link.label
+                    {records.links.length > 0 && (
+                        <nav
+                            aria-label="Record pages"
+                            className="flex flex-wrap gap-2 border-t p-3"
+                        >
+                            {records.links.map((link, index) => {
+                                const label = link.label
                                     .replace(/&laquo;|&raquo;/g, '')
-                                    .trim()}
-                            </Link>
-                        ))}
-                    </div>
+                                    .trim();
+                                const variant = link.active
+                                    ? 'default'
+                                    : 'outline';
+                                const key = `${link.label}-${index}`;
+
+                                return link.url ? (
+                                    <Button
+                                        key={key}
+                                        asChild
+                                        variant={variant}
+                                        size="sm"
+                                    >
+                                        <Link
+                                            href={link.url}
+                                            preserveScroll
+                                            aria-current={
+                                                link.active ? 'page' : undefined
+                                            }
+                                        >
+                                            {label}
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        key={key}
+                                        type="button"
+                                        variant={variant}
+                                        size="sm"
+                                        disabled
+                                    >
+                                        {label}
+                                    </Button>
+                                );
+                            })}
+                        </nav>
+                    )}
                 </section>
             </div>
         </>

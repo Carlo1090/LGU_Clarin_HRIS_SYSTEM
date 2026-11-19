@@ -1,4 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
+import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
 
 type Cell = string | number | null;
 
@@ -13,7 +15,10 @@ type Props = {
     } | null;
     profile?: Cell[] | null;
     missingEmployee?: boolean;
+    dtrPreviewUrl?: string | null;
+    dtrDemoUrl?: string | null;
     leaveTypes?: { id: number; name: string }[] | null;
+    canPreviewLeaveForm?: boolean;
 };
 
 function LeaveRequestForm({
@@ -166,19 +171,33 @@ export default function PortalPage({
     records,
     profile,
     missingEmployee,
+    dtrPreviewUrl,
+    dtrDemoUrl,
     leaveTypes,
+    canPreviewLeaveForm,
 }: Props) {
     return (
         <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
             <Head title={title} />
-            <header className="rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                    {title}
-                </h1>
-                <p className="mt-2 text-sm text-white/80">{description}</p>
+            <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
+                <div>
+                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                        {title}
+                    </h1>
+                    <p className="mt-2 text-sm text-white/80">{description}</p>
+                </div>
+                {canPreviewLeaveForm && <LeaveFormDemoDialog />}
             </header>
 
             {leaveTypes && <LeaveRequestForm types={leaveTypes} />}
+            {dtrDemoUrl && (
+                <div className="flex flex-wrap gap-2">
+                    {dtrPreviewUrl && (
+                        <DailyTimeRecordDialog url={dtrPreviewUrl} />
+                    )}
+                    <DailyTimeRecordDialog url={dtrDemoUrl} demo />
+                </div>
+            )}
 
             <section
                 aria-label={title}

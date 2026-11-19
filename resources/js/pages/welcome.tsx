@@ -190,7 +190,7 @@ export default function Welcome() {
                                     src="/images/clarin-officials.png"
                                     alt="Three LGU Clarin officials in municipal uniforms"
                                     width={1293}
-                                    height={1216}
+                                    height={1217}
                                     className="max-h-[600px] w-auto max-w-full object-contain drop-shadow-2xl"
                                 />
                             </div>
@@ -270,6 +270,8 @@ export default function Welcome() {
                             {/* Card 1 */}
                             <SpotlightCard
                                 className="landing-feature"
+                                data-aos="fade-up"
+                                data-aos-delay="100"
                                 theme="light"
                                 style={{ backgroundColor: '#D7F75B' }}
                                 spotlightColor="#F2FFD0"
@@ -302,6 +304,8 @@ export default function Welcome() {
                             {/* Card 2 */}
                             <SpotlightCard
                                 className="landing-feature"
+                                data-aos="fade-up"
+                                data-aos-delay="200"
                                 theme="light"
                                 style={{ backgroundColor: '#9CE82A' }}
                                 spotlightColor="#F2FFD0"
@@ -331,6 +335,8 @@ export default function Welcome() {
                             {/* Card 3 */}
                             <SpotlightCard
                                 className="landing-feature"
+                                data-aos="fade-up"
+                                data-aos-delay="300"
                                 theme="light"
                                 style={{ backgroundColor: '#B4F232' }}
                                 spotlightColor="#F2FFD0"
@@ -362,6 +368,8 @@ export default function Welcome() {
                             {/* Card 4 */}
                             <SpotlightCard
                                 className="landing-feature"
+                                data-aos="fade-up"
+                                data-aos-delay="400"
                                 theme="light"
                                 style={{ backgroundColor: '#DCFA70' }}
                                 spotlightColor="#F2FFD0"
@@ -792,10 +800,10 @@ export default function Welcome() {
                                     className="absolute inset-0 bg-gradient-to-b from-[#89D91B] via-[#69B518] to-[#1C4722]"
                                 />
                                 <img
-                                    src="/images/black_hero.png"
+                                    src="/images/clarin-team-portrait.png"
                                     alt=""
-                                    width={403}
-                                    height={612}
+                                    width={1122}
+                                    height={1402}
                                     loading="lazy"
                                     decoding="async"
                                     className="absolute inset-0 size-full object-cover object-top"

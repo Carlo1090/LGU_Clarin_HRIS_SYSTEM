@@ -25,29 +25,14 @@ class EmployeeSpreadsheetImport
 {
     public function __construct(private EmployeeImportTemplate $template) {}
 
-    private const FIELDS = [
-        'employee_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'gender', 'birth_date',
-        'department', 'position', 'employment_status', 'date_hired', 'date_regularized',
-        'age', 'tin', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status',
-        'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number', 'gsis_bp_number', 'email',
-    ];
-
-    private const PROFILE_FIELDS = [
-        'age', 'tin', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status',
-        'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number', 'gsis_bp_number',
-    ];
+    private const FIELDS = ['employee_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'department', 'position', 'employment_status'];
 
     private const HEADER_FIELDS = [
         'employeenumber' => 'employee_number', 'firstname' => 'first_name', 'middlename' => 'middle_name',
-        'lastname' => 'last_name', 'suffix' => 'suffix', 'gender' => 'gender', 'birthdate' => 'birth_date',
-        'department' => 'department', 'departmentname' => 'department', 'departmentcode' => 'department',
-        'position' => 'position', 'positiontitle' => 'position', 'positioncode' => 'position', 'employmentstatus' => 'employment_status',
-        'datehired' => 'date_hired', 'dateregularized' => 'date_regularized', 'age' => 'age', 'tin' => 'tin',
-        'dateoforiginalappointment' => 'date_of_original_appointment',
-        'dateoflastpromotionappointment' => 'date_of_last_promotion_appointment',
-        'appointmentstatus' => 'appointment_status', 'civilserviceeligibility' => 'civil_service_eligibility',
-        'commentannotation' => 'comment_annotation', 'pwd' => 'pwd', 'indigenouspeople' => 'indigenous_people',
-        'soloparentidnumber' => 'solo_parent_id_number', 'gsisbpnumber' => 'gsis_bp_number', 'emailaddress' => 'email',
+        'lastname' => 'last_name', 'suffix' => 'suffix', 'department' => 'department',
+        'departmentname' => 'department', 'departmentcode' => 'department', 'position' => 'position',
+        'positiontitle' => 'position', 'positioncode' => 'position', 'employmentstatus' => 'employment_status',
+        'emailaddress' => 'email',
     ];
 
     /** @return list<array<string, mixed>> */
@@ -70,8 +55,9 @@ class EmployeeSpreadsheetImport
                 $mappedHeaders[$index] = $field;
             }
         }
-        if (array_diff(['employee_number', 'first_name', 'last_name', 'employment_status'], array_values($mappedHeaders))) {
-            throw ValidationException::withMessages(['file' => 'Use the Employee workbook. Its EMPLOYEES sheet must include Employee Number.']);
+        $requiredKeys = ['employee_number', 'first_name', 'last_name', 'department', 'employment_status'];
+        if (array_diff($requiredKeys, array_values($mappedHeaders))) {
+            throw ValidationException::withMessages(['file' => 'The workbook must include Employee Number, First Name, Last Name, Department, and Employment Status.']);
         }
         $customKeys = array_filter(array_column($columns, 'key'), fn ($key) => str_starts_with($key, 'custom_'));
 
@@ -86,20 +72,16 @@ class EmployeeSpreadsheetImport
         }
 
         foreach ($dataRows as $excelRow => $values) {
-            $data = array_fill_keys(array_unique(array_merge(self::FIELDS, $customKeys)), null);
+            $data = array_fill_keys(array_unique(array_merge(self::FIELDS, ['email'], $customKeys)), null);
             foreach ($mappedHeaders as $index => $field) {
                 $value = trim((string) ($values[$index] ?? ''));
                 $data[$field] = $value === '' ? null : $value;
             }
             $data['employee_number'] = $data['employee_number'] === null ? null : trim((string) $data['employee_number']);
             $data['email'] = $data['email'] === null ? null : Str::lower($data['email']);
-            foreach (['birth_date', 'date_hired', 'date_regularized', 'date_of_original_appointment', 'date_of_last_promotion_appointment'] as $field) {
-                $data[$field] = $this->date($data[$field]);
-            }
-
             $errors = [];
-            foreach (['employee_number', 'first_name', 'last_name', 'employment_status'] as $field) {
-                if (! $data[$field]) {
+            foreach ($requiredKeys as $field) {
+                if ($data[$field] === null || trim((string) $data[$field]) === '') {
                     $errors[] = str_replace('_', ' ', ucfirst($field)).' is required.';
                 }
             }
@@ -141,22 +123,13 @@ class EmployeeSpreadsheetImport
                     $errors = array_merge($errors, $validator->errors()->all());
                 }
             }
-            foreach (['birth_date', 'date_hired', 'date_regularized', 'date_of_original_appointment', 'date_of_last_promotion_appointment'] as $field) {
-                if ($data[$field] && ! $this->validDate($data[$field])) {
-                    $errors[] = str_replace('_', ' ', ucfirst($field)).' must be a valid date.';
-                }
-            }
             $validator = Validator::make($data, [
                 'employee_number' => ['required', 'string', 'max:255'],
                 'first_name' => ['required', 'string', 'max:255'], 'middle_name' => ['nullable', 'string', 'max:255'],
                 'last_name' => ['required', 'string', 'max:255'], 'suffix' => ['nullable', 'string', 'max:255'],
-                'gender' => ['nullable', 'string', 'max:255'], 'employment_status' => ['required', 'string', 'max:255'],
-                'department' => ['nullable', 'string', 'max:255'], 'position' => ['nullable', 'string', 'max:255'],
-                'age' => ['nullable', 'integer', 'min:0', 'max:150'], 'tin' => ['nullable', 'string', 'max:64'],
-                'appointment_status' => ['nullable', Rule::in(['P', 'E', 'T', 'S', 'CT', 'PA', 'FT'])],
-                'civil_service_eligibility' => ['nullable', 'string', 'max:255'], 'comment_annotation' => ['nullable', 'string', 'max:10000'],
-                'pwd' => ['nullable', Rule::in(['Y'])], 'indigenous_people' => ['nullable', Rule::in(['Y'])],
-                'solo_parent_id_number' => ['nullable', 'string', 'max:255'], 'gsis_bp_number' => ['nullable', 'string', 'max:100'],
+                'employment_status' => ['required', 'string', 'max:255', Rule::in($this->template->statuses())],
+                'department' => ['required', 'string', 'max:255'], 'position' => ['nullable', 'string', 'max:255'],
+                'email' => ['nullable', 'email', 'max:255'],
             ]);
             if ($validator->fails()) {
                 $errors = array_merge($errors, $validator->errors()->all());
@@ -164,12 +137,16 @@ class EmployeeSpreadsheetImport
 
             $data['department_id'] = $department->id ?? $existing?->department_id;
             $data['position_id'] = $position->id ?? ($department && $existing?->department_id !== $department->id ? null : $existing?->position_id);
+            $temporaryPassword = $user ? null : Str::password(18);
             $rows[] = [
                 'row' => $excelRow, 'employee_number' => $data['employee_number'] ?? '—',
                 'name' => trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')),
                 'department' => $department->name ?? '—', 'position' => $position->title ?? '—',
                 'status' => $data['employment_status'] ?? '—',
-                'action' => $existing ? 'Update profile' : 'Create employee account',
+                'profile_action' => $existing ? 'Update profile' : 'Create profile',
+                'account_action' => $user ? 'Account exists' : 'Create account',
+                'username' => $data['employee_number'],
+                'temporary_password' => $errors || $user ? null : $temporaryPassword,
                 'valid' => ! $errors, 'errors' => array_values(array_unique($errors)), 'data' => $data + ['present_fields' => array_values(array_unique($mappedHeaders))],
             ];
         }
@@ -183,11 +160,11 @@ class EmployeeSpreadsheetImport
 
     /**
      * @param  list<array<string, mixed>>  $rows
-     * @return array{createdProfiles: int, updatedProfiles: int, createdAccounts: int, credentials: list<array<string, string>>, emailSetupSent: int}
+     * @return array{createdProfiles: int, updatedProfiles: int, createdAccounts: int, credentials: list<array<string, string>>, emailSetupSent: int, emailSetupFailed: int}
      */
-    public function commit(array $rows, User $actor, string $approval): array
+    public function commit(array $rows, User $actor): array
     {
-        $result = DB::transaction(function () use ($rows, $actor, $approval): array {
+        $result = DB::transaction(function () use ($rows, $actor): array {
             $createdProfiles = $updatedProfiles = $createdAccounts = 0;
             $credentials = $emailUsers = [];
             $employeeRole = Role::query()->where('name', 'Employee')->where('guard_name', 'web')->firstOrFail();
@@ -195,8 +172,15 @@ class EmployeeSpreadsheetImport
             foreach ($rows as $row) {
                 $data = $row['data'];
                 $employee = Employee::query()->where('employee_number', $data['employee_number'])->lockForUpdate()->first();
-                $profileFields = array_merge(self::FIELDS, self::PROFILE_FIELDS);
-                $employeeData = array_intersect_key($data, array_flip(array_intersect($data['present_fields'], $profileFields)));
+                $employeeData = array_intersect_key($data, array_flip(array_intersect($data['present_fields'], self::FIELDS)));
+                unset($employeeData['department'], $employeeData['position']);
+                if ($employee) {
+                    foreach (['middle_name', 'suffix'] as $field) {
+                        if (($employeeData[$field] ?? null) === null) {
+                            unset($employeeData[$field]);
+                        }
+                    }
+                }
                 if (array_intersect(['department', 'position'], $data['present_fields'])) {
                     $employeeData['department_id'] = $data['department_id'];
                     $employeeData['position_id'] = $data['position_id'];
@@ -212,16 +196,15 @@ class EmployeeSpreadsheetImport
 
                 $user = User::query()->where('employee_id', $employee->id)->orWhere('id', $employee->user_id)->lockForUpdate()->first();
                 if (! $user) {
-                    $temporaryPassword = Str::password(18);
+                    $temporaryPassword = $row['temporary_password'];
                     $user = new User(['name' => trim($employee->first_name.' '.$employee->last_name), 'email' => $data['email'], 'password' => $temporaryPassword]);
                     $user->forceFill(['employee_id' => $employee->id, 'role_id' => $employeeRole->id, 'requires_mfa' => true, 'must_change_password' => true])->save();
                     $employee->forceFill(['user_id' => $user->id])->save();
                     $createdAccounts++;
-                    $credential = ['employee_number' => $employee->employee_number, 'name' => trim($employee->first_name.' '.$employee->last_name), 'temporary_password' => $temporaryPassword];
+                    $credential = ['employee_number' => $employee->employee_number, 'username' => $employee->employee_number, 'name' => trim($employee->first_name.' '.$employee->last_name), 'temporary_password' => $temporaryPassword];
+                    $credentials[] = $credential;
                     if ($data['email']) {
                         $emailUsers[] = ['email' => $data['email']] + $credential;
-                    } else {
-                        $credentials[] = $credential;
                     }
                 } elseif ($user->name !== trim($employee->first_name.' '.$employee->last_name)) {
                     $user->update(['name' => trim($employee->first_name.' '.$employee->last_name)]);
@@ -230,18 +213,23 @@ class EmployeeSpreadsheetImport
 
             AuditLog::create([
                 'user_id' => $actor->id, 'action' => 'employee.spreadsheet_imported', 'model_type' => Employee::class,
-                'metadata' => json_encode(['created_profiles' => $createdProfiles, 'updated_profiles' => $updatedProfiles, 'created_accounts' => $createdAccounts, 'approval_reference' => $approval], JSON_THROW_ON_ERROR),
+                'metadata' => json_encode(['created_profiles' => $createdProfiles, 'updated_profiles' => $updatedProfiles, 'created_accounts' => $createdAccounts], JSON_THROW_ON_ERROR),
             ]);
 
             return compact('createdProfiles', 'updatedProfiles', 'createdAccounts', 'credentials', 'emailUsers');
         });
 
-        $result['emailSetupSent'] = 0;
+        $result['emailSetupSent'] = $result['emailSetupFailed'] = 0;
         foreach ($result['emailUsers'] as $emailUser) {
-            if (HrisAccountSetup::sendTo($emailUser['email']) === Password::RESET_LINK_SENT) {
-                $result['emailSetupSent']++;
-            } else {
-                $result['credentials'][] = array_diff_key($emailUser, ['email' => true]);
+            try {
+                if (HrisAccountSetup::sendTo($emailUser['email']) === Password::RESET_LINK_SENT) {
+                    $result['emailSetupSent']++;
+                } else {
+                    $result['emailSetupFailed']++;
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+                $result['emailSetupFailed']++;
             }
         }
         unset($result['emailUsers']);
@@ -352,25 +340,5 @@ class EmployeeSpreadsheetImport
         $reader->close();
 
         return $rows;
-    }
-
-    private function date(?string $value): ?string
-    {
-        if (! $value) {
-            return null;
-        }
-        if (is_numeric($value) && (float) $value >= 30000 && (float) $value <= 80000) {
-            return gmdate('Y-m-d', (int) round(((float) $value - 25569) * 86400));
-        }
-        $timestamp = strtotime($value);
-
-        return $timestamp ? gmdate('Y-m-d', $timestamp) : $value;
-    }
-
-    private function validDate(string $value): bool
-    {
-        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-
-        return $date !== false && $date->format('Y-m-d') === $value;
     }
 }

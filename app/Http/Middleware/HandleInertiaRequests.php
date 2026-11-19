@@ -10,6 +10,14 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    private const NAVIGATION_PRIORITY = [
+        '/hris/attendance' => 0,
+        '/hris/portal/my-attendance' => 0,
+        '/hris/employees' => 1,
+        '/hris/leave-applications' => 2,
+        '/hris/portal/my-leave-requests' => 2,
+    ];
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -60,7 +68,11 @@ class HandleInertiaRequests extends Middleware
                 ];
             },
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'hrisNavigation' => fn (): array => $request->user() ? [...PortalController::navigation($request->user()), ...HrisResourceController::navigation()] : [],
+            'hrisNavigation' => fn (): array => $request->user()
+                ? collect([...PortalController::navigation($request->user()), ...HrisResourceController::navigation()])
+                    ->sortBy(fn (array $item) => self::NAVIGATION_PRIORITY[$item['href']] ?? PHP_INT_MAX)
+                    ->values()->all()
+                : [],
         ];
     }
 }

@@ -42,7 +42,7 @@ class AttendanceCorrectionController extends Controller
         return Inertia::render('hris/attendance-corrections', [
             'records' => $query->latest('id')->simplePaginate(20)->through(fn (AttendanceCorrection $row) => [
                 'id' => $row->id,
-                'date' => $row->attendanceRecord?->attendance_date ?? ($row->proposed_time_in ? substr($row->proposed_time_in, 0, 10) : null),
+                'date' => $row->attendanceRecord->attendance_date ?? ($row->proposed_time_in ? substr($row->proposed_time_in, 0, 10) : null),
                 'missingDay' => $row->correction_type === 'missing_day',
                 'employee' => $row->employee?->employee_number,
                 'timeIn' => $row->proposed_time_in,
@@ -79,7 +79,7 @@ class AttendanceCorrectionController extends Controller
             abort_unless($owner->user_id === $employee->user_id, 403);
 
             $log = isset($data['attendance_record_id'])
-                ? $owner->attendanceRecords()->lockForUpdate()->findOrFail($data['attendance_record_id'])
+                ? $owner->attendanceRecords()->lockForUpdate()->findOrFail((int) $data['attendance_record_id'])
                 : null;
             $start = Carbon::parse($data['time_in']);
             $end = Carbon::parse($data['time_out']);
@@ -160,7 +160,7 @@ class AttendanceCorrectionController extends Controller
                     ]);
                     $entry->attendance_record_id = $log->id;
                 }
-                $entry->approved_by = $user->id;
+                $entry->approvedBy()->associate($user);
                 $entry->approved_at = now();
             }
 

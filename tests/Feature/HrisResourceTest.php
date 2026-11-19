@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\AttendanceImport;
+use App\Models\AttendancePunch;
+use App\Models\AttendanceRecord;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Role;
@@ -19,6 +22,112 @@ class HrisResourceTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+    }
+
+    public function test_attendance_lists_employees_once_with_dtr_links_and_respects_department_scope(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create(['first_name' => 'Alex', 'last_name' => 'Adams', 'suffix' => null]);
+        $withoutEntries = Employee::factory()->create(['last_name' => 'Zulu']);
+        AttendanceRecord::factory()->count(2)->for($employee)->create();
+
+        $this->actingAs($hr)->get('/hris/attendance?month=2026-10')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('hris/resources/index')
+                ->where('attendanceDirectory', true)
+                ->has('records.data', 2)
+                ->where('records.data.0.name', 'Adams, Alex')
+                ->where('attendanceMonth', '2026-10')
+                ->where('records.data.0.dtr_url', "/hris/attendance/dtr/{$employee->id}?month=2026-10")
+                ->where('records.data.1.dtr_url', "/hris/attendance/dtr/{$withoutEntries->id}?month=2026-10")
+                ->where('records.data.1.attendance_complete_days', 0)
+                ->where('records.data.1.attendance_review_days', 0));
+
+        $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create(['employee_id' => $employee->id]);
+        $this->actingAs($head)->get('/hris/attendance')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('records.data', 1)
+                ->where('records.data.0.id', $employee->id));
+        $this->getJson("/hris/attendance/dtr/{$withoutEntries->id}")->assertForbidden();
+    }
+
+    public function test_attendance_indicators_count_each_recorded_workday_once_for_the_selected_month(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create();
+        $employee->forceFill(['biometric_id' => 15])->save();
+        $batch = AttendanceImport::query()->create(['file_name' => 'test.dat', 'status' => 'completed']);
+        foreach (['19 07:50:00', '19 12:03:00', '19 12:50:00', '19 17:02:00', '20 07:54:00', '22 07:55:00'] as $punch) {
+            AttendancePunch::query()->insert([
+                'attendance_import_id' => $batch->id, 'biometric_id' => 15,
+                'punched_at' => '2026-10-'.$punch, 'created_at' => now(),
+            ]);
+        }
+        foreach ([
+            ['2026-10-21', 'absent', null, null],
+            ['2026-10-21', 'present', '2026-10-21 08:00:00', '2026-10-21 17:00:00'],
+            ['2026-10-22', 'On Leave', null, null],
+            ['2026-10-23', 'late', '2026-10-23 09:00:00', '2026-10-23 17:00:00'],
+            ['2026-11-02', 'incomplete', '2026-11-02 08:00:00', null],
+        ] as [$date, $status, $in, $out]) {
+            AttendanceRecord::factory()->for($employee)->create([
+                'attendance_date' => $date, 'status' => $status, 'time_in' => $in, 'time_out' => $out,
+            ]);
+        }
+
+        $this->actingAs($hr)->get('/hris/attendance?month=2026-10')
+            ->assertInertia(fn ($page) => $page
+                ->where('records.data.0.attendance_complete_days', 2)
+                ->where('records.data.0.attendance_review_days', 2));
+        $this->get('/hris/attendance?month=2026-11')
+            ->assertInertia(fn ($page) => $page
+                ->where('records.data.0.attendance_complete_days', 0)
+                ->where('records.data.0.attendance_review_days', 1));
+    }
+
+    public function test_attendance_entries_can_still_be_managed_from_the_entries_view(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create();
+        $entriesUrl = '/hris/attendance?view=entries';
+        $data = [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-10-19',
+            'total_hours' => 8,
+            'status' => 'present',
+            'source' => 'manual',
+            'overtime_hours' => 0,
+        ];
+
+        $this->actingAs($hr)->post('/hris/attendance', $data)->assertRedirect($entriesUrl);
+        $entry = AttendanceRecord::query()->sole();
+        $this->get($entriesUrl)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('canManage', true)
+                ->where('records.data.0.id', $entry->id));
+        $entryUrl = "/hris/attendance/{$entry->id}";
+        $this->put($entryUrl, ['total_hours' => 7] + $data)->assertRedirect($entriesUrl);
+        $this->delete($entryUrl)->assertRedirect($entriesUrl);
+        $this->assertModelMissing($entry);
+    }
+
+    public function test_saved_calendar_rules_no_longer_influence_attendance_or_dtr_previews(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create(['date_hired' => '2020-01-01', 'employment_status' => 'active']);
+        DB::table('attendance_schedules')->insert([
+            'scope_key' => 'municipal', 'effective_from' => '2020-01-01', 'workdays' => '[1,2,3,4,5]',
+            'am_in' => '08:00', 'am_out' => '12:00', 'pm_in' => '13:00', 'pm_out' => '17:00',
+        ]);
+
+        $this->actingAs($hr)->get('/hris/attendance/work-calendar')->assertNotFound();
+        $this->get('/hris/attendance?month=2026-10')->assertInertia(fn ($page) => $page
+            ->where('records.data.0.attendance_complete_days', 0)
+            ->where('records.data.0.attendance_review_days', 0));
+        $this->getJson("/hris/attendance/dtr/{$employee->id}?month=2026-10")->assertOk()->assertJsonCount(0, 'records');
     }
 
     public function test_hr_officer_can_view_but_cannot_create_a_department(): void
@@ -276,5 +385,52 @@ class HrisResourceTest extends TestCase
             ->where('statusSummary.0.status', 'active')
             ->where('statusSummary.0.total', 1)
             );
+    }
+
+    public function test_employee_record_form_uses_the_excel_status_dropdown_choices(): void
+    {
+        $this->seed();
+        $user = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
+
+        $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))
+            ->assertOk()->assertInertia(fn ($page) => $page
+            ->where('fields.9.type', 'select')
+            ->has('fields.9.options', 4)
+            ->where('fields.9.options.0.value', 'active')
+            ->where('fields.9.options.0.label', 'Active')
+            ->where('fields.9.options.3.value', 'terminated')
+            ->where('fields.10.type', 'select')
+            ->where('fields.10.options.0.value', 'P')
+            ->where('fields.10.options.0.label', 'Permanent')
+            ->where('fields.10.options.4.label', 'Coterminous')
+            ->where('fields.10.options.5.label', 'Presidential Appointee')
+            ->where('fields.10.options.6.value', 'FT')
+            ->has('fields.10.options', 7));
+    }
+
+    public function test_manual_employee_creation_rejects_status_values_outside_the_dropdowns(): void
+    {
+        $this->seed();
+        $user = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
+        $url = route('hris.resources.store', ['resource' => 'employees']);
+        $record = [
+            'employee_number' => 'EMP-MANUAL-01', 'first_name' => 'Jordan', 'last_name' => 'Sample',
+            'department_id' => Department::factory()->create()->id,
+            'employment_status' => 'unknown', 'appointment_status' => 'unknown',
+        ];
+
+        $this->actingAs($user)->post($url, $record)->assertSessionHasErrors(['employment_status', 'appointment_status']);
+        $this->actingAs($user)->post($url, array_merge($record, ['employment_status' => 'active', 'appointment_status' => 'CT']))
+            ->assertRedirect(route('hris.resources.index', ['resource' => 'employees']));
+        $employee = Employee::query()->where('employee_number', 'EMP-MANUAL-01')->firstOrFail();
+        $account = User::query()->where('employee_id', $employee->id)->firstOrFail();
+        $this->assertSame('CT', $employee->appointment_status);
+        $this->assertNull($account->email);
+        $this->assertTrue($account->must_change_password);
+        $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))
+            ->assertOk()->assertInertia(fn ($page) => $page
+            ->where('createdAccountCredentials.username', 'EMP-MANUAL-01')
+            ->where('createdAccountCredentials.employee_number', 'EMP-MANUAL-01')
+            ->has('createdAccountCredentials.temporary_password'));
     }
 }
