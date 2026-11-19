@@ -270,6 +270,8 @@ export default function Welcome() {
                             {/* Card 1 */}
                             <SpotlightCard
                                 className="landing-feature"
+                                data-aos="fade-up"
+                                data-aos-delay="100"
                                 theme="light"
                                 style={{ backgroundColor: '#D7F75B' }}
                                 spotlightColor="#F2FFD0"
@@ -302,6 +304,8 @@ export default function Welcome() {
                             {/* Card 2 */}
                             <SpotlightCard
                                 className="landing-feature"
+                                data-aos="fade-up"
+                                data-aos-delay="200"
                                 theme="light"
                                 style={{ backgroundColor: '#9CE82A' }}
                                 spotlightColor="#F2FFD0"
@@ -331,6 +335,8 @@ export default function Welcome() {
                             {/* Card 3 */}
                             <SpotlightCard
                                 className="landing-feature"
+                                data-aos="fade-up"
+                                data-aos-delay="300"
                                 theme="light"
                                 style={{ backgroundColor: '#B4F232' }}
                                 spotlightColor="#F2FFD0"
@@ -362,6 +368,8 @@ export default function Welcome() {
                             {/* Card 4 */}
                             <SpotlightCard
                                 className="landing-feature"
+                                data-aos="fade-up"
+                                data-aos-delay="400"
                                 theme="light"
                                 style={{ backgroundColor: '#DCFA70' }}
                                 spotlightColor="#F2FFD0"
