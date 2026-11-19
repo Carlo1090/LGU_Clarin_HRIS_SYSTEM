@@ -52,21 +52,21 @@ export default function BiometricIdField({
                         form.clearErrors('biometric_id');
                     }}
                 />
-                {(!link.locked || canVerify) && (
-                    <Button
-                        size="sm"
-                        type="submit"
-                        variant="outline"
-                        disabled={busy || (!canSave && !canVerify)}
-                    >
-                        {canVerify ? 'Verify' : 'Save'}
-                    </Button>
-                )}
+                <Button
+                    size="sm"
+                    type="submit"
+                    variant="outline"
+                    className="w-18"
+                    disabled={busy || (!canSave && !canVerify)}
+                >
+                    {canVerify ? 'Verify' : 'Save'}
+                </Button>
                 {link.id !== null && (
                     <Button
                         size="sm"
                         type="button"
                         variant="outline"
+                        className="w-18"
                         aria-label={`${link.locked ? 'Unlock' : 'Lock'} biometric ID for ${employeeNumber}`}
                         disabled={busy || dirty}
                         onClick={() =>

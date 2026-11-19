@@ -18,7 +18,10 @@ export default function PublicHeader({
 }: {
     showNavigation?: boolean;
 }) {
-    const { auth } = usePage().props;
+    const {
+        component,
+        props: { auth },
+    } = usePage();
 
     const headerRef = useRef<HTMLElement>(null);
     const [activeSection, setActiveSection] = useState<string>();
@@ -95,17 +98,15 @@ export default function PublicHeader({
                         <Button asChild className="rounded-full">
                             <Link href={dashboard()}>Dashboard</Link>
                         </Button>
-                    ) : (
-                        <>
-                            <Button
-                                asChild
-                                variant="ghost"
-                                className="rounded-full px-3 text-xs sm:text-sm"
-                            >
-                                <Link href={login()}>Log in</Link>
-                            </Button>
-                        </>
-                    )}
+                    ) : component !== 'auth/login' ? (
+                        <Button
+                            asChild
+                            variant="ghost"
+                            className="rounded-full px-3 text-xs sm:text-sm"
+                        >
+                            <Link href={login()}>Log in</Link>
+                        </Button>
+                    ) : null}
                 </div>
             </nav>
         </header>
