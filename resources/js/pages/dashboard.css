@@ -510,3 +510,114 @@
 .dashboard-footer > div {
     border-radius: 2.5rem;
 }
+
+/* Landing-inspired artwork and colors for the workforce bento cards. */
+#dashboard-overview > .dashboard-panel.dashboard-snapshot {
+    background: linear-gradient(145deg, #f8fbed, #e6f4d2);
+    border-color: #d9ebc8;
+}
+.dark #dashboard-overview > .dashboard-panel.dashboard-snapshot {
+    background: linear-gradient(145deg, #203522, #17271b);
+    border-color: #355139;
+}
+.dashboard-snapshot-intro {
+    position: relative;
+    min-height: 140px;
+    padding-right: min(45%, 150px);
+}
+.dashboard-snapshot-art {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: min(43%, 140px);
+    height: 155px;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    background: linear-gradient(155deg, #a6eb20, #69b518 52%, #1c4722);
+    pointer-events: none;
+}
+.dashboard-snapshot-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom center;
+    filter: drop-shadow(0 8px 12px rgba(20, 32, 20, 0.16));
+}
+#dashboard-overview > .dashboard-panel.dashboard-queue-card {
+    background: var(--card);
+}
+.dashboard-queue-card .dashboard-task {
+    min-height: 185px;
+    padding: 16px;
+    border-radius: 1.25rem;
+}
+.dashboard-queue-card .dashboard-task:nth-child(1),
+.dark .dashboard-queue-card .dashboard-task:nth-child(1) {
+    --muted-foreground: #d4e6cd;
+    --accent: #e5f4d4;
+    --accent-foreground: #1c4722;
+    color: #fff;
+    background: linear-gradient(145deg, #33713b, #1c4722);
+    border-color: #32643b;
+}
+.dashboard-queue-card .dashboard-task:nth-child(2),
+.dark .dashboard-queue-card .dashboard-task:nth-child(2) {
+    --muted-foreground: #53604e;
+    --accent: #ffffff;
+    --accent-foreground: #1c4722;
+    color: #142014;
+    background: #f3f5ef;
+    border-color: #e4e9df;
+}
+.dashboard-queue-card .dashboard-task:nth-child(3),
+.dark .dashboard-queue-card .dashboard-task:nth-child(3) {
+    --muted-foreground: #3c4b26;
+    --accent: #1c4722;
+    --accent-foreground: #ffffff;
+    color: #142014;
+    background: #a6eb20;
+    border-color: #a6eb20;
+}
+.dashboard-queue-card .dashboard-task:hover h3 {
+    color: inherit;
+}
+.dashboard-queue-card .dashboard-task:nth-child(3) .bg-primary {
+    background: #1c4722;
+}
+#dashboard-overview > .dashboard-panel.dashboard-attendance-card {
+    background: linear-gradient(145deg, #f2f9e8, #e4f4cf);
+    border-color: #d8ebc2;
+}
+.dark #dashboard-overview > .dashboard-panel.dashboard-attendance-card {
+    background: linear-gradient(145deg, #273e27, #1b2d1e);
+    border-color: #375138;
+}
+#dashboard-overview > .dashboard-panel.dashboard-workforce-card,
+.dark #dashboard-overview > .dashboard-panel.dashboard-workforce-card {
+    --foreground: #f5faef;
+    --card-foreground: #f5faef;
+    --muted-foreground: #c6dcc0;
+    --muted: #315b35;
+    --border: #3b6940;
+    --dashboard-chart-1: #a6eb20;
+    --dashboard-chart-2: #eef8e5;
+    --dashboard-chart-3: #77b664;
+    --dashboard-chart-4: #c8e5b3;
+    --dashboard-chart-5: #8daf82;
+    --dashboard-chart-6: #557d55;
+    color: #f5faef;
+    background: linear-gradient(150deg, #316e37, #1c4722);
+    border-color: #3b6940;
+}
+.dashboard-workforce-card [data-slot='card-title'] {
+    color: #fff;
+}
+@media (max-width: 420px) {
+    .dashboard-snapshot-intro {
+        padding-right: 42%;
+    }
+    .dashboard-snapshot-art {
+        width: 40%;
+        height: 140px;
+    }
+}

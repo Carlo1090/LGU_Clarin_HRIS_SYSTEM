@@ -716,35 +716,48 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                             </AnalyticsCard>
 
                             <AnalyticsCard
-                                className="md:col-span-2 xl:col-span-4"
+                                className="dashboard-snapshot md:col-span-2 xl:col-span-4"
                                 title="Workspace snapshot"
                                 description={analytics.scope}
                             >
-                                <p className="text-[32px] leading-none font-semibold tracking-tight tabular-nums">
-                                    {number.format(distributionTotal)}
-                                </p>
-                                <p className="mt-1.5 text-[11px] text-muted-foreground">
-                                    {analytics.distribution.unit} &middot;{' '}
-                                    {analytics.distribution.title.toLowerCase()}
-                                </p>
-                                <div className="mt-5 flex items-center gap-2.5">
-                                    <Avatar className="size-8 border border-border">
-                                        <AvatarFallback className="bg-accent text-[10px] font-semibold text-accent-foreground">
-                                            {auth.user.name
-                                                .split(/\s+/)
-                                                .filter(Boolean)
-                                                .slice(0, 2)
-                                                .map((word) => word[0])
-                                                .join('')}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="min-w-0">
-                                        <p className="truncate text-[11px] font-medium">
-                                            {auth.user.name}
-                                        </p>
-                                        <p className="truncate text-[10px] text-muted-foreground">
-                                            {role}
-                                        </p>
+                                <div className="dashboard-snapshot-intro">
+                                    <div
+                                        className="dashboard-snapshot-art"
+                                        aria-hidden="true"
+                                    >
+                                        <img
+                                            src="/images/black_hero.png"
+                                            alt=""
+                                            loading="lazy"
+                                            decoding="async"
+                                        />
+                                    </div>
+                                    <p className="text-[32px] leading-none font-semibold tracking-tight tabular-nums">
+                                        {number.format(distributionTotal)}
+                                    </p>
+                                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                                        {analytics.distribution.unit} &middot;{' '}
+                                        {analytics.distribution.title.toLowerCase()}
+                                    </p>
+                                    <div className="mt-5 flex items-center gap-2.5">
+                                        <Avatar className="size-8 border border-border">
+                                            <AvatarFallback className="bg-accent text-[10px] font-semibold text-accent-foreground">
+                                                {auth.user.name
+                                                    .split(/\s+/)
+                                                    .filter(Boolean)
+                                                    .slice(0, 2)
+                                                    .map((word) => word[0])
+                                                    .join('')}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-[11px] font-medium">
+                                                {auth.user.name}
+                                            </p>
+                                            <p className="truncate text-[10px] text-muted-foreground">
+                                                {role}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                                 <h3 className="mt-5 text-[10px] font-semibold">
@@ -779,7 +792,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                             </AnalyticsCard>
 
                             <AnalyticsCard
-                                className="md:col-span-2 xl:col-span-6"
+                                className="dashboard-queue-card md:col-span-2 xl:col-span-6"
                                 title="Your work queue"
                                 description="Open a workspace to review your next actions."
                                 accessory={
@@ -859,7 +872,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                             </AnalyticsCard>
 
                             <AnalyticsCard
-                                className="xl:col-span-3"
+                                className="dashboard-attendance-card xl:col-span-3"
                                 title={analytics.bars.title}
                                 description={analytics.bars.description}
                             >
@@ -962,7 +975,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                             </AnalyticsCard>
 
                             <AnalyticsCard
-                                className="xl:col-span-3"
+                                className="dashboard-workforce-card xl:col-span-3"
                                 title={analytics.distribution.title}
                                 description={analytics.distribution.description}
                             >
