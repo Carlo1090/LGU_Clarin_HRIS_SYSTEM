@@ -484,7 +484,7 @@ class HrisResourceController extends Controller
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'fields' => $fields,
             'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()]
-                + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note']) : [])
+                + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
                 + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
             'editing' => $request->integer('edit') ?: null,
         ]);

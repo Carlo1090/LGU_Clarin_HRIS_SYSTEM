@@ -15,14 +15,18 @@ export default function BiometricIdField({
 }) {
     const savedId = link.id?.toString() ?? '';
     const form = useForm({ biometric_id: savedId });
-    const error = form.errors.biometric_id;
+    const lockForm = useForm({ locked: !link.locked });
+    const url = `/hris/employees/${employeeId}/biometric-id`;
+    const busy = form.processing || lockForm.processing;
+    const dirty = form.data.biometric_id !== savedId;
+    const error = form.errors.biometric_id ?? lockForm.errors.locked;
     const noteId = `biometric-note-${employeeId}`;
 
     function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        form.put(`/hris/employees/${employeeId}/biometric-id`, {
-            preserveScroll: true,
-        });
+        if (!link.locked && !busy && dirty) {
+            form.put(url, { preserveScroll: true });
+        }
     }
 
     return (
@@ -37,23 +41,40 @@ export default function BiometricIdField({
                     aria-label={`Biometric ID for ${employeeNumber}`}
                     aria-invalid={Boolean(error)}
                     aria-describedby={noteId}
-                    disabled={form.processing}
+                    disabled={busy}
+                    readOnly={link.locked}
                     value={form.data.biometric_id}
                     onChange={(event) => {
                         form.setData('biometric_id', event.target.value);
                         form.clearErrors('biometric_id');
                     }}
                 />
-                <Button
-                    size="sm"
-                    type="submit"
-                    variant="outline"
-                    disabled={
-                        form.processing || form.data.biometric_id === savedId
-                    }
-                >
-                    {form.processing ? 'Saving…' : 'Save'}
-                </Button>
+                {!link.locked && (
+                    <Button
+                        size="sm"
+                        type="submit"
+                        variant="outline"
+                        disabled={busy || !dirty}
+                    >
+                        {form.processing ? 'Saving…' : 'Save'}
+                    </Button>
+                )}
+                {link.id !== null && (
+                    <Button
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                        aria-label={`${link.locked ? 'Unlock' : 'Lock'} biometric ID for ${employeeNumber}`}
+                        disabled={busy || dirty}
+                        onClick={() =>
+                            lockForm.patch(`${url}/lock`, {
+                                preserveScroll: true,
+                            })
+                        }
+                    >
+                        {link.locked ? 'Unlock' : 'Lock'}
+                    </Button>
+                )}
             </div>
             <div id={noteId} className="text-xs text-muted-foreground">
                 {error ? (
@@ -62,6 +83,7 @@ export default function BiometricIdField({
                     </p>
                 ) : link.id !== null ? (
                     <>
+                        {link.locked && <span>Locked · </span>}
                         <span className="capitalize">{link.status}</span>
                         {link.note && <span> · {link.note}</span>}
                     </>

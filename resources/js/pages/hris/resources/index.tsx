@@ -713,7 +713,7 @@ export default function HrisResourceIndex({
                                             typeof row.id === 'number' && (
                                                 <td className="px-3 py-3">
                                                     <BiometricIdField
-                                                        key={`${row.id}-${row.biometric_id ?? ''}`}
+                                                        key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
                                                         employeeId={row.id}
                                                         employeeNumber={String(
                                                             row.employee_number,
@@ -724,6 +724,9 @@ export default function HrisResourceIndex({
                                                                 'number'
                                                                     ? row.biometric_id
                                                                     : null,
+                                                            locked:
+                                                                row.biometric_locked ===
+                                                                true,
                                                             status:
                                                                 row.biometric_status ===
                                                                 'verified'

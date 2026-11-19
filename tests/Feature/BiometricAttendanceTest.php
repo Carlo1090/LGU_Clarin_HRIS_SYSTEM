@@ -64,6 +64,7 @@ test('saving or correcting an employee biometric ID links historical and future 
     $other = Employee::factory()->create();
     $url = '/hris/attendance/logs';
     $linkUrl = "/hris/employees/{$employee->id}/biometric-id";
+    $lockUrl = $linkUrl.'/lock';
     $dtr = "/hris/attendance/dtr/{$employee->id}";
     $file = " 15\t2026-10-19 17:10:00\n15\t2026-10-19 12:03:00\n15\t2026-10-19 07:56:00\n15\t2026-10-19 12:58:00\n";
 
@@ -72,8 +73,10 @@ test('saving or correcting an employee biometric ID links historical and future 
     expect(AttendancePunch::query()->unassigned()->count())->toBe(4);
     $this->get('/hris/employees')->assertInertia(fn (Assert $page) => $page
         ->where('canLinkBiometricIds', true)
-        ->where('records.data.0.biometric_id', null));
+        ->where('records.data.0.biometric_id', null)
+        ->where('records.data.0.biometric_locked', false));
 
+    $this->from('/hris/employees')->patch($lockUrl, ['locked' => true])->assertSessionHasErrors('locked');
     $this->from('/hris/employees')->put($linkUrl, ['biometric_id' => '00015'])->assertRedirect('/hris/employees');
     expect($employee->refresh()->biometric_id)->toBe(15)
         ->and($employee->biometric_status)->toBe('pending')
@@ -84,6 +87,15 @@ test('saving or correcting an employee biometric ID links historical and future 
         ->assertJsonPath('month', '2026-10')
         ->assertJsonPath('records.19', ['amIn' => '07:56', 'amOut' => '12:03', 'pmIn' => '12:58', 'pmOut' => '17:10']);
 
+    $this->from('/hris/employees')->patch($lockUrl, ['locked' => true])
+        ->assertRedirect('/hris/employees')->assertSessionHasNoErrors();
+    expect($employee->refresh()->biometric_locked)->toBeTrue();
+    foreach ([16, null] as $id) {
+        $this->from('/hris/employees')->put($linkUrl, ['biometric_id' => $id])->assertSessionHasErrors('biometric_id');
+    }
+    expect($employee->refresh()->biometric_id)->toBe(15);
+    $this->assertDatabaseHas('audit_logs', ['user_id' => $hr->id, 'action' => 'employee.biometric_link_locked', 'model_id' => $employee->id]);
+
     $this->from('/hris/employees')->put("/hris/employees/{$other->id}/biometric-id", ['biometric_id' => 15])
         ->assertSessionHasErrors('biometric_id');
     expect($other->refresh()->biometric_id)->toBeNull();
@@ -91,12 +103,17 @@ test('saving or correcting an employee biometric ID links historical and future 
     $this->post($url, ['file' => UploadedFile::fake()->createWithContent('future.dat', "15\t2026-10-20 08:00:00\n")])
         ->assertSessionHasNoErrors()->assertRedirect();
     expect($employee->refresh()->biometric_status)->toBe('verified')
+        ->and($employee->biometric_locked)->toBeTrue()
         ->and($employee->biometric_verified_by)->toBe($hr->id)
         ->and($employee->biometric_note)->toContain('Only 5')
         ->and($employee->attendancePunches()->count())->toBe(5);
     $this->getJson($dtr)->assertJsonPath('records.20.remarks', 'Review 1 punch(es)')
         ->assertJsonPath('punchTimes.20', ['08:00:00']);
 
+    $this->from('/hris/employees')->patch($lockUrl, ['locked' => false])
+        ->assertRedirect('/hris/employees')->assertSessionHasNoErrors();
+    expect($employee->refresh()->biometric_locked)->toBeFalse();
+    $this->assertDatabaseHas('audit_logs', ['user_id' => $hr->id, 'action' => 'employee.biometric_link_unlocked', 'model_id' => $employee->id]);
     $this->from('/hris/employees')->put($linkUrl, ['biometric_id' => ''])->assertRedirect('/hris/employees');
     expect($employee->refresh()->biometric_id)->toBeNull()
         ->and(AttendancePunch::query()->unassigned()->count())->toBe(5);
@@ -127,6 +144,7 @@ test('department heads cannot import logs or view or edit biometric IDs', functi
     $this->actingAs($head)->get('/hris/attendance/logs')->assertForbidden();
     $this->post('/hris/attendance/logs')->assertForbidden();
     $this->put("/hris/employees/{$employee->id}/biometric-id", ['biometric_id' => 1])->assertForbidden();
+    $this->patch("/hris/employees/{$employee->id}/biometric-id/lock", ['locked' => false])->assertForbidden();
     $this->get('/hris/employees')->assertInertia(fn (Assert $page) => $page
         ->where('canLinkBiometricIds', false)
         ->missing('records.data.0.biometric_id'));
