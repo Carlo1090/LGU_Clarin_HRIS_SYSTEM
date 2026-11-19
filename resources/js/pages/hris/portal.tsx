@@ -1,6 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormPreviewDialog, {
+    leaveReasons,
     leaveTypes as formLeaveTypes,
     type LeaveApplicant,
 } from '@/components/leave-form-preview-dialog';
@@ -37,7 +38,12 @@ function LeaveRequestForm({
         end_date: '',
         days_requested: '',
         reason: '',
+        reason_details: '',
     });
+
+    const reasonDetail = leaveReasons
+        .flatMap(({ options }) => options)
+        .find(({ label }) => label === form.data.reason)?.detail;
 
     const fieldClass =
         'w-full rounded-xl border border-input bg-background px-3 py-2';
@@ -68,6 +74,24 @@ function LeaveRequestForm({
                             );
                             return;
                         }
+                        if (
+                            !form.data.reason ||
+                            (reasonDetail && !form.data.reason_details.trim())
+                        ) {
+                            form.setError(
+                                'reason',
+                                form.data.reason
+                                    ? 'Enter the requested details.'
+                                    : 'Select a reason.',
+                            );
+                            return;
+                        }
+                        form.transform(({ reason_details, ...data }) => ({
+                            ...data,
+                            reason: reason_details.trim()
+                                ? data.reason + ' - ' + reason_details.trim()
+                                : data.reason,
+                        }));
                         form.post('/hris/portal/my-leave-requests', {
                             preserveScroll: true,
                             onSuccess: () => form.reset(),
@@ -175,25 +199,73 @@ function LeaveRequestForm({
                             )}
                         </label>
                     ))}
-                    <label className="grid gap-1 text-sm sm:col-span-2 xl:col-span-4">
-                        Reason
-                        <textarea
-                            required
-                            maxLength={2000}
-                            rows={3}
-                            placeholder="Briefly explain why you’re requesting leave."
-                            className={fieldClass}
-                            value={form.data.reason}
-                            onChange={(event) =>
-                                form.setData('reason', event.target.value)
-                            }
-                        />
-                        {form.errors.reason && (
-                            <span className="text-destructive">
-                                {form.errors.reason}
-                            </span>
+                    <fieldset className="rounded-lg border p-4 sm:col-span-2 xl:col-span-4">
+                        <legend className="px-1 text-sm font-semibold">
+                            Reason
+                        </legend>
+                        <div className="grid gap-4 lg:grid-cols-2">
+                            {leaveReasons.map(({ title, options }) => (
+                                <div key={title} className="space-y-2">
+                                    <p className="text-sm font-medium">
+                                        {title}
+                                    </p>
+                                    {options.map(({ label }) => (
+                                        <label
+                                            key={label}
+                                            className="flex cursor-pointer items-start gap-2 text-sm"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                className="mt-0.5 size-4 shrink-0 accent-primary"
+                                                checked={
+                                                    form.data.reason === label
+                                                }
+                                                onChange={(event) => {
+                                                    form.setData({
+                                                        ...form.data,
+                                                        reason: event.target
+                                                            .checked
+                                                            ? label
+                                                            : '',
+                                                        reason_details: '',
+                                                    });
+                                                    form.clearErrors('reason');
+                                                }}
+                                            />
+                                            {label}
+                                        </label>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                        {reasonDetail && (
+                            <label className="mt-4 grid gap-1 text-sm">
+                                {reasonDetail}
+                                <textarea
+                                    required
+                                    maxLength={1900}
+                                    rows={2}
+                                    className={fieldClass}
+                                    value={form.data.reason_details}
+                                    onChange={(event) => {
+                                        form.setData(
+                                            'reason_details',
+                                            event.target.value,
+                                        );
+                                        form.clearErrors('reason');
+                                    }}
+                                />
+                            </label>
                         )}
-                    </label>
+                        {form.errors.reason && (
+                            <p
+                                role="alert"
+                                className="mt-2 text-sm text-destructive"
+                            >
+                                {form.errors.reason}
+                            </p>
+                        )}
+                    </fieldset>
                     <div className="flex flex-wrap items-center gap-3 border-t pt-4 sm:col-span-2 xl:col-span-4">
                         <LeaveFormPreviewDialog
                             draft={{
@@ -208,6 +280,7 @@ function LeaveRequestForm({
                                 endDate: form.data.end_date,
                                 daysRequested: form.data.days_requested,
                                 reason: form.data.reason,
+                                reasonDetails: form.data.reason_details,
                             }}
                         />
                         <button

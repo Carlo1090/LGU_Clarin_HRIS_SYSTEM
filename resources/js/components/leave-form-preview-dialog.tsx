@@ -45,6 +45,42 @@ export const leaveTypes = [
     ['Adoption Leave', 'R.A. No. 8552'],
 ];
 
+export const leaveReasons = [
+    {
+        title: 'In case of Vacation/Special Privilege Leave',
+        options: [
+            { label: 'Within the Philippines', detail: '' },
+            { label: 'Abroad', detail: 'Destination' },
+        ],
+    },
+    {
+        title: 'In case of Sick Leave',
+        options: [
+            { label: 'In Hospital', detail: 'Illness' },
+            { label: 'Out Patient', detail: 'Illness' },
+        ],
+    },
+    {
+        title: 'In case of Special Leave Benefits for Women',
+        options: [{ label: 'Specify Illness', detail: 'Illness' }],
+    },
+    {
+        title: 'In case of Study Leave',
+        options: [
+            { label: 'Completion of Master’s Degree', detail: '' },
+            { label: 'BAR/Board Examination Review', detail: '' },
+        ],
+    },
+    {
+        title: 'Other purpose',
+        options: [
+            { label: 'Monetization of Leave Credits', detail: '' },
+            { label: 'Terminal Leave', detail: '' },
+            { label: 'Other reason', detail: 'Reason' },
+        ],
+    },
+];
+
 export type LeaveApplicant = {
     firstName: string;
     middleName: string | null;
@@ -60,6 +96,7 @@ type LeaveDraft = {
     endDate: string;
     daysRequested: string;
     reason: string;
+    reasonDetails: string;
 };
 
 function Choice({
@@ -240,67 +277,53 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                         </section>
                         <section className="space-y-2 p-2">
                             <h5 className="font-bold">6.B DETAILS OF LEAVE</h5>
-                            {draft && (
-                                <div>
-                                    <p className="font-semibold">Reason</p>
-                                    <p className="wrap-anywhere whitespace-pre-wrap">
-                                        {draft.reason}
-                                    </p>
+                            {leaveReasons.map(({ title, options }) => (
+                                <div key={title}>
+                                    <p className="italic">{title}</p>
+                                    <ul className="mt-0.5 space-y-0.5">
+                                        {options
+                                            .filter(
+                                                ({ label }) =>
+                                                    label !== 'Other reason' ||
+                                                    draft?.reason === label,
+                                            )
+                                            .map(({ label, detail }) => (
+                                                <Choice
+                                                    key={label}
+                                                    checked={
+                                                        draft
+                                                            ? draft.reason ===
+                                                              label
+                                                            : label ===
+                                                              'Within the Philippines'
+                                                    }
+                                                >
+                                                    {label}
+                                                    {detail &&
+                                                        ' (Specify ' +
+                                                            detail.toLowerCase() +
+                                                            ')'}
+                                                    {draft?.reason === label &&
+                                                        draft.reasonDetails && (
+                                                            <strong className="ml-1 wrap-anywhere whitespace-pre-wrap">
+                                                                {
+                                                                    draft.reasonDetails
+                                                                }
+                                                            </strong>
+                                                        )}
+                                                    {!draft &&
+                                                        label ===
+                                                            'Within the Philippines' && (
+                                                            <strong>
+                                                                {' '}
+                                                                Cebu City
+                                                            </strong>
+                                                        )}
+                                                </Choice>
+                                            ))}
+                                    </ul>
                                 </div>
-                            )}
-                            <div>
-                                <p className="italic">
-                                    In case of Vacation/Special Privilege Leave
-                                </p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                    <Choice checked={!draft}>
-                                        Within the Philippines{' '}
-                                        {!draft && <strong>Cebu City</strong>}
-                                    </Choice>
-                                    <Choice>
-                                        Abroad (Specify) ____________________
-                                    </Choice>
-                                </ul>
-                            </div>
-                            <div>
-                                <p className="italic">In case of Sick Leave</p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                    <Choice>
-                                        In Hospital (Specify Illness)
-                                        ______________
-                                    </Choice>
-                                    <Choice>
-                                        Out Patient (Specify Illness)
-                                        ______________
-                                    </Choice>
-                                </ul>
-                            </div>
-                            <div>
-                                <p className="italic">
-                                    In case of Special Leave Benefits for Women
-                                </p>
-                                <FormLine label="(Specify Illness)" />
-                            </div>
-                            <div>
-                                <p className="italic">In case of Study Leave</p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                    <Choice>
-                                        Completion of Master’s Degree
-                                    </Choice>
-                                    <Choice>
-                                        BAR/Board Examination Review
-                                    </Choice>
-                                </ul>
-                            </div>
-                            <div>
-                                <p className="italic">Other purpose</p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                    <Choice>
-                                        Monetization of Leave Credits
-                                    </Choice>
-                                    <Choice>Terminal Leave</Choice>
-                                </ul>
-                            </div>
+                            ))}
                         </section>
                     </div>
                     <div className="grid grid-cols-2 divide-x divide-black border-t border-black">
