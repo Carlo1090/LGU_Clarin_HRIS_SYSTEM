@@ -1,3 +1,5 @@
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import SpotlightCard from '@/components/SpotlightCard';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
@@ -20,7 +22,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
     Area,
@@ -218,6 +220,7 @@ function AnalyticsCard({
 }) {
     return (
         <Card
+            data-aos="fade-up"
             className={cn(
                 'dashboard-panel min-w-0 gap-4 rounded-lg py-4 shadow-none',
                 className,
@@ -298,6 +301,24 @@ const chartColors = [
 
 export default function Dashboard({ role, office, cards, analytics }: Props) {
     const { auth } = usePage().props;
+
+    useEffect(() => {
+        AOS.init({
+            duration: 700,
+            easing: 'ease-out-cubic',
+            once: true,
+            offset: 50,
+            disable: window.matchMedia('(prefers-reduced-motion: reduce)')
+                .matches,
+        });
+        const frame = requestAnimationFrame(() => AOS.refreshHard());
+        const refresh = () => AOS.refresh();
+        window.addEventListener('load', refresh);
+        return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener('load', refresh);
+        };
+    }, [role, cards.length]);
     const [query, setQuery] = useState('');
     const [status, setStatus] = useState('all');
     const [page, setPage] = useState(1);
@@ -477,6 +498,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
 
                         <section
                             className="dashboard-metrics-banner"
+                            data-aos="fade-up"
                             aria-label="Key information"
                         >
                             <div className="dashboard-banner-heading">
@@ -507,13 +529,18 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                         : 'xl:grid-cols-4',
                                 )}
                             >
-                                {cards.map((card) => {
+                                {cards.map((card, index) => {
                                     const Icon =
                                         cardIcons[card.label] ??
                                         LayoutDashboard;
                                     return (
                                         <Card
                                             key={card.label}
+                                            data-aos="fade-up"
+                                            data-aos-delay={Math.min(
+                                                index * 50,
+                                                200,
+                                            )}
                                             className="dashboard-metric gap-0 rounded-lg py-0 shadow-none"
                                         >
                                             <SpotlightCard
@@ -1073,6 +1100,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                         </section>
                         <Card
                             id="dashboard-records"
+                            data-aos="fade-up"
                             className="dashboard-panel min-w-0 scroll-mt-20 gap-0 rounded-lg py-0 shadow-none"
                         >
                             <CardHeader className="gap-1 px-4 pt-4 pb-4">
