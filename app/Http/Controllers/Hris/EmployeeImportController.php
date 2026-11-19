@@ -25,14 +25,34 @@ class EmployeeImportController
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
 
-        return Inertia::render('hris/import-employees', ['statusOptions' => $template->statuses(), 'columns' => $template->columns()]);
+        $token = $request->query('token');
+        $rows = is_string($token) && preg_match('/^[a-f0-9]{64}$/', $token)
+            ? $request->session()->get('employee_import.'.$token)
+            : null;
+
+        $previewRows = [];
+        if (is_array($rows)) {
+            foreach ($rows as $row) {
+                if (is_array($row)) {
+                    unset($row['data']);
+                    $previewRows[] = $row;
+                }
+            }
+        }
+
+        return Inertia::render('hris/import-employees', [
+            'statusOptions' => $template->statuses(),
+            'columns' => $template->columns(),
+            'rows' => $previewRows,
+            'token' => is_array($rows) ? $token : null,
+        ]);
     }
 
     public function updateTemplate(Request $request, EmployeeImportTemplate $template): RedirectResponse
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
         $input = $request->validate([
-            'columns' => ['required', 'array', 'min:4', 'max:40'],
+            'columns' => ['required', 'array', 'min:5', 'max:40'],
             'columns.*.key' => ['nullable', 'string', 'max:100'],
             'columns.*.label' => ['required', 'string', 'max:64'],
             'status_options' => ['required', 'array', 'min:1', 'max:8'],
@@ -46,7 +66,7 @@ class EmployeeImportController
         return back()->with('success', 'Employee template columns and choices updated.');
     }
 
-    public function preview(Request $request, EmployeeSpreadsheetImport $import, EmployeeImportTemplate $template): Response
+    public function preview(Request $request, EmployeeSpreadsheetImport $import): RedirectResponse
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
         $input = $request->validate([
@@ -56,25 +76,17 @@ class EmployeeImportController
         $token = bin2hex(random_bytes(32));
         $request->session()->put('employee_import.'.$token, $rows);
 
-        return Inertia::render('hris/import-employees', [
-            'statusOptions' => $template->statuses(),
-            'columns' => $template->columns(),
-            'rows' => collect($rows)->map(fn ($row) => collect($row)->except('data')->all())->values(),
-            'token' => $token,
-        ]);
+        return redirect()->route('hris.employees.import', ['token' => $token]);
     }
 
     public function store(Request $request, EmployeeSpreadsheetImport $import): Response
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
-        $input = $request->validate([
-            'token' => ['required', 'string', 'size:64'],
-            'approval_reference' => ['required', 'string', 'max:100'],
-        ]);
+        $input = $request->validate(['token' => ['required', 'string', 'size:64']]);
         $rows = $request->session()->pull('employee_import.'.$input['token']);
         abort_unless(is_array($rows) && count($rows), 410, 'Import preview expired. Upload the workbook again.');
         abort_if(collect($rows)->contains(fn ($row) => ! $row['valid']), 422, 'Fix all spreadsheet row errors and preview the corrected workbook.');
-        $result = $import->commit(array_values($rows), $request->user(), $input['approval_reference']);
+        $result = $import->commit(array_values($rows), $request->user());
 
         return Inertia::render('hris/import-employees', [
             'result' => collect($result)->except('credentials')->all(),

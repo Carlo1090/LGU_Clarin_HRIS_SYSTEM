@@ -4,6 +4,9 @@ use App\Http\Controllers\Auth\GoogleLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Hris\AccountInvitationController;
 use App\Http\Controllers\Hris\AttendanceCorrectionController;
+use App\Http\Controllers\Hris\AttendanceLogImportController;
+use App\Http\Controllers\Hris\BiometricLinkController;
+use App\Http\Controllers\Hris\DailyTimeRecordController;
 use App\Http\Controllers\Hris\EmployeeImportController;
 use App\Http\Controllers\Hris\HrisResourceController;
 use App\Http\Controllers\Hris\LeaveReviewController;
@@ -40,6 +43,11 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
         Route::post('portal/my-leave-requests', [PortalController::class, 'submitLeave'])
             ->name('portal.leave.store');
         Route::post('leave-applications/{leave}/review', LeaveReviewController::class)->name('leave.review');
+        Route::get('attendance/logs', [AttendanceLogImportController::class, 'index'])->name('attendance-logs.index');
+        Route::post('attendance/logs', [AttendanceLogImportController::class, 'store'])->name('attendance-logs.store');
+        Route::put('employees/{employee}/biometric-id', BiometricLinkController::class)->whereNumber('employee')->name('employees.biometric-id.update');
+        Route::get('attendance/dtr/demo', [DailyTimeRecordController::class, 'demo'])->name('attendance.dtr.demo');
+        Route::get('attendance/dtr/{employee}', DailyTimeRecordController::class)->whereNumber('employee')->name('attendance.dtr');
         Route::get('attendance-corrections', [AttendanceCorrectionController::class, 'index'])->name('attendance-corrections.index');
         Route::post('attendance-corrections', [AttendanceCorrectionController::class, 'store'])->name('attendance-corrections.store');
         Route::post('attendance-corrections/{correction}/review', [AttendanceCorrectionController::class, 'review'])->name('attendance-corrections.review');

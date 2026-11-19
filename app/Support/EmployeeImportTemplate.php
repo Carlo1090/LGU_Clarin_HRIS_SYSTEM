@@ -8,24 +8,14 @@ use ZipArchive;
 
 class EmployeeImportTemplate
 {
-    private const REQUIRED = ['employee_number', 'first_name', 'last_name', 'employment_status'];
+    private const REQUIRED = ['employee_number', 'first_name', 'last_name', 'department', 'employment_status'];
 
     private const DEFAULT_COLUMNS = [
         ['key' => 'employee_number', 'label' => 'Employee Number'], ['key' => 'first_name', 'label' => 'First Name'],
         ['key' => 'middle_name', 'label' => 'Middle Name'], ['key' => 'last_name', 'label' => 'Last Name'],
-        ['key' => 'suffix', 'label' => 'Suffix'], ['key' => 'gender', 'label' => 'Gender'],
-        ['key' => 'birth_date', 'label' => 'Birth Date'], ['key' => 'department', 'label' => 'Department'],
+        ['key' => 'suffix', 'label' => 'Suffix'], ['key' => 'department', 'label' => 'Department'],
         ['key' => 'position', 'label' => 'Position'], ['key' => 'employment_status', 'label' => 'Employment Status'],
-        ['key' => 'date_hired', 'label' => 'Date Hired'], ['key' => 'date_regularized', 'label' => 'Date Regularized'],
-        ['key' => 'age', 'label' => 'Age'], ['key' => 'tin', 'label' => 'TIN'],
-        ['key' => 'date_of_original_appointment', 'label' => 'Date of Original Appointment'],
-        ['key' => 'date_of_last_promotion_appointment', 'label' => 'Date of Last Promotion/Appointment'],
-        ['key' => 'appointment_status', 'label' => 'Appointment Status'],
-        ['key' => 'civil_service_eligibility', 'label' => 'Civil Service Eligibility'],
-        ['key' => 'comment_annotation', 'label' => 'Comment/Annotation'], ['key' => 'pwd', 'label' => 'PWD'],
-        ['key' => 'indigenous_people', 'label' => 'Indigenous People'],
-        ['key' => 'solo_parent_id_number', 'label' => 'Solo Parent ID Number'],
-        ['key' => 'gsis_bp_number', 'label' => 'GSIS BP Number'], ['key' => 'email', 'label' => 'Email Address'],
+        ['key' => 'email', 'label' => 'Email Address'],
     ];
 
     private function path(): string
@@ -42,7 +32,33 @@ class EmployeeImportTemplate
         }
         $saved = json_decode((string) file_get_contents($path), true);
 
-        return is_array($saved) && isset($saved['columns']) ? $saved['columns'] : self::DEFAULT_COLUMNS;
+        if (! is_array($saved['columns'] ?? null)) {
+            return self::DEFAULT_COLUMNS;
+        }
+
+        $allowed = array_column(self::DEFAULT_COLUMNS, 'key');
+        $columns = [];
+        foreach ($saved['columns'] as $column) {
+            if (is_array($column) && is_string($column['key'] ?? null) && is_string($column['label'] ?? null)
+                && (in_array($column['key'], $allowed, true) || str_starts_with($column['key'], 'custom_'))) {
+                $columns[] = ['key' => $column['key'], 'label' => $column['label']];
+            }
+        }
+        $byKey = array_column($columns, null, 'key');
+        foreach (self::DEFAULT_COLUMNS as $default) {
+            if (in_array($default['key'], self::REQUIRED, true) && ! isset($byKey[$default['key']])) {
+                $byKey[$default['key']] = $default;
+            }
+        }
+        $ordered = [];
+        foreach (self::DEFAULT_COLUMNS as $column) {
+            if (isset($byKey[$column['key']])) {
+                $ordered[] = $byKey[$column['key']];
+            }
+        }
+        $custom = array_values(array_filter($columns, fn (array $column) => str_starts_with($column['key'], 'custom_')));
+
+        return [...$ordered, ...$custom];
     }
 
     /** @return list<string> */
@@ -92,21 +108,16 @@ class EmployeeImportTemplate
     public function download(string $path, array $statuses): void
     {
         $columns = $this->columns();
-        $lookupContents = file_get_contents(resource_path('data/plantilla-lookups.json'));
-        if ($lookupContents === false) {
-            throw new \RuntimeException('Unable to read employee workbook lookups.');
-        }
-        $eligibilities = json_decode($lookupContents, true, flags: JSON_THROW_ON_ERROR)['eligibilities'];
         $zip = new ZipArchive;
         if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new \RuntimeException('Unable to create the employee workbook.');
         }
-        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
         $zip->addFromString('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
-        $zip->addFromString('xl/workbook.xml', '<?xml version="1.0"?><x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><x:definedNames><x:definedName name="EligibilityOptions">\'Eligibilities\'!$A$1:$A$'.count($eligibilities).'</x:definedName></x:definedNames><x:sheets><x:sheet name="EMPLOYEES" sheetId="1" r:id="rId1"/><x:sheet name="Eligibilities" sheetId="2" r:id="rId2"/></x:sheets></x:workbook>');
-        $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+        $zip->addFromString('xl/workbook.xml', '<?xml version="1.0"?><x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><x:sheets><x:sheet name="EMPLOYEES" sheetId="1" r:id="rId1"/></x:sheets></x:workbook>');
+        $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
 
-        $widths = [20, 18, 18, 18, 14, 14, 16, 24, 22, 20, 16, 18, 10, 18, 22, 25, 20, 34, 30, 12, 20, 22, 20, 30];
+        $widths = [20, 18, 18, 18, 14, 28, 22, 22, 30];
         $cols = $header = '';
         foreach ($columns as $index => $column) {
             $number = $index + 1;
@@ -121,16 +132,8 @@ class EmployeeImportTemplate
             if ($column['key'] === 'employment_status') {
                 $validations .= '<x:dataValidation type="list" allowBlank="1" sqref="'.$letter.'2:'.$letter.'5001"><x:formula1>"'.htmlspecialchars(implode(',', $statuses), ENT_XML1 | ENT_QUOTES, 'UTF-8').'"</x:formula1></x:dataValidation>';
             }
-            if ($column['key'] === 'civil_service_eligibility') {
-                $validations .= '<x:dataValidation type="list" allowBlank="1" sqref="'.$letter.'2:'.$letter.'5001"><x:formula1>EligibilityOptions</x:formula1></x:dataValidation>';
-            }
         }
         $zip->addFromString('xl/worksheets/sheet1.xml', '<?xml version="1.0"?><x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:dimension ref="A1:'.$last.'5001"/><x:sheetViews><x:sheetView workbookViewId="0"><x:pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></x:sheetView></x:sheetViews><x:cols>'.$cols.'</x:cols><x:sheetData><x:row r="1" ht="56" customHeight="1">'.$header.'</x:row></x:sheetData><x:dataValidations count="'.substr_count($validations, '<x:dataValidation ').'">'.$validations.'</x:dataValidations></x:worksheet>');
-        $lookup = '';
-        foreach ($eligibilities as $index => $value) {
-            $lookup .= '<x:row r="'.($index + 1).'"><x:c r="A'.($index + 1).'" t="inlineStr"><x:is><x:t>'.htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8').'</x:t></x:is></x:c></x:row>';
-        }
-        $zip->addFromString('xl/worksheets/sheet2.xml', '<?xml version="1.0"?><x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheetData>'.$lookup.'</x:sheetData></x:worksheet>');
         $zip->addFromString('xl/styles.xml', '<?xml version="1.0"?><x:styleSheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:fonts count="2"><x:font><x:sz val="11"/><x:name val="Calibri"/></x:font><x:font><x:b/><x:color rgb="FFFFFFFF"/><x:sz val="11"/><x:name val="Calibri"/></x:font></x:fonts><x:fills count="3"><x:fill><x:patternFill patternType="none"/></x:fill><x:fill><x:patternFill patternType="gray125"/></x:fill><x:fill><x:patternFill patternType="solid"><x:fgColor rgb="FF1F4E78"/><x:bgColor indexed="64"/></x:patternFill></x:fill></x:fills><x:borders count="1"><x:border><x:left/><x:right/><x:top/><x:bottom/><x:diagonal/></x:border></x:borders><x:cellStyleXfs count="1"><x:xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></x:cellStyleXfs><x:cellXfs count="2"><x:xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><x:xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></x:cellXfs></x:styleSheet>');
         $zip->close();
     }
