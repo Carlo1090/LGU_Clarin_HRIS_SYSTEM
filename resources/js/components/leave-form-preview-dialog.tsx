@@ -110,18 +110,7 @@ function Signature({ children }: { children: ReactNode }) {
     );
 }
 
-export function LeaveFormPreview({
-    draft,
-    fields,
-}: {
-    draft?: LeaveDraft;
-    fields?: {
-        leaveType: ReactNode;
-        reason: ReactNode;
-        days: ReactNode;
-        dates: ReactNode;
-    };
-}) {
+function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
     const selectedType = draft
         ? draft.leaveType.trim().toLowerCase()
         : 'vacation leave';
@@ -232,7 +221,6 @@ export function LeaveFormPreview({
                             <h5 className="font-bold">
                                 6.A TYPE OF LEAVE TO BE AVAILED OF
                             </h5>
-                            {fields?.leaveType}
                             <ul className="space-y-1">
                                 {leaveTypes.map(([name, reference]) => (
                                     <Choice
@@ -252,15 +240,14 @@ export function LeaveFormPreview({
                         </section>
                         <section className="space-y-2 p-2">
                             <h5 className="font-bold">6.B DETAILS OF LEAVE</h5>
-                            {fields?.reason ??
-                                (draft && (
-                                    <div>
-                                        <p className="font-semibold">Reason</p>
-                                        <p className="wrap-anywhere whitespace-pre-wrap">
-                                            {draft.reason}
-                                        </p>
-                                    </div>
-                                ))}
+                            {draft && (
+                                <div>
+                                    <p className="font-semibold">Reason</p>
+                                    <p className="wrap-anywhere whitespace-pre-wrap">
+                                        {draft.reason}
+                                    </p>
+                                </div>
+                            )}
                             <div>
                                 <p className="italic">
                                     In case of Vacation/Special Privilege Leave
@@ -321,23 +308,14 @@ export function LeaveFormPreview({
                             <h5 className="font-bold">
                                 6.C NUMBER OF WORKING DAYS APPLIED FOR
                             </h5>
-                            {fields ? (
-                                <>
-                                    {fields.days}
-                                    {fields.dates}
-                                </>
-                            ) : (
-                                <>
-                                    <p className="border-b border-black px-1 font-semibold">
-                                        {draft ? draft.daysRequested : '3 days'}
-                                    </p>
-                                    <FormLine label="INCLUSIVE DATES">
-                                        {draft
-                                            ? `${draft.startDate || '—'} – ${draft.endDate || '—'}`
-                                            : 'November 23–25, 2026'}
-                                    </FormLine>
-                                </>
-                            )}
+                            <p className="border-b border-black px-1 font-semibold">
+                                {draft ? draft.daysRequested : '3 days'}
+                            </p>
+                            <FormLine label="INCLUSIVE DATES">
+                                {draft
+                                    ? `${draft.startDate || '—'} – ${draft.endDate || '—'}`
+                                    : 'November 23–25, 2026'}
+                            </FormLine>
                         </section>
                         <section className="p-2">
                             <h5 className="mb-1 font-bold">6.D COMMUTATION</h5>

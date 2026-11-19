@@ -1,7 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormPreviewDialog, {
-    LeaveFormPreview,
     type LeaveApplicant,
 } from '@/components/leave-form-preview-dialog';
 
@@ -40,47 +39,7 @@ function LeaveRequestForm({
     });
 
     const fieldClass =
-        'w-full rounded border border-gray-500 bg-white px-2 py-1 text-black';
-
-    const draft = {
-        applicant,
-        leaveType:
-            types.find(({ id }) => String(id) === form.data.leave_type_id)
-                ?.name ?? '',
-        startDate: form.data.start_date,
-        endDate: form.data.end_date,
-        daysRequested: form.data.days_requested,
-        reason: form.data.reason,
-    };
-    function dateField(
-        name: 'start_date' | 'end_date' | 'days_requested',
-        label: string,
-    ) {
-        return (
-            <label className="grid gap-1 text-sm">
-                {label}
-                <input
-                    required
-                    type={name === 'days_requested' ? 'number' : 'date'}
-                    min={
-                        name === 'days_requested'
-                            ? 1
-                            : name === 'end_date'
-                              ? form.data.start_date || undefined
-                              : undefined
-                    }
-                    className={fieldClass}
-                    value={form.data[name]}
-                    onChange={(event) => form.setData(name, event.target.value)}
-                />
-                {form.errors[name] && (
-                    <span className="text-destructive">
-                        {form.errors[name]}
-                    </span>
-                )}
-            </label>
-        );
-    }
+        'w-full rounded-xl border border-input bg-background px-3 py-2';
 
     return (
         <section
@@ -90,9 +49,15 @@ function LeaveRequestForm({
             <h2 id="leave-form-heading" className="text-lg font-semibold">
                 New leave request
             </h2>
+            {types.length > 0 && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                    Fill in your details, then preview them on Civil Service
+                    Form 6 before submitting.
+                </p>
+            )}
             {types.length ? (
                 <form
-                    className="mt-4 grid gap-4"
+                    className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
                     onSubmit={(event) => {
                         event.preventDefault();
                         form.post('/hris/portal/my-leave-requests', {
@@ -101,79 +66,103 @@ function LeaveRequestForm({
                         });
                     }}
                 >
-                    <LeaveFormPreview
-                        draft={draft}
-                        fields={{
-                            leaveType: (
-                                <label className="grid gap-1 text-sm">
-                                    Leave type
-                                    <select
-                                        required
-                                        className={fieldClass}
-                                        value={form.data.leave_type_id}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'leave_type_id',
-                                                event.target.value,
-                                            )
-                                        }
-                                    >
-                                        <option value="">
-                                            Select a leave type
-                                        </option>
-                                        {types.map((type) => (
-                                            <option
-                                                key={type.id}
-                                                value={type.id}
-                                            >
-                                                {type.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {form.errors.leave_type_id && (
-                                        <span className="text-destructive">
-                                            {form.errors.leave_type_id}
-                                        </span>
-                                    )}
-                                </label>
-                            ),
-                            reason: (
-                                <label className="grid gap-1 text-sm">
-                                    Reason
-                                    <textarea
-                                        required
-                                        maxLength={2000}
-                                        rows={3}
-                                        className={fieldClass}
-                                        value={form.data.reason}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'reason',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                    {form.errors.reason && (
-                                        <span className="text-destructive">
-                                            {form.errors.reason}
-                                        </span>
-                                    )}
-                                </label>
-                            ),
-                            days: dateField(
-                                'days_requested',
-                                'Requested workdays',
-                            ),
-                            dates: (
-                                <div className="grid grid-cols-2 gap-2">
-                                    {dateField('start_date', 'Start date')}
-                                    {dateField('end_date', 'End date')}
-                                </div>
-                            ),
-                        }}
-                    />
-                    <div className="flex flex-wrap items-center gap-3">
-                        <LeaveFormPreviewDialog draft={draft} />
+                    <label className="grid gap-1 text-sm">
+                        Leave type
+                        <select
+                            required
+                            className={fieldClass}
+                            value={form.data.leave_type_id}
+                            onChange={(event) =>
+                                form.setData(
+                                    'leave_type_id',
+                                    event.target.value,
+                                )
+                            }
+                        >
+                            <option value="">Select a leave type</option>
+                            {types.map((type) => (
+                                <option key={type.id} value={type.id}>
+                                    {type.name}
+                                </option>
+                            ))}
+                        </select>
+                        {form.errors.leave_type_id && (
+                            <span className="text-destructive">
+                                {form.errors.leave_type_id}
+                            </span>
+                        )}
+                    </label>
+                    {(
+                        [
+                            ['start_date', 'Start date'],
+                            ['end_date', 'End date'],
+                            ['days_requested', 'Requested workdays'],
+                        ] as const
+                    ).map(([name, label]) => (
+                        <label key={name} className="grid gap-1 text-sm">
+                            {label}
+                            <input
+                                required
+                                type={
+                                    name === 'days_requested'
+                                        ? 'number'
+                                        : 'date'
+                                }
+                                min={
+                                    name === 'days_requested'
+                                        ? 1
+                                        : name === 'end_date'
+                                          ? form.data.start_date || undefined
+                                          : undefined
+                                }
+                                className={fieldClass}
+                                value={form.data[name]}
+                                onChange={(event) =>
+                                    form.setData(name, event.target.value)
+                                }
+                            />
+                            {form.errors[name] && (
+                                <span className="text-destructive">
+                                    {form.errors[name]}
+                                </span>
+                            )}
+                        </label>
+                    ))}
+                    <label className="grid gap-1 text-sm sm:col-span-2 xl:col-span-4">
+                        Reason
+                        <textarea
+                            required
+                            maxLength={2000}
+                            rows={3}
+                            placeholder="Briefly explain why you’re requesting leave."
+                            className={fieldClass}
+                            value={form.data.reason}
+                            onChange={(event) =>
+                                form.setData('reason', event.target.value)
+                            }
+                        />
+                        {form.errors.reason && (
+                            <span className="text-destructive">
+                                {form.errors.reason}
+                            </span>
+                        )}
+                    </label>
+                    <div className="flex flex-wrap items-center gap-3 border-t pt-4 sm:col-span-2 xl:col-span-4">
+                        <LeaveFormPreviewDialog
+                            draft={{
+                                applicant,
+                                leaveType:
+                                    types.find(
+                                        ({ id }) =>
+                                            String(id) ===
+                                            form.data.leave_type_id,
+                                    )?.name ?? '',
+                                startDate: form.data.start_date,
+                                endDate: form.data.end_date,
+                                daysRequested: form.data.days_requested,
+                                reason: form.data.reason,
+                            }}
+                        />
                         <button
                             type="submit"
                             disabled={form.processing}
