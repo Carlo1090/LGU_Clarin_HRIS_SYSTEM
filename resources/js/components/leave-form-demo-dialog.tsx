@@ -130,16 +130,16 @@ function LeaveFormDemo() {
                         <div className="p-2">
                             <p>1. OFFICE/DEPARTMENT</p>
                             <p className="mt-1 font-semibold">
-                                Municipal Treasurer’s Office
+                                Sample Administrative Office
                             </p>
                         </div>
                         <div className="p-2">
                             <p>2. NAME</p>
                             <dl className="mt-1 grid grid-cols-3 gap-2 text-center">
                                 {[
-                                    ['Last', 'Reyes'],
-                                    ['First', 'Alex'],
-                                    ['Middle', 'Mendoza'],
+                                    ['Last', 'Sample'],
+                                    ['First', 'Jamie'],
+                                    ['Middle', 'Demo'],
                                 ].map(([label, name]) => (
                                     <div
                                         key={label}
@@ -158,12 +158,12 @@ function LeaveFormDemo() {
                     </div>
                     <div className="grid grid-cols-[1.1fr_1.4fr_0.8fr] gap-2 p-2">
                         <FormLine label="3. DATE OF FILING">
-                            November 18, 2026
+                            November 16, 2026
                         </FormLine>
                         <FormLine label="4. POSITION">
-                            Administrative Assistant II
+                            Administrative Aide
                         </FormLine>
-                        <FormLine label="5. SALARY">₱24,000.00</FormLine>
+                        <FormLine label="5. SALARY">₱20,000.00</FormLine>
                     </div>
 
                     <h4 className="border-y border-black px-2 py-1 text-center font-bold">
@@ -195,7 +195,7 @@ function LeaveFormDemo() {
                                 <ul className="mt-0.5 space-y-0.5">
                                     <Choice checked>
                                         Within the Philippines{' '}
-                                        <strong>Bohol</strong>
+                                        <strong>Cebu City</strong>
                                     </Choice>
                                     <Choice>
                                         Abroad (Specify) ____________________
@@ -249,10 +249,10 @@ function LeaveFormDemo() {
                                 6.C NUMBER OF WORKING DAYS APPLIED FOR
                             </h5>
                             <p className="border-b border-black px-1 font-semibold">
-                                2 days
+                                3 days
                             </p>
                             <FormLine label="INCLUSIVE DATES">
-                                November 26–27, 2026
+                                November 23–25, 2026
                             </FormLine>
                         </section>
                         <section className="p-2">
@@ -273,7 +273,7 @@ function LeaveFormDemo() {
                             <h5 className="font-bold">
                                 7.A CERTIFICATION OF LEAVE CREDITS
                             </h5>
-                            <FormLine label="As of">November 18, 2026</FormLine>
+                            <FormLine label="As of">November 16, 2026</FormLine>
                             <table
                                 aria-label="Sample leave credits"
                                 className="w-full border-collapse [&_td]:border [&_td]:border-black [&_td]:p-1 [&_th]:border [&_th]:border-black [&_th]:p-1"
@@ -287,13 +287,13 @@ function LeaveFormDemo() {
                                 </thead>
                                 <tbody>
                                     {[
-                                        ['Total Earned', '12.50', '10.00'],
+                                        ['Total Earned', '18.75', '14.50'],
                                         [
                                             'Less this application',
-                                            '2.00',
+                                            '3.00',
                                             '0.00',
                                         ],
-                                        ['Balance', '10.50', '10.00'],
+                                        ['Balance', '15.75', '14.50'],
                                     ].map(([label, vacation, sick]) => (
                                         <tr key={label}>
                                             <th
@@ -332,7 +332,7 @@ function LeaveFormDemo() {
                             <h5 className="font-bold">7.C APPROVED FOR</h5>
                             <p>
                                 <strong className="border-b border-black px-3">
-                                    2
+                                    3
                                 </strong>{' '}
                                 days with pay
                             </p>
