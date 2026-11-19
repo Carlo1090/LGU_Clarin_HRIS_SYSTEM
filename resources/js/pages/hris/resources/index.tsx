@@ -309,21 +309,6 @@ export default function HrisResourceIndex({
                                 Employees
                             </Link>
                         </Button>
-                        <Button
-                            asChild
-                            variant={
-                                attendanceDirectory ? 'outline' : 'default'
-                            }
-                        >
-                            <Link
-                                href="/hris/attendance?view=entries"
-                                aria-current={
-                                    attendanceDirectory ? undefined : 'page'
-                                }
-                            >
-                                Attendance entries
-                            </Link>
-                        </Button>
                         <DailyTimeRecordDialog
                             url="/hris/attendance/dtr/demo"
                             demo
