@@ -1,4 +1,5 @@
 import { Form, Head, Link, useForm } from '@inertiajs/react';
+import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { Fragment, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -264,22 +265,24 @@ export default function MonthlyAttendanceReport({
     const filters = { month, sort, direction };
 
     return (
-        <main className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-8">
+        <main className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
             <Head title="Monthly Attendance Report" />
-            <header className="space-y-2">
-                <Link href="/hris/attendance" className="text-sm underline">
-                    Attendance Records
-                </Link>
-                <h1 className="text-2xl font-semibold">
+            <AttendanceWorkspaceHeader
+                active="report"
+                month={month}
+                canManage
+            />
+            <section aria-label="Report overview" className="space-y-2">
+                <h2 className="text-xl font-semibold">
                     Monthly Attendance Report
-                </h1>
+                </h2>
                 <p className="text-sm text-muted-foreground">
                     A date with imported punches counts as one attended day. The
                     first punch on a four-punch day is used as the clock-in.
                     Lateness is undetermined when either a clock-in or scheduled
                     start is unavailable.
                 </p>
-            </header>
+            </section>
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <Form
                     key={month}

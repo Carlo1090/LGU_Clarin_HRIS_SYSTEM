@@ -1,4 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import { useRef, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,21 +73,21 @@ export default function ImportAttendanceLogs({
     }
 
     return (
-        <main className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-8">
+        <main className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
             <Head title="Import Attendance Logs" />
-            <header className="space-y-3">
-                <div className="flex flex-wrap gap-4 text-sm">
-                    <Link href="/hris/attendance" className="underline">
-                        Attendance Records
-                    </Link>
-                    <Link href="/hris/employees" className="underline">
-                        Link IDs on Employees
-                    </Link>
-                </div>
-                <h1 className="text-2xl font-semibold">
+            <AttendanceWorkspaceHeader
+                active="import"
+                month={month}
+                canManage
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold">
                     Import Attendance Logs
-                </h1>
-            </header>
+                </h2>
+                <Button asChild variant="outline">
+                    <Link href="/hris/employees">Link IDs on Employees</Link>
+                </Button>
+            </div>
             <form
                 onSubmit={upload}
                 className="space-y-4 rounded-xl border bg-card p-5"

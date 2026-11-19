@@ -2,6 +2,7 @@ import { Form, Head, Link, router, useForm } from '@inertiajs/react';
 import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BiometricIdField from '@/components/biometric-id-field';
+import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -252,89 +253,49 @@ export default function HrisResourceIndex({
         <>
             <Head title={title} />
             <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
-                <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
+                {isAttendance ? (
+                    <AttendanceWorkspaceHeader
+                        active="records"
+                        month={attendanceMonth}
+                        canManage={canManageAttendance}
                     />
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
-                    />
-                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-                        <div>
-                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                {title}
-                            </h1>
-                            <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                                {moduleDescriptions[resource] ??
-                                    'Manage HRIS records and their linked data.'}
-                            </p>
-                        </div>
-                        {resource === 'employees' && canImport && (
-                            <Button
-                                asChild
-                                size="lg"
-                                className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
-                            >
-                                <Link href="/hris/employees/import">
-                                    <FileUp aria-hidden="true" />
-                                    Bulk Import Employees
-                                </Link>
-                            </Button>
-                        )}
-                        {resource === 'leave-applications' && (
-                            <LeaveFormDemoDialog />
-                        )}
-                    </div>
-                </header>
-
-                {isAttendance && (
-                    <nav
-                        aria-label="Attendance views"
-                        className="flex flex-wrap gap-2"
-                    >
-                        <Button
-                            asChild
-                            variant={
-                                attendanceDirectory ? 'default' : 'outline'
-                            }
-                        >
-                            <Link
-                                href="/hris/attendance"
-                                aria-current={
-                                    attendanceDirectory ? 'page' : undefined
-                                }
-                            >
-                                Employees
-                            </Link>
-                        </Button>
-                        <DailyTimeRecordDialog
-                            url="/hris/attendance/dtr/demo"
-                            demo
+                ) : (
+                    <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
                         />
-                        {canManageAttendance && (
-                            <>
-                                <Button asChild variant="outline">
-                                    <Link href="/hris/attendance/logs">
-                                        Import Attendance Logs
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
+                        />
+                        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+                            <div>
+                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                                    {title}
+                                </h1>
+                                <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+                                    {moduleDescriptions[resource] ??
+                                        'Manage HRIS records and their linked data.'}
+                                </p>
+                            </div>
+                            {resource === 'employees' && canImport && (
+                                <Button
+                                    asChild
+                                    size="lg"
+                                    className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
+                                >
+                                    <Link href="/hris/employees/import">
+                                        <FileUp aria-hidden="true" />
+                                        Bulk Import Employees
                                     </Link>
                                 </Button>
-                                <Button asChild variant="outline">
-                                    <Link
-                                        href="/hris/attendance/monthly-report"
-                                        data={
-                                            attendanceMonth
-                                                ? { month: attendanceMonth }
-                                                : undefined
-                                        }
-                                    >
-                                        Monthly Attendance Report
-                                    </Link>
-                                </Button>
-                            </>
-                        )}
-                    </nav>
+                            )}
+                            {resource === 'leave-applications' && (
+                                <LeaveFormDemoDialog />
+                            )}
+                        </div>
+                    </header>
                 )}
 
                 {attendanceMonth && (
