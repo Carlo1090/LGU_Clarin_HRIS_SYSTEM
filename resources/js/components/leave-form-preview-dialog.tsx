@@ -110,7 +110,18 @@ function Signature({ children }: { children: ReactNode }) {
     );
 }
 
-function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
+export function LeaveFormPreview({
+    draft,
+    fields,
+}: {
+    draft?: LeaveDraft;
+    fields?: {
+        leaveType: ReactNode;
+        reason: ReactNode;
+        days: ReactNode;
+        dates: ReactNode;
+    };
+}) {
     const selectedType = draft
         ? draft.leaveType.trim().toLowerCase()
         : 'vacation leave';
@@ -221,6 +232,7 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                             <h5 className="font-bold">
                                 6.A TYPE OF LEAVE TO BE AVAILED OF
                             </h5>
+                            {fields?.leaveType}
                             <ul className="space-y-1">
                                 {leaveTypes.map(([name, reference]) => (
                                     <Choice
@@ -240,14 +252,15 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                         </section>
                         <section className="space-y-2 p-2">
                             <h5 className="font-bold">6.B DETAILS OF LEAVE</h5>
-                            {draft && (
-                                <div>
-                                    <p className="font-semibold">Reason</p>
-                                    <p className="wrap-anywhere whitespace-pre-wrap">
-                                        {draft.reason}
-                                    </p>
-                                </div>
-                            )}
+                            {fields?.reason ??
+                                (draft && (
+                                    <div>
+                                        <p className="font-semibold">Reason</p>
+                                        <p className="wrap-anywhere whitespace-pre-wrap">
+                                            {draft.reason}
+                                        </p>
+                                    </div>
+                                ))}
                             <div>
                                 <p className="italic">
                                     In case of Vacation/Special Privilege Leave
@@ -308,14 +321,23 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                             <h5 className="font-bold">
                                 6.C NUMBER OF WORKING DAYS APPLIED FOR
                             </h5>
-                            <p className="border-b border-black px-1 font-semibold">
-                                {draft ? draft.daysRequested : '3 days'}
-                            </p>
-                            <FormLine label="INCLUSIVE DATES">
-                                {draft
-                                    ? `${draft.startDate || '—'} – ${draft.endDate || '—'}`
-                                    : 'November 23–25, 2026'}
-                            </FormLine>
+                            {fields ? (
+                                <>
+                                    {fields.days}
+                                    {fields.dates}
+                                </>
+                            ) : (
+                                <>
+                                    <p className="border-b border-black px-1 font-semibold">
+                                        {draft ? draft.daysRequested : '3 days'}
+                                    </p>
+                                    <FormLine label="INCLUSIVE DATES">
+                                        {draft
+                                            ? `${draft.startDate || '—'} – ${draft.endDate || '—'}`
+                                            : 'November 23–25, 2026'}
+                                    </FormLine>
+                                </>
+                            )}
                         </section>
                         <section className="p-2">
                             <h5 className="mb-1 font-bold">6.D COMMUTATION</h5>
