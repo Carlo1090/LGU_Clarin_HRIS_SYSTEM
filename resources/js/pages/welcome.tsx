@@ -190,7 +190,7 @@ export default function Welcome() {
                                     src="/images/clarin-officials.png"
                                     alt="Three LGU Clarin officials in municipal uniforms"
                                     width={1293}
-                                    height={1216}
+                                    height={1217}
                                     className="max-h-[600px] w-auto max-w-full object-contain drop-shadow-2xl"
                                 />
                             </div>

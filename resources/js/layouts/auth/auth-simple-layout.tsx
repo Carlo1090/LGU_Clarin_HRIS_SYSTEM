@@ -85,7 +85,7 @@ export default function AuthSimpleLayout({
                                 src="/images/clarin-officials.png"
                                 alt=""
                                 width={1293}
-                                height={1216}
+                                height={1217}
                                 decoding="async"
                                 className="h-full w-full object-contain object-bottom drop-shadow-xl"
                             />

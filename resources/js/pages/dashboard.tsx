@@ -86,7 +86,7 @@ export default function Dashboard({ role, office, cards }: Props) {
                             src="/images/clarin-officials.png"
                             alt=""
                             width={1293}
-                            height={1216}
+                            height={1217}
                             className="absolute right-4 bottom-0 h-[94%] w-[90%] object-contain object-right-bottom lg:right-10"
                         />
                     </div>
