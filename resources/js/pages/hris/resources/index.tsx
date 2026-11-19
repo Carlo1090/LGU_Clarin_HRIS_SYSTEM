@@ -644,8 +644,10 @@ export default function HrisResourceIndex({
 
                 {canLinkBiometricIds && (
                     <p className="text-sm text-muted-foreground">
-                        Enter the Biometric ID from the machine’s enrollment
-                        records. To remove a link, clear the field and save.
+                        Use the ID shown on the biometric device. Save checks
+                        imported logs for a match. Lock prevents changes until
+                        you unlock the ID. To remove an unlocked ID, clear the
+                        field and save.
                     </p>
                 )}
 

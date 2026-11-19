@@ -79,16 +79,28 @@ export default function BiometricIdField({
                     </Button>
                 )}
             </div>
-            <div id={noteId} className="text-xs text-muted-foreground">
+            <div
+                id={noteId}
+                className="max-w-72 space-y-1 text-xs text-muted-foreground"
+            >
                 {error ? (
                     <p role="alert" className="text-destructive">
                         {error}
                     </p>
                 ) : link.id !== null ? (
                     <>
-                        {link.locked && <span>Locked · </span>}
-                        <span className="capitalize">{link.status}</span>
-                        {link.note && <span> · {link.note}</span>}
+                        <p className="font-medium text-foreground">
+                            {link.status === 'verified'
+                                ? 'Verified'
+                                : 'Pending verification'}
+                            {link.locked && ' · Locked'}
+                        </p>
+                        <p>
+                            {link.note ??
+                                (link.status === 'verified'
+                                    ? 'Matching attendance logs found.'
+                                    : 'Select Verify to check the imported attendance logs.')}
+                        </p>
                     </>
                 ) : null}
             </div>

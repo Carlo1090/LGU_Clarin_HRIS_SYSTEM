@@ -31,7 +31,7 @@ class BiometricLinkController
                         throw ValidationException::withMessages(['biometric_id' => 'The saved biometric ID changed. Refresh the employee list and try again.']);
                     }
                     if ($employee->biometric_locked) {
-                        throw ValidationException::withMessages(['biometric_id' => 'Unlock the biometric ID before changing or removing it.']);
+                        throw ValidationException::withMessages(['biometric_id' => 'This ID is locked. Select Unlock before changing or removing it.']);
                     }
 
                     $employee->forceFill(['biometric_id' => $id]);
@@ -100,6 +100,8 @@ class BiometricLinkController
                 'model_id' => $employee->id,
             ]);
         }, attempts: 3);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $locked ? 'Biometric ID locked.' : 'Biometric ID unlocked. You can edit it now.']);
 
         return back();
     }
