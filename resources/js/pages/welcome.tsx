@@ -585,10 +585,10 @@ export default function Welcome() {
                                         data-aos-delay="200"
                                     >
                                         <img
-                                            src="/images/how-it-works-hero.png"
+                                            src="/images/clarin-uniform-portrait.png"
                                             alt=""
-                                            width={1000}
-                                            height={1000}
+                                            width={1536}
+                                            height={1024}
                                             loading="lazy"
                                             decoding="async"
                                             draggable={false}
@@ -986,7 +986,7 @@ export default function Welcome() {
                                         data-aos-delay="100"
                                     >
                                         <img
-                                            src="/images/how-it-works-hero.png"
+                                            src="/images/clarin-uniform-portrait.png"
                                             alt=""
                                             loading="lazy"
                                             decoding="async"
