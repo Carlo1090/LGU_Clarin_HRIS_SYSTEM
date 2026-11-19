@@ -301,3 +301,57 @@
         }
     }
 }
+
+/* Reuse the landing page's transparent hero within the dashboard welcome area. */
+.dashboard-banner-heading {
+    position: relative;
+    min-height: 142px;
+    padding-right: min(34%, 300px);
+}
+.dashboard-banner-heading > div:first-child,
+.dashboard-banner-heading > span {
+    position: relative;
+    z-index: 1;
+}
+.dashboard-hero-art {
+    position: absolute;
+    right: 8px;
+    bottom: -20px;
+    width: min(32%, 275px);
+    height: 166px;
+    overflow: hidden;
+    pointer-events: none;
+}
+.dashboard-hero-accent {
+    position: absolute;
+    inset: 26px 12px 5px 26px;
+    border-radius: 24px;
+    transform: rotate(-6deg);
+    background: linear-gradient(135deg, #a6eb20, #69b518);
+    opacity: 0.85;
+}
+.dashboard-hero-art img {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom right;
+    filter: drop-shadow(0 8px 12px rgba(20, 32, 20, 0.14));
+}
+@media (max-width: 639px) {
+    .dashboard-banner-heading {
+        min-height: 112px;
+        padding-right: 40%;
+        align-content: center;
+    }
+    .dashboard-hero-art {
+        width: 43%;
+        right: -8px;
+        height: 128px;
+    }
+    .dashboard-banner-heading h2 {
+        font-size: 17px;
+    }
+}

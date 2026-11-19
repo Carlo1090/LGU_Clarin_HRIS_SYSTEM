@@ -488,6 +488,16 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                     </p>
                                 </div>
                                 <span>{role}</span>
+                                <div
+                                    className="dashboard-hero-art"
+                                    aria-hidden="true"
+                                >
+                                    <div className="dashboard-hero-accent" />
+                                    <img
+                                        src="/images/clarin-officials.png"
+                                        alt=""
+                                    />
+                                </div>
                             </div>
                             <div
                                 className={cn(
