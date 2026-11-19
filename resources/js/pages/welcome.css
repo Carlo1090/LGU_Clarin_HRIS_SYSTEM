@@ -22,6 +22,19 @@
     box-shadow: 0 12px 32px -24px rgb(28 71 34 / 35%);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+    .public-surface
+        .landing-feature.spotlight-card.aos-init[data-aos='fade-up'] {
+        filter: blur(5px);
+        transition-property: opacity, transform, filter;
+    }
+
+    .public-surface
+        .landing-feature.spotlight-card.aos-animate[data-aos='fade-up'] {
+        filter: none;
+    }
+}
+
 .public-surface .landing-reveal--how .landing-reveal-text {
     max-width: 12em;
     font-size: clamp(1.875rem, 4vw, 2.625rem);
