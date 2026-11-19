@@ -10,7 +10,6 @@ import {
     ChartPie,
     CheckCircle2,
     FileText,
-    Landmark,
     LayoutGrid,
     Lightbulb,
     Play,
@@ -279,20 +278,21 @@ export default function Welcome() {
                                 borderGlow={0.85}
                                 smoothing={0.3}
                             >
-                                <div className="group relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                <div className="relative flex h-full min-h-80 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <div className="relative z-10">
                                         <span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold text-[#142014]">
                                             LGU Clarin
                                         </span>
                                     </div>
-                                    <div className="relative z-10 my-auto flex justify-center">
-                                        <div className="flex size-24 items-center justify-center rounded-2xl bg-[#1C4722] text-[#A6EB20] shadow-xl transition group-hover:scale-105">
-                                            <Landmark
-                                                className="size-11"
-                                                strokeWidth={1.6}
-                                            />
-                                        </div>
-                                    </div>
+                                    <img
+                                        src="/images/feature-municipal-portal.png"
+                                        alt=""
+                                        width={1254}
+                                        height={1254}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="pointer-events-none mx-auto h-36 w-full object-contain"
+                                    />
                                     <p className="relative z-10 text-xs font-medium text-[#142014]/80">
                                         Centralized municipal employee portal.
                                     </p>
@@ -311,14 +311,18 @@ export default function Welcome() {
                                 borderGlow={0.85}
                                 smoothing={0.3}
                             >
-                                <div className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                <div className="relative flex h-full min-h-80 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <h3 className="relative z-10 text-sm leading-snug font-bold">
                                         Automated 201 Files &amp; Alerts
                                     </h3>
-                                    <ArrowUpRight
-                                        aria-hidden="true"
-                                        className="pointer-events-none absolute -right-6 -bottom-6 size-56 text-[#4D940D]/25"
-                                        strokeWidth={2.5}
+                                    <img
+                                        src="/images/feature-employee-files.png"
+                                        alt=""
+                                        width={1254}
+                                        height={1254}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="pointer-events-none mx-auto h-36 w-full object-contain"
                                     />
                                     <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
                                         Maintain updated employee service
@@ -340,17 +344,19 @@ export default function Welcome() {
                                 borderGlow={0.85}
                                 smoothing={0.3}
                             >
-                                <div className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                <div className="relative flex h-full min-h-80 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <h3 className="relative z-10 text-sm leading-snug font-bold">
                                         Unified Department Dashboard
                                     </h3>
-                                    <div
-                                        aria-hidden="true"
-                                        className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 -space-x-8"
-                                    >
-                                        <span className="size-32 rounded-full bg-[#86CC14]/35" />
-                                        <span className="size-32 rounded-full bg-[#86CC14]/35" />
-                                    </div>
+                                    <img
+                                        src="/images/feature-department-dashboard.png"
+                                        alt=""
+                                        width={1254}
+                                        height={1254}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="pointer-events-none mx-auto h-36 w-full object-contain"
+                                    />
                                     <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
                                         View all municipal offices, leave
                                         credits, and personnel statuses in one
@@ -371,16 +377,19 @@ export default function Welcome() {
                                 borderGlow={0.85}
                                 smoothing={0.3}
                             >
-                                <div className="relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
+                                <div className="relative flex h-full min-h-80 flex-col justify-between gap-2 overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <h3 className="relative z-10 text-sm leading-snug font-bold">
                                         Role-Based HR Insights
                                     </h3>
-                                    <span
-                                        aria-hidden="true"
-                                        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[150px] font-black text-[#95CE1B]/30 select-none"
-                                    >
-                                        §
-                                    </span>
+                                    <img
+                                        src="/images/feature-role-insights.png"
+                                        alt=""
+                                        width={1254}
+                                        height={1254}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="pointer-events-none mx-auto h-36 w-full object-contain"
+                                    />
                                     <p className="relative z-10 text-xs leading-relaxed text-[#142014]/85">
                                         Access role-specific HR tools and
                                         reports tailored to employees,
