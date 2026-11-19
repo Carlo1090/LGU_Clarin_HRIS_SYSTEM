@@ -20,6 +20,7 @@ class LeaveReviewController extends Controller
         'HRMO Head' => ['hr_validated', 'approved', 'Approve leave'],
     ];
 
+    /** @return array{string, string, string}|null */
     public static function stage(User $user): ?array
     {
         return $user->is_active ? (self::STAGES[$user->role?->name] ?? null) : null;
@@ -29,7 +30,7 @@ class LeaveReviewController extends Controller
     {
         $user = $request->user();
         $stage = self::stage($user);
-        abort_unless($stage, 403);
+        abort_unless($stage !== null, 403);
         $data = $request->validate(['decision' => ['required', 'in:advance,reject']]);
 
         DB::transaction(function () use ($user, $stage, $data, $leave): void {

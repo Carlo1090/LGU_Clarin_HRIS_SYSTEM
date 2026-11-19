@@ -484,7 +484,7 @@ class HrisResourceController extends Controller
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'fields' => $fields,
             'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()]
-                + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note']) : [])
+                + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
                 + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
             'editing' => $request->integer('edit') ?: null,
         ]);
@@ -683,7 +683,10 @@ class HrisResourceController extends Controller
         return to_route('hris.resources.index', $parameters);
     }
 
-    /** @param Collection<int, AttendancePunch> $punchDays */
+    /**
+     * @param  Collection<int, AttendancePunch>  $punchDays
+     * @return array{attendance_complete_days: int, attendance_review_days: int}
+     */
     private function attendanceLogSummary(Employee $employee, Collection $punchDays): array
     {
         $complete = $review = 0;
@@ -700,10 +703,10 @@ class HrisResourceController extends Controller
             }
         }
         foreach ($punchDays as $day) {
-            if ($manualDays->has($day->attendance_day)) {
+            if ($manualDays->has($day->getAttribute('attendance_day'))) {
                 continue;
             }
-            if ((int) $day->punch_count === AttendancePunch::DTR_PUNCH_COUNT) {
+            if ((int) $day->getAttribute('punch_count') === AttendancePunch::DTR_PUNCH_COUNT) {
                 $complete++;
             } else {
                 $review++;

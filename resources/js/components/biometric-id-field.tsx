@@ -15,14 +15,21 @@ export default function BiometricIdField({
 }) {
     const savedId = link.id?.toString() ?? '';
     const form = useForm({ biometric_id: savedId });
-    const error = form.errors.biometric_id;
+    const lockForm = useForm({ locked: !link.locked });
+    const url = `/hris/employees/${employeeId}/biometric-id`;
+    const busy = form.processing || lockForm.processing;
+    const dirty = form.data.biometric_id !== savedId;
+    const canVerify = !dirty && link.id !== null && link.status === 'pending';
+    const canSave = !link.locked && dirty;
+    const error = form.errors.biometric_id ?? lockForm.errors.locked;
     const noteId = `biometric-note-${employeeId}`;
 
     function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        form.put(`/hris/employees/${employeeId}/biometric-id`, {
-            preserveScroll: true,
-        });
+        if (!busy && (canSave || canVerify)) {
+            form.transform((data) => ({ ...data, verify_only: canVerify }));
+            form.put(url, { preserveScroll: true });
+        }
     }
 
     return (
@@ -37,33 +44,63 @@ export default function BiometricIdField({
                     aria-label={`Biometric ID for ${employeeNumber}`}
                     aria-invalid={Boolean(error)}
                     aria-describedby={noteId}
-                    disabled={form.processing}
+                    disabled={busy}
+                    readOnly={link.locked}
                     value={form.data.biometric_id}
                     onChange={(event) => {
                         form.setData('biometric_id', event.target.value);
                         form.clearErrors('biometric_id');
                     }}
                 />
-                <Button
-                    size="sm"
-                    type="submit"
-                    variant="outline"
-                    disabled={
-                        form.processing || form.data.biometric_id === savedId
-                    }
-                >
-                    {form.processing ? 'Saving…' : 'Save'}
-                </Button>
+                {(!link.locked || canVerify) && (
+                    <Button
+                        size="sm"
+                        type="submit"
+                        variant="outline"
+                        disabled={busy || (!canSave && !canVerify)}
+                    >
+                        {canVerify ? 'Verify' : 'Save'}
+                    </Button>
+                )}
+                {link.id !== null && (
+                    <Button
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                        aria-label={`${link.locked ? 'Unlock' : 'Lock'} biometric ID for ${employeeNumber}`}
+                        disabled={busy || dirty}
+                        onClick={() =>
+                            lockForm.patch(`${url}/lock`, {
+                                preserveScroll: true,
+                            })
+                        }
+                    >
+                        {link.locked ? 'Unlock' : 'Lock'}
+                    </Button>
+                )}
             </div>
-            <div id={noteId} className="text-xs text-muted-foreground">
+            <div
+                id={noteId}
+                className="max-w-72 space-y-1 text-xs text-muted-foreground"
+            >
                 {error ? (
                     <p role="alert" className="text-destructive">
                         {error}
                     </p>
                 ) : link.id !== null ? (
                     <>
-                        <span className="capitalize">{link.status}</span>
-                        {link.note && <span> · {link.note}</span>}
+                        <p className="font-medium text-foreground">
+                            {link.status === 'verified'
+                                ? 'Verified'
+                                : 'Pending verification'}
+                            {link.locked && ' · Locked'}
+                        </p>
+                        <p>
+                            {link.note ??
+                                (link.status === 'verified'
+                                    ? 'Matching attendance logs found.'
+                                    : 'Select Verify to check the imported attendance logs.')}
+                        </p>
                     </>
                 ) : null}
             </div>

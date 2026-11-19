@@ -22,6 +22,9 @@ class UpdateBiometricLinkRequest extends FormRequest
     /** @return array<string, list<string>> */
     public function rules(): array
     {
-        return ['biometric_id' => ['present', 'nullable', 'integer', 'between:1,4294967295']];
+        return [
+            'biometric_id' => ['present', 'nullable', 'integer', 'between:1,4294967295'],
+            'verify_only' => ['sometimes', 'boolean'],
+        ];
     }
 }

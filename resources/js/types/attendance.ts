@@ -1,5 +1,6 @@
 export type EmployeeBiometricLink = {
     id: number | null;
+    locked: boolean;
     status?: 'pending' | 'verified';
     note?: string | null;
 };

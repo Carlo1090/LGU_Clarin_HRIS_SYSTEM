@@ -309,31 +309,30 @@ export default function HrisResourceIndex({
                                 Employees
                             </Link>
                         </Button>
-                        <Button
-                            asChild
-                            variant={
-                                attendanceDirectory ? 'outline' : 'default'
-                            }
-                        >
-                            <Link
-                                href="/hris/attendance?view=entries"
-                                aria-current={
-                                    attendanceDirectory ? undefined : 'page'
-                                }
-                            >
-                                Attendance entries
-                            </Link>
-                        </Button>
                         <DailyTimeRecordDialog
                             url="/hris/attendance/dtr/demo"
                             demo
                         />
                         {canManageAttendance && (
-                            <Button asChild variant="outline">
-                                <Link href="/hris/attendance/logs">
-                                    Import Attendance Logs
-                                </Link>
-                            </Button>
+                            <>
+                                <Button asChild variant="outline">
+                                    <Link href="/hris/attendance/logs">
+                                        Import Attendance Logs
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link
+                                        href="/hris/attendance/monthly-report"
+                                        data={
+                                            attendanceMonth
+                                                ? { month: attendanceMonth }
+                                                : undefined
+                                        }
+                                    >
+                                        Monthly Attendance Report
+                                    </Link>
+                                </Button>
+                            </>
                         )}
                     </nav>
                 )}
@@ -630,8 +629,10 @@ export default function HrisResourceIndex({
 
                 {canLinkBiometricIds && (
                     <p className="text-sm text-muted-foreground">
-                        Enter the Biometric ID from the machine’s enrollment
-                        records. To remove a link, clear the field and save.
+                        Use the ID shown on the biometric device. Save checks
+                        imported logs for a match. Lock prevents changes until
+                        you unlock the ID. To remove an unlocked ID, clear the
+                        field and save.
                     </p>
                 )}
 
@@ -699,7 +700,7 @@ export default function HrisResourceIndex({
                                             typeof row.id === 'number' && (
                                                 <td className="px-3 py-3">
                                                     <BiometricIdField
-                                                        key={`${row.id}-${row.biometric_id ?? ''}`}
+                                                        key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
                                                         employeeId={row.id}
                                                         employeeNumber={String(
                                                             row.employee_number,
@@ -710,6 +711,9 @@ export default function HrisResourceIndex({
                                                                 'number'
                                                                     ? row.biometric_id
                                                                     : null,
+                                                            locked:
+                                                                row.biometric_locked ===
+                                                                true,
                                                             status:
                                                                 row.biometric_status ===
                                                                 'verified'

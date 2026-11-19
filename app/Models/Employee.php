@@ -27,7 +27,7 @@ class Employee extends Model
 
     protected function casts(): array
     {
-        return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'biometric_id' => 'integer', 'custom_fields' => 'array'];
+        return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'biometric_id' => 'integer', 'biometric_locked' => 'boolean', 'custom_fields' => 'array'];
     }
 
     /** @return BelongsTo<User, $this> */

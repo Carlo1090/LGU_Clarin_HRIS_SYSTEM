@@ -10,6 +10,7 @@ use App\Http\Controllers\Hris\DailyTimeRecordController;
 use App\Http\Controllers\Hris\EmployeeImportController;
 use App\Http\Controllers\Hris\HrisResourceController;
 use App\Http\Controllers\Hris\LeaveReviewController;
+use App\Http\Controllers\Hris\MonthlyAttendanceReportController;
 use App\Http\Controllers\Hris\PortalController;
 use App\Http\Middleware\EnsureHrisAccountReady;
 use Illuminate\Support\Facades\Route;
@@ -45,7 +46,10 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
         Route::post('leave-applications/{leave}/review', LeaveReviewController::class)->name('leave.review');
         Route::get('attendance/logs', [AttendanceLogImportController::class, 'index'])->name('attendance-logs.index');
         Route::post('attendance/logs', [AttendanceLogImportController::class, 'store'])->name('attendance-logs.store');
+        Route::get('attendance/monthly-report', [MonthlyAttendanceReportController::class, 'index'])->name('attendance-report.index');
+        Route::put('attendance/monthly-report/{employee}/clock-in-rule', [MonthlyAttendanceReportController::class, 'saveRule'])->whereNumber('employee')->name('attendance-report.clock-in-rule.update');
         Route::put('employees/{employee}/biometric-id', BiometricLinkController::class)->whereNumber('employee')->name('employees.biometric-id.update');
+        Route::patch('employees/{employee}/biometric-id/lock', [BiometricLinkController::class, 'setLock'])->whereNumber('employee')->name('employees.biometric-id.lock');
         Route::get('attendance/dtr/demo', [DailyTimeRecordController::class, 'demo'])->name('attendance.dtr.demo');
         Route::get('attendance/dtr/{employee}', DailyTimeRecordController::class)->whereNumber('employee')->name('attendance.dtr');
         Route::get('attendance-corrections', [AttendanceCorrectionController::class, 'index'])->name('attendance-corrections.index');

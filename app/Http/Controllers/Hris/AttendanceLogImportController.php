@@ -8,6 +8,7 @@ use App\Models\AttendancePunch;
 use App\Services\AttendanceLogParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,15 +22,21 @@ class AttendanceLogImportController
             'batch' => ['sometimes', 'integer', 'min:1'],
             'biometric_id' => ['sometimes', 'integer', 'between:1,4294967295'],
             'unassigned' => ['sometimes', 'in:1'],
+            'month' => ['sometimes', 'required', 'date_format:Y-m', 'regex:/^[1-9][0-9]{3}-/'],
         ]);
         $id = isset($filters['biometric_id']) ? (int) $filters['biometric_id'] : null;
         $unassigned = isset($filters['unassigned']);
+        $month = $filters['month'] ?? null;
         $batches = AttendanceImport::query()->whereNotNull('file_sha256');
         $batch = isset($filters['batch']) ? $batches->findOrFail($filters['batch']) : $batches->latest('id')->first();
 
-        $groups = AttendancePunch::query()
-            ->leftJoin('employees as owner', 'owner.biometric_id', '=', 'attendance_punches.biometric_id')
+        $punchQuery = AttendancePunch::query()
             ->when($unassigned, fn ($query) => $query->unassigned())
+            ->when($month !== null, fn ($query) => $query->whereBetween('punched_at', [
+                $month.'-01 00:00:00', Date::parse($month.'-01')->endOfMonth()->toDateString().' 23:59:59',
+            ]));
+        $groups = (clone $punchQuery)
+            ->leftJoin('employees as owner', 'owner.biometric_id', '=', 'attendance_punches.biometric_id')
             ->selectRaw('attendance_punches.biometric_id, owner.employee_number, owner.first_name, owner.last_name, COUNT(*) as punch_count, MIN(punched_at) as first_punch, MAX(punched_at) as last_punch')
             ->groupBy('attendance_punches.biometric_id', 'owner.employee_number', 'owner.first_name', 'owner.last_name')
             ->orderBy('attendance_punches.biometric_id')
@@ -39,8 +46,9 @@ class AttendanceLogImportController
             'batch' => $batch?->only(['file_name', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count', 'clock_offset_seconds', 'invalid_lines']),
             'groups' => $groups,
             'unassigned' => $unassigned,
+            'month' => $month,
             'selectedId' => $id,
-            'punches' => $id === null ? null : AttendancePunch::query()->where('biometric_id', $id)
+            'punches' => $id === null ? null : $punchQuery->where('biometric_id', $id)
                 ->orderBy('punched_at')->simplePaginate(50, ['id', 'punched_at'], 'punch_page')->withQueryString(),
         ]);
     }

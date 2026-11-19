@@ -62,14 +62,14 @@ class DailyTimeRecordController extends Controller
                 'amIn' => $record->time_in ? Date::parse($record->time_in)->format('H:i') : null,
                 'pmOut' => $record->time_out ? Date::parse($record->time_out)->format('H:i') : null,
                 'remarks' => $record->status === 'present' ? null : ucfirst(str_replace('_', ' ', $record->status)),
-            ]);
+            ])->all();
 
         $punchTimes = $punches->whereBetween('punched_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->orderBy('punched_at')->pluck('punched_at')
             ->groupBy(fn (string $time) => (int) substr($time, 8, 2))
             ->map(fn ($times) => $times->map(fn (string $time) => substr($time, 11))->all());
         foreach ($punchTimes as $day => $times) {
-            if ($records->has($day)) {
+            if (isset($records[$day])) {
                 continue;
             }
             $count = count($times);
@@ -86,7 +86,7 @@ class DailyTimeRecordController extends Controller
             'month' => $calendar->format('Y-m'),
             'period' => $period,
             'periodLabel' => $periodLabel,
-            'records' => (object) $records->all(),
+            'records' => (object) $records,
             'punchTimes' => (object) $punchTimes->all(),
             'previewUrl' => route('hris.attendance.dtr', $employee, false),
             'backUrl' => $selfService
