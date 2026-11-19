@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Hris;
 use App\Http\Requests\Hris\UpdateBiometricLinkRequest;
 use App\Models\AuditLog;
 use App\Models\Employee;
+use App\Services\BiometricLinkVerifier;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,37 +16,45 @@ use Inertia\Inertia;
 
 class BiometricLinkController
 {
-    public function __invoke(UpdateBiometricLinkRequest $request, Employee $employee): RedirectResponse
+    public function __invoke(UpdateBiometricLinkRequest $request, Employee $employee, BiometricLinkVerifier $verifier): RedirectResponse
     {
         $input = $request->validated('biometric_id');
         $id = $input === null ? null : (int) $input;
 
         try {
-            DB::transaction(function () use ($request, $employee, $id): void {
+            $changed = DB::transaction(function () use ($request, $employee, $id, $verifier): bool {
                 $employee = Employee::query()->lockForUpdate()->findOrFail($employee->id);
                 $old = $employee->biometric_id;
-                if ($old === $id) {
-                    return;
+
+                if ($old !== $id) {
+                    if ($request->validated('verify_only')) {
+                        throw ValidationException::withMessages(['biometric_id' => 'The saved biometric ID changed. Refresh the employee list and try again.']);
+                    }
+                    if ($employee->biometric_locked) {
+                        throw ValidationException::withMessages(['biometric_id' => 'Unlock the biometric ID before changing or removing it.']);
+                    }
+
+                    $employee->forceFill(['biometric_id' => $id]);
+                    $employee->biometric_status = 'pending';
+                    $employee->biometric_note = null;
+                    $employee->biometric_verified_at = null;
+                    $employee->biometric_verified_by = null;
+                    $employee->save();
+
+                    AuditLog::query()->create([
+                        'user_id' => $request->user()->id,
+                        'action' => 'employee.biometric_link_updated',
+                        'model_type' => Employee::class,
+                        'model_id' => $employee->id,
+                        'metadata' => json_encode(['old' => $old, 'new' => $id], JSON_THROW_ON_ERROR),
+                    ]);
                 }
 
-                if ($employee->biometric_locked) {
-                    throw ValidationException::withMessages(['biometric_id' => 'Unlock the biometric ID before changing or removing it.']);
+                if ($id !== null) {
+                    $verifier->verifyPending($request->user(), $employee->id);
                 }
 
-                $employee->forceFill(['biometric_id' => $id]);
-                $employee->biometric_status = 'pending';
-                $employee->biometric_note = null;
-                $employee->biometric_verified_at = null;
-                $employee->biometric_verified_by = null;
-                $employee->save();
-
-                AuditLog::query()->create([
-                    'user_id' => $request->user()->id,
-                    'action' => 'employee.biometric_link_updated',
-                    'model_type' => Employee::class,
-                    'model_id' => $employee->id,
-                    'metadata' => json_encode(['old' => $old, 'new' => $id], JSON_THROW_ON_ERROR),
-                ]);
+                return $old !== $id;
             }, attempts: 3);
         } catch (UniqueConstraintViolationException $exception) {
             $owner = Employee::query()->where('biometric_id', $id)->value('employee_number');
@@ -56,7 +65,12 @@ class BiometricLinkController
             throw ValidationException::withMessages(['biometric_id' => "Biometric ID {$id} is already linked to {$owner}."]);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $id === null ? 'Biometric ID removed.' : 'Biometric ID saved.']);
+        $message = match (true) {
+            $id === null => 'Biometric ID removed.',
+            $changed => 'Biometric ID saved.',
+            default => 'Biometric ID checked.',
+        };
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
         return back();
     }

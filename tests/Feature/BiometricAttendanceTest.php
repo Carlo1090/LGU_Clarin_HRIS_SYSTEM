@@ -79,7 +79,9 @@ test('saving or correcting an employee biometric ID links historical and future 
     $this->from('/hris/employees')->patch($lockUrl, ['locked' => true])->assertSessionHasErrors('locked');
     $this->from('/hris/employees')->put($linkUrl, ['biometric_id' => '00015'])->assertRedirect('/hris/employees');
     expect($employee->refresh()->biometric_id)->toBe(15)
-        ->and($employee->biometric_status)->toBe('pending')
+        ->and($employee->biometric_status)->toBe('verified')
+        ->and($employee->biometric_verified_by)->toBe($hr->id)
+        ->and($employee->biometric_note)->toContain('Only 4')
         ->and($employee->attendancePunches()->count())->toBe(4)
         ->and(AttendancePunch::query()->unassigned()->count())->toBe(0);
     $this->assertDatabaseHas('audit_logs', ['user_id' => $hr->id, 'action' => 'employee.biometric_link_updated', 'model_id' => $employee->id]);
@@ -105,7 +107,7 @@ test('saving or correcting an employee biometric ID links historical and future 
     expect($employee->refresh()->biometric_status)->toBe('verified')
         ->and($employee->biometric_locked)->toBeTrue()
         ->and($employee->biometric_verified_by)->toBe($hr->id)
-        ->and($employee->biometric_note)->toContain('Only 5')
+        ->and($employee->biometric_note)->toContain('Only 4')
         ->and($employee->attendancePunches()->count())->toBe(5);
     $this->getJson($dtr)->assertJsonPath('records.20.remarks', 'Review 1 punch(es)')
         ->assertJsonPath('punchTimes.20', ['08:00:00']);
@@ -126,16 +128,38 @@ test('verification reports missing punches and dates before hire', function () {
     $hr = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create();
     $early = Employee::factory()->create(['date_hired' => '2026-10-19']);
     $missing = Employee::factory()->create();
+    $valid = Employee::factory()->create(['date_hired' => '2026-10-19']);
     $this->actingAs($hr)->from('/hris/employees')
         ->put("/hris/employees/{$early->id}/biometric-id", ['biometric_id' => 15])->assertRedirect();
     $this->put("/hris/employees/{$missing->id}/biometric-id", ['biometric_id' => 30])->assertRedirect();
-    $this->post('/hris/attendance/logs', ['file' => UploadedFile::fake()->createWithContent('check.dat', "15\t2026-10-18 08:00:00\n")])
+    $this->put("/hris/employees/{$valid->id}/biometric-id", ['biometric_id' => 31])->assertRedirect();
+    expect($valid->refresh()->biometric_status)->toBe('pending');
+    $this->post('/hris/attendance/logs', ['file' => UploadedFile::fake()->createWithContent('check.dat', "15\t2026-10-18 08:00:00\n31\t2026-10-19 08:00:00\n")])
         ->assertSessionHasNoErrors()->assertRedirect();
 
     expect($early->refresh()->biometric_status)->toBe('pending')
         ->and($early->biometric_note)->toContain('before')
         ->and($missing->refresh()->biometric_status)->toBe('pending')
-        ->and($missing->biometric_note)->toContain('No imported punches');
+        ->and($missing->biometric_note)->toContain('No imported punches')
+        ->and($valid->refresh()->biometric_status)->toBe('verified');
+});
+
+test('pending biometric links can be verified without changing a locked or stale ID', function () {
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+    $this->actingAs($hr)->post('/hris/attendance/logs', [
+        'file' => UploadedFile::fake()->createWithContent('existing.dat', "15\t2026-10-19 07:56:00\n"),
+    ])->assertSessionHasNoErrors();
+    $employee = Employee::factory()->create(['date_hired' => '2020-01-01']);
+    $employee->forceFill(['biometric_id' => 15, 'biometric_status' => 'pending'])->save();
+    $url = "/hris/employees/{$employee->id}/biometric-id";
+
+    $this->from('/hris/employees')->put($url, ['biometric_id' => 16, 'verify_only' => true])->assertSessionHasErrors('biometric_id');
+    expect($employee->refresh()->biometric_id)->toBe(15);
+    $this->patch($url.'/lock', ['locked' => true])->assertSessionHasNoErrors();
+    $this->put($url, ['biometric_id' => 15, 'verify_only' => true])->assertSessionHasNoErrors();
+    expect($employee->refresh()->biometric_status)->toBe('verified')
+        ->and($employee->biometric_locked)->toBeTrue()
+        ->and($employee->biometric_id)->toBe(15);
 });
 
 test('department heads cannot import logs or view or edit biometric IDs', function () {

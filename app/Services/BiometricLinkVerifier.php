@@ -7,11 +7,12 @@ use App\Models\User;
 
 class BiometricLinkVerifier
 {
-    public function verifyPending(User $actor): void
+    public function verifyPending(User $actor, ?int $employeeId = null): void
     {
         $minimum = (int) config('attendance.minimum_verification_punches', 50);
 
         Employee::query()->whereNotNull('biometric_id')->where('biometric_status', 'pending')
+            ->when($employeeId !== null, fn ($query) => $query->whereKey($employeeId))
             ->withMin('attendancePunches as first_punch', 'punched_at')->withCount('attendancePunches')
             ->chunkById(100, function ($employees) use ($actor, $minimum): void {
                 foreach ($employees as $employee) {

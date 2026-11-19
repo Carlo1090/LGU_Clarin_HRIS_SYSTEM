@@ -19,12 +19,15 @@ export default function BiometricIdField({
     const url = `/hris/employees/${employeeId}/biometric-id`;
     const busy = form.processing || lockForm.processing;
     const dirty = form.data.biometric_id !== savedId;
+    const canVerify = !dirty && link.id !== null && link.status === 'pending';
+    const canSave = !link.locked && dirty;
     const error = form.errors.biometric_id ?? lockForm.errors.locked;
     const noteId = `biometric-note-${employeeId}`;
 
     function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!link.locked && !busy && dirty) {
+        if (!busy && (canSave || canVerify)) {
+            form.transform((data) => ({ ...data, verify_only: canVerify }));
             form.put(url, { preserveScroll: true });
         }
     }
@@ -49,14 +52,14 @@ export default function BiometricIdField({
                         form.clearErrors('biometric_id');
                     }}
                 />
-                {!link.locked && (
+                {(!link.locked || canVerify) && (
                     <Button
                         size="sm"
                         type="submit"
                         variant="outline"
-                        disabled={busy || !dirty}
+                        disabled={busy || (!canSave && !canVerify)}
                     >
-                        {form.processing ? 'Saving…' : 'Save'}
+                        {canVerify ? 'Verify' : 'Save'}
                     </Button>
                 )}
                 {link.id !== null && (
