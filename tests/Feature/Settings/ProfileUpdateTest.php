@@ -4,11 +4,36 @@ namespace Tests\Feature\Settings;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileUpdateTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_photo_upload_replaces_the_picture_and_rejects_invalid_files(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jwZkAAAAASUVORK5CYII=');
+
+        $upload = fn () => $this->actingAs($user)->post(route('profile.photo.update'), [
+            'photo' => UploadedFile::fake()->createWithContent('photo.png', $png),
+        ])->assertSessionHasNoErrors()->assertRedirect(route('profile.edit'));
+
+        $upload();
+        $first = $user->refresh()->avatar;
+        $this->get($first)->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->post(route('profile.photo.update'), ['photo' => UploadedFile::fake()->createWithContent('bad.png', 'plain text')])
+            ->assertSessionHasErrors('photo');
+        $this->assertSame($first, $user->refresh()->avatar);
+        $upload();
+        $this->assertNotSame($first, $user->refresh()->avatar);
+        Storage::disk('local')->assertMissing(ltrim($first, '/'));
+        $this->post(route('logout'));
+        $this->get($user->avatar)->assertRedirect(route('login'));
+    }
 
     public function test_profile_page_is_displayed()
     {

@@ -95,12 +95,12 @@ class DashboardInsights
 
         if ($canLeave) {
             $href = $role === 'Employee' ? '/hris/portal/my-leave-requests' : '/hris/leave-applications';
-            $rows = (clone $leaves)->with(['employee', 'leaveType'])
+            $rows = (clone $leaves)->with(['employee' => fn ($query) => $query->addSelect(['avatar' => Employee::accountAvatarQuery()]), 'leaveType'])
                 ->whereBetween('start_date', [$start->toDateString(), $end->toDateString()])
                 ->latest('start_date')->latest('id')->limit(25)->get()
                 ->map(fn (LeaveApplication $row) => [
                     'id' => 'leave-'.$row->id, 'reference' => 'LR-'.str_pad((string) $row->id, 4, '0', STR_PAD_LEFT),
-                    'subject' => trim(($row->employee->first_name ?? '').' '.($row->employee->last_name ?? '')) ?: 'Employee record',
+                    'avatar' => $row->employee?->avatar, 'subject' => trim(($row->employee->first_name ?? '').' '.($row->employee->last_name ?? '')) ?: 'Employee record',
                     'description' => $row->leaveType->name ?? 'Leave request', 'date' => (string) $row->start_date,
                     'status' => (string) $row->status, 'value' => (float) $row->days_requested, 'unit' => 'days', 'href' => $href,
                 ])->all();
@@ -160,8 +160,8 @@ class DashboardInsights
                 $this->task('Awaiting disbursement', 'Approved payrolls awaiting payment.', (clone $query)->where('status', 'approved')->count(), '/hris/payrolls', 'green'),
                 $this->task('Payroll errors', 'Entries that need a closer look.', (clone $query)->where('status', 'error')->count(), '/hris/payrolls', 'blue'),
             ],
-            'records' => ['title' => 'Recent payrolls', 'description' => 'The latest 25 payroll records in this period.', 'valueLabel' => 'Net pay (PHP)', 'data' => (clone $query)->with('employee')->latest('id')->limit(25)->get()->map(fn (Payroll $row) => [
-                'id' => 'payroll-'.$row->id, 'reference' => 'PAY-'.str_pad((string) $row->id, 4, '0', STR_PAD_LEFT), 'subject' => trim(($row->employee->first_name ?? '').' '.($row->employee->last_name ?? '')) ?: 'Payroll record', 'description' => 'Employee payroll', 'date' => $row->created_at?->toDateString(), 'status' => (string) $row->status, 'value' => (float) $row->net_pay, 'unit' => 'PHP', 'href' => '/hris/payrolls',
+            'records' => ['title' => 'Recent payrolls', 'description' => 'The latest 25 payroll records in this period.', 'valueLabel' => 'Net pay (PHP)', 'data' => (clone $query)->with(['employee' => fn ($query) => $query->addSelect(['avatar' => Employee::accountAvatarQuery()])])->latest('id')->limit(25)->get()->map(fn (Payroll $row) => [
+                'id' => 'payroll-'.$row->id, 'reference' => 'PAY-'.str_pad((string) $row->id, 4, '0', STR_PAD_LEFT), 'avatar' => $row->employee?->avatar, 'subject' => trim(($row->employee->first_name ?? '').' '.($row->employee->last_name ?? '')) ?: 'Payroll record', 'description' => 'Employee payroll', 'date' => $row->created_at?->toDateString(), 'status' => (string) $row->status, 'value' => (float) $row->net_pay, 'unit' => 'PHP', 'href' => '/hris/payrolls',
             ])->all()],
         ];
     }

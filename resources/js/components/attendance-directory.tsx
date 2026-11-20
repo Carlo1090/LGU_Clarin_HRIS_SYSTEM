@@ -1,5 +1,6 @@
+import { DirectorySearch } from '@/components/table-search';
 import { WorkspaceMetrics } from '@/components/workspace-metrics';
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import {
     CalendarCheck2,
     CalendarClock,
@@ -14,12 +15,13 @@ import RecordPagination, {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useInitials } from '@/hooks/use-initials';
+import PersonAvatar from '@/components/person-avatar';
 
 type EmployeeAttendance = {
     id: number;
     name: string;
     employee_number: string;
+    avatar?: string | null;
     department: string | null;
     attendance_complete_days: number;
     attendance_review_days: number;
@@ -70,7 +72,7 @@ export default function AttendanceDirectory({
     canManageAttendance,
     records,
 }: AttendanceDirectoryProps) {
-    const initials = useInitials();
+    const search = new URL(usePage().url, 'http://localhost').searchParams;
     const totals = { complete: 0, review: 0, empty: 0 };
     for (const employee of records.data) totals[statusFor(employee)]++;
     const monthLabel = new Intl.DateTimeFormat('en-PH', {
@@ -120,6 +122,17 @@ export default function AttendanceDirectory({
                         method="get"
                         className="flex max-w-full flex-wrap items-end gap-2"
                     >
+                        {['q', 'column'].map(
+                            (key) =>
+                                search.has(key) && (
+                                    <input
+                                        key={key}
+                                        type="hidden"
+                                        name={key}
+                                        value={search.get(key) ?? ''}
+                                    />
+                                ),
+                        )}
                         <label className="grid min-w-0 gap-1 text-xs font-medium">
                             Attendance month
                             <Input
@@ -154,6 +167,13 @@ export default function AttendanceDirectory({
                             : `${records.total} employees`}
                     </span>
                 </div>
+                <DirectorySearch
+                    columns={[
+                        { name: 'employee', label: 'Employee' },
+                        { name: 'department', label: 'Department' },
+                    ]}
+                    label="Search employee attendance"
+                />
                 {records.data.length > 0 ? (
                     <ul className="divide-y border-t">
                         {records.data.map((employee) => {
@@ -164,12 +184,10 @@ export default function AttendanceDirectory({
                                     className="grid gap-3 px-4 py-4 transition-colors hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center sm:px-6"
                                 >
                                     <div className="flex min-w-0 items-center gap-3">
-                                        <span
-                                            aria-hidden="true"
-                                            className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground"
-                                        >
-                                            {initials(employee.name)}
-                                        </span>
+                                        <PersonAvatar
+                                            name={employee.name}
+                                            src={employee.avatar}
+                                        />
                                         <div className="min-w-0">
                                             <p className="font-semibold break-words">
                                                 {employee.name}

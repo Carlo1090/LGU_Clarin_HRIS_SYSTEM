@@ -1,3 +1,4 @@
+import { CheckCheck, Lock, LockOpen, Save } from 'lucide-react';
 import { useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -53,20 +54,33 @@ export default function BiometricIdField({
                     }}
                 />
                 <Button
-                    size="sm"
+                    size="icon"
                     type="submit"
                     variant="outline"
-                    className="w-18"
+
+                    title={
+                        canVerify ? 'Verify biometric ID' : 'Save biometric ID'
+                    }
+                    aria-label={`${canVerify ? 'Verify' : 'Save'} biometric ID for ${employeeNumber}`}
                     disabled={busy || (!canSave && !canVerify)}
                 >
-                    {canVerify ? 'Verify' : 'Save'}
+                    {canVerify ? (
+                        <CheckCheck aria-hidden="true" />
+                    ) : (
+                        <Save aria-hidden="true" />
+                    )}
                 </Button>
                 {link.id !== null && (
                     <Button
-                        size="sm"
+                        size="icon"
                         type="button"
                         variant="outline"
-                        className="w-18"
+
+                        title={
+                            link.locked
+                                ? 'Unlock biometric ID'
+                                : 'Lock biometric ID'
+                        }
                         aria-label={`${link.locked ? 'Unlock' : 'Lock'} biometric ID for ${employeeNumber}`}
                         disabled={busy || dirty}
                         onClick={() =>
@@ -75,7 +89,11 @@ export default function BiometricIdField({
                             })
                         }
                     >
-                        {link.locked ? 'Unlock' : 'Lock'}
+                        {link.locked ? (
+                            <LockOpen aria-hidden="true" />
+                        ) : (
+                            <Lock aria-hidden="true" />
+                        )}
                     </Button>
                 )}
             </div>

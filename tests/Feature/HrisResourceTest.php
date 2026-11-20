@@ -24,6 +24,28 @@ class HrisResourceTest extends TestCase
         $this->withoutVite();
     }
 
+    public function test_employee_directory_search_finds_photos_across_pages_and_obeys_department_scope(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $department = Department::factory()->create();
+        Employee::factory()->count(21)->create(['department_id' => $department->id, 'last_name' => 'Adams']);
+        $account = User::factory()->create();
+        $account->forceFill(['avatar' => '/profile-photos/example.png'])->save();
+        $target = Employee::factory()->create(['department_id' => $department->id, 'user_id' => $account->id, 'first_name' => 'Quentin', 'last_name' => 'Zuniga']);
+        $outsider = Employee::factory()->create(['first_name' => 'Quentin', 'last_name' => 'Zuniga']);
+        $this->actingAs($hr)->get('/hris/employees?column=employee_number&q='.$target->employee_number)
+            ->assertInertia(fn ($page) => $page->has('records.data', 1)
+                ->where('records.data.0.id', $target->id)->where('records.data.0.avatar', '/profile-photos/example.png'));
+
+        $target->update(['user_id' => null]);
+        $account->forceFill(['employee_id' => $target->id])->save();
+        $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create(['employee_id' => $target->id]);
+        $this->actingAs($head)->get('/hris/employees?q=Quentin%20Zuniga')
+            ->assertInertia(fn ($page) => $page->has('records.data', 1)->where('records.data.0.id', $target->id)->where('records.data.0.avatar', '/profile-photos/example.png'));
+        $this->get('/hris/employees?column=employee_number&q='.$outsider->employee_number)
+            ->assertInertia(fn ($page) => $page->has('records.data', 0));
+    }
+
     public function test_attendance_lists_employees_once_with_dtr_links_and_respects_department_scope(): void
     {
         $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();

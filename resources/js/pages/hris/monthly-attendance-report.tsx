@@ -1,6 +1,8 @@
+import { useTableSearch } from '@/components/table-search';
+import PersonAvatar from '@/components/person-avatar';
 import { Form, Head, Link, useForm } from '@inertiajs/react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, EyeOff } from 'lucide-react';
 import { Fragment, type FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +11,7 @@ import { Input } from '@/components/ui/input';
 type Sort = 'days_attended' | 'late_arrivals';
 type Direction = 'asc' | 'desc';
 type EmployeeSummary = {
+    avatar?: string | null;
     id: number;
     name: string;
     employee_number: string;
@@ -57,6 +60,18 @@ function DailyRecords({
     detail: EmployeeDetail;
     month: string;
 }) {
+    const search = useTableSearch(
+        detail.days,
+        ['Work date', 'First punch', 'Last punch', 'Punch count', 'Lateness'],
+        (row) => [
+            row.work_date,
+            row.first_punch,
+            row.last_punch,
+            row.punch_count,
+            latenessLabels[row.lateness],
+        ],
+        'Search daily records',
+    );
     const form = useForm({
         effective_from: detail.rule?.effective_from.startsWith(month)
             ? detail.rule.effective_from
@@ -155,6 +170,7 @@ function DailyRecords({
                     </p>
                 </form>
             </details>
+            {search.toolbar}
             {detail.days.length ? (
                 <div className="overflow-x-auto rounded-md border bg-card">
                     <table
@@ -183,7 +199,7 @@ function DailyRecords({
                             </tr>
                         </thead>
                         <tbody>
-                            {detail.days.map((day) => (
+                            {search.rows.map((day) => (
                                 <tr
                                     key={day.work_date}
                                     className="border-t tabular-nums"
@@ -262,6 +278,16 @@ export default function MonthlyAttendanceReport({
     unlinkedIds: number;
     detail: EmployeeDetail | null;
 }) {
+    const search = useTableSearch(
+        summary.data,
+        ['Employee', 'Employee number', 'Days attended', 'Late arrivals'],
+        (row) => [
+            row.name,
+            row.employee_number,
+            row.days_attended,
+            row.late_arrivals,
+        ],
+    );
     const filters = { month, sort, direction };
 
     return (
@@ -325,6 +351,7 @@ export default function MonthlyAttendanceReport({
                     </Button>
                 )}
             </div>
+            {search.toolbar}
             <div className="workspace-panel overflow-x-auto">
                 <table
                     aria-label="Monthly attendance summary"
@@ -387,7 +414,7 @@ export default function MonthlyAttendanceReport({
                         </tr>
                     </thead>
                     <tbody>
-                        {summary.data.map((row) => {
+                        {search.rows.map((row) => {
                             const expanded = detail?.id === row.id;
                             const allUndetermined =
                                 row.undetermined_days > 0 &&
@@ -399,7 +426,13 @@ export default function MonthlyAttendanceReport({
                                             scope="row"
                                             className="p-3 font-medium"
                                         >
-                                            {row.name}
+                                            <span className="inline-flex items-center gap-2">
+                                                <PersonAvatar
+                                                    name={row.name}
+                                                    src={row.avatar}
+                                                />
+                                                {row.name}
+                                            </span>
                                         </th>
                                         <td className="p-3">
                                             {row.employee_number}
@@ -427,8 +460,8 @@ export default function MonthlyAttendanceReport({
                                             <Button
                                                 asChild
                                                 variant="outline"
-                                                size="sm"
-                                                className="w-28 aria-expanded:border-primary aria-expanded:bg-accent aria-expanded:text-accent-foreground"
+                                                size="icon"
+                                                className="aria-expanded:border-primary aria-expanded:bg-accent aria-expanded:text-accent-foreground"
                                             >
                                                 <Link
                                                     href={reportUrl}
@@ -447,9 +480,11 @@ export default function MonthlyAttendanceReport({
                                                     aria-expanded={expanded}
                                                     aria-label={`${expanded ? 'Hide' : 'View'} daily records for ${row.name}`}
                                                 >
-                                                    {expanded
-                                                        ? 'Hide records'
-                                                        : 'View records'}
+                                                    {expanded ? (
+                                                        <EyeOff aria-hidden="true" />
+                                                    ) : (
+                                                        <Eye aria-hidden="true" />
+                                                    )}
                                                 </Link>
                                             </Button>
                                         </td>
@@ -468,7 +503,7 @@ export default function MonthlyAttendanceReport({
                                 </Fragment>
                             );
                         })}
-                        {!summary.data.length && (
+                        {!search.rows.length && (
                             <tr>
                                 <td
                                     colSpan={5}

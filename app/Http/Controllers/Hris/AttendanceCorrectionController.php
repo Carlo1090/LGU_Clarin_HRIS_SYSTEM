@@ -31,7 +31,7 @@ class AttendanceCorrectionController extends Controller
         $role = $user->role?->name;
         $employee = $user->employee;
         $linked = $employee && $employee->user_id === $user->id;
-        $query = AttendanceCorrection::query()->with(['attendanceRecord', 'employee']);
+        $query = AttendanceCorrection::query()->with(['attendanceRecord', 'employee' => fn ($query) => $query->addSelect(['avatar' => Employee::accountAvatarQuery()])]);
 
         if ($role === 'Employee') {
             $query->where('employee_id', $linked ? $employee->id : 0);
@@ -45,6 +45,7 @@ class AttendanceCorrectionController extends Controller
                 'date' => $row->attendanceRecord->attendance_date ?? ($row->proposed_time_in ? substr($row->proposed_time_in, 0, 10) : null),
                 'missingDay' => $row->correction_type === 'missing_day',
                 'employee' => $row->employee?->employee_number,
+                'avatar' => $row->employee?->avatar,
                 'timeIn' => $row->proposed_time_in,
                 'timeOut' => $row->proposed_time_out,
                 'reason' => $row->reason,

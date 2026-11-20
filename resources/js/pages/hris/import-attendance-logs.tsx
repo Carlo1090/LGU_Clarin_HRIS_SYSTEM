@@ -1,3 +1,5 @@
+import { useTableSearch } from '@/components/table-search';
+import PersonAvatar from '@/components/person-avatar';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import { useRef, type FormEvent } from 'react';
@@ -56,6 +58,19 @@ export default function ImportAttendanceLogs({
     selectedId: number | null;
     punches: Page<{ id: number; punched_at: string }> | null;
 }) {
+    const search = useTableSearch(
+        groups.data,
+        ['Biometric ID', 'Employee', 'Punches', 'First punch', 'Last punch'],
+        (g) => [
+            g.biometric_id,
+            g.employee_number
+                ? [g.last_name, g.first_name, g.employee_number].join(' ')
+                : 'Unassigned',
+            g.punch_count,
+            g.first_punch,
+            g.last_punch,
+        ],
+    );
     const inputRef = useRef<HTMLInputElement>(null);
     const form = useForm<{ file: File | null }>({ file: null });
     const removal = useForm({});
@@ -269,6 +284,7 @@ export default function ImportAttendanceLogs({
                         </Link>
                     </Button>
                 </div>
+                {search.toolbar}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                         <thead className="workspace-table-head">
@@ -291,7 +307,7 @@ export default function ImportAttendanceLogs({
                             </tr>
                         </thead>
                         <tbody>
-                            {groups.data.map((group) => (
+                            {search.rows.map((group) => (
                                 <tr
                                     key={group.biometric_id}
                                     className="border-b"
@@ -320,9 +336,17 @@ export default function ImportAttendanceLogs({
                                         </Link>
                                     </th>
                                     <td className="p-3">
-                                        {group.employee_number
-                                            ? `${group.last_name}, ${group.first_name} (${group.employee_number})`
-                                            : 'Unassigned'}
+                                        {group.employee_number ? (
+                                            <span className="inline-flex items-center gap-2">
+                                                <PersonAvatar
+                                                    name={`${group.first_name} ${group.last_name}`}
+                                                    src={group.avatar}
+                                                />
+                                                {`${group.last_name}, ${group.first_name} (${group.employee_number})`}
+                                            </span>
+                                        ) : (
+                                            'Unassigned'
+                                        )}
                                     </td>
                                     <td className="p-3 tabular-nums">
                                         {group.punch_count}
@@ -335,7 +359,7 @@ export default function ImportAttendanceLogs({
                                     </td>
                                 </tr>
                             ))}
-                            {!groups.data.length && (
+                            {!search.rows.length && (
                                 <tr>
                                     <td
                                         colSpan={5}

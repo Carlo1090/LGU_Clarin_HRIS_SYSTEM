@@ -1,3 +1,6 @@
+import { useTableSearch } from '@/components/table-search';
+import TableAction from '@/components/table-action';
+import PersonAvatar from '@/components/person-avatar';
 import {
     Table,
     TableHeader,
@@ -9,6 +12,8 @@ import {
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
+    Check,
+    X,
     CalendarClock,
     CalendarMinus,
     ClipboardList,
@@ -34,6 +39,7 @@ type Correction = {
     date: string | null;
     missingDay: boolean;
     employee: string;
+    avatar?: string | null;
     timeIn: string | null;
     timeOut: string | null;
     reason: string;
@@ -54,6 +60,27 @@ export default function AttendanceCorrections({
     logs: Log[] | null;
     advanceLabel: string;
 }) {
+    const search = useTableSearch(
+        records.data,
+        [
+            'Employee',
+            'Attendance date',
+            'Time in',
+            'Time out',
+            'Reason',
+            'Status',
+            'Day type',
+        ],
+        (row) => [
+            row.employee,
+            row.date,
+            row.timeIn,
+            row.timeOut,
+            row.reason,
+            row.status.replaceAll('_', ' '),
+            row.missingDay ? 'Missing day' : 'Existing record',
+        ],
+    );
     const showReview = records.data.some((row) => row.canReview);
     const columns = [
         'Employee',
@@ -276,6 +303,7 @@ export default function AttendanceCorrections({
                         {records.data.length} on this page
                     </span>
                 </header>
+                {search.toolbar}
                 <Table
                     aria-labelledby="correction-history"
                     className="workspace-record-table"
@@ -290,10 +318,16 @@ export default function AttendanceCorrections({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {records.data.map((row) => (
+                        {search.rows.map((row) => (
                             <TableRow key={row.id}>
                                 <TableHead scope="row">
-                                    {row.employee}
+                                    <span className="inline-flex items-center gap-2">
+                                        <PersonAvatar
+                                            name={row.employee}
+                                            src={row.avatar}
+                                        />
+                                        {row.employee}
+                                    </span>
                                 </TableHead>
                                 <TableCell>
                                     {row.date ?? 'Date unavailable'}
@@ -317,9 +351,9 @@ export default function AttendanceCorrections({
                                     <TableCell>
                                         {row.canReview && (
                                             <div className="flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    className={button}
+                                                <TableAction
+                                                    icon={Check}
+                                                    label={advanceLabel}
                                                     disabled={reviewing}
                                                     onClick={() =>
                                                         review(
@@ -327,26 +361,23 @@ export default function AttendanceCorrections({
                                                             'advance',
                                                         )
                                                     }
-                                                >
-                                                    {advanceLabel}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="rounded-full border px-4 py-2 text-sm text-destructive"
+                                                />
+                                                <TableAction
+                                                    icon={X}
+                                                    label="Reject correction"
+                                                    className="text-destructive"
                                                     disabled={reviewing}
                                                     onClick={() =>
                                                         review(row.id, 'reject')
                                                     }
-                                                >
-                                                    Reject
-                                                </button>
+                                                />
                                             </div>
                                         )}
                                     </TableCell>
                                 )}
                             </TableRow>
                         ))}
-                        {!records.data.length && (
+                        {!search.rows.length && (
                             <TableRow>
                                 <TableCell
                                     colSpan={columns.length}

@@ -9,6 +9,7 @@ export type DashboardRecord = {
     id: string;
     reference: string;
     subject: string;
+    avatar?: string | null;
     description: string;
     date: string | null;
     status: string;

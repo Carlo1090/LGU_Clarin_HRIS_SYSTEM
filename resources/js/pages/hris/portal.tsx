@@ -1,3 +1,4 @@
+import { useTableSearch } from '@/components/table-search';
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, useForm } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
@@ -177,6 +178,7 @@ export default function PortalPage({
     leaveTypes,
     canPreviewLeaveForm,
 }: Props) {
+    const search = useTableSearch(records?.data ?? [], columns, (row) => row);
     return (
         <div className="workspace-page max-w-7xl">
             <Head title={title} />
@@ -218,6 +220,7 @@ export default function PortalPage({
                     </dl>
                 ) : (
                     <>
+                        {search.toolbar}
                         <div className="overflow-x-auto">
                             <table
                                 aria-label={title}
@@ -237,7 +240,7 @@ export default function PortalPage({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {records?.data.map((row, index) => (
+                                    {search.rows.map((row, index) => (
                                         <tr
                                             key={index}
                                             className="border-t hover:bg-muted/60"
@@ -259,7 +262,7 @@ export default function PortalPage({
                                             ))}
                                         </tr>
                                     ))}
-                                    {!records?.data.length && (
+                                    {!search.rows.length && (
                                         <tr>
                                             <td
                                                 colSpan={columns.length}

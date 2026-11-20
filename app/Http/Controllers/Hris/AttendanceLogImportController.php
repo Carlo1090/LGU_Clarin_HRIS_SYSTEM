@@ -41,7 +41,8 @@ class AttendanceLogImportController
         $groups = (clone $punchQuery)
             ->leftJoin('employees as owner', 'owner.biometric_id', '=', 'attendance_punches.biometric_id')
             ->selectRaw('attendance_punches.biometric_id, owner.employee_number, owner.first_name, owner.last_name, COUNT(*) as punch_count, MIN(punched_at) as first_punch, MAX(punched_at) as last_punch')
-            ->groupBy('attendance_punches.biometric_id', 'owner.employee_number', 'owner.first_name', 'owner.last_name')
+            ->addSelect(['avatar' => Employee::accountAvatarQuery('owner')])
+            ->groupBy('attendance_punches.biometric_id', 'owner.id', 'owner.user_id', 'owner.employee_number', 'owner.first_name', 'owner.last_name')
             ->orderBy('attendance_punches.biometric_id')
             ->simplePaginate(20, pageName: 'group_page')->withQueryString();
 

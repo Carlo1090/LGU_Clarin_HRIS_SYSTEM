@@ -1,6 +1,7 @@
 import { Form, Head, usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import PersonAvatar from '@/components/person-avatar';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -37,6 +38,50 @@ export default function Profile({
                     description="Update your name and email address"
                 />
 
+                <Form
+                    {...ProfileController.uploadPhoto.form()}
+                    options={{ preserveScroll: true }}
+                    resetOnSuccess
+                    className="space-y-3"
+                >
+                    {({ processing, errors }) => (
+                        <>
+                            <Label htmlFor="profile-photo">
+                                Profile picture
+                            </Label>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <PersonAvatar
+                                    name={auth.user.name}
+                                    src={auth.user.avatar}
+                                />
+                                <Input
+                                    id="profile-photo"
+                                    name="photo"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    required
+                                    className="min-w-0 flex-1"
+                                    aria-describedby="photo-help"
+                                />
+                                <Button
+                                    type="submit"
+                                    variant="outline"
+                                    disabled={processing}
+                                >
+                                    Upload photo
+                                </Button>
+                            </div>
+                            <p
+                                id="photo-help"
+                                className="text-xs text-muted-foreground"
+                            >
+                                JPEG, PNG or WebP, up to 2 MB and 4096 pixels
+                                per side.
+                            </p>
+                            <InputError message={errors.photo} />
+                        </>
+                    )}
+                </Form>
                 <Form
                     {...ProfileController.update.form()}
                     options={{

@@ -1,3 +1,5 @@
+import { DirectorySearch } from '@/components/table-search';
+import PersonAvatar from '@/components/person-avatar';
 import { Head } from '@inertiajs/react';
 import {
     Building2,
@@ -117,6 +119,9 @@ function PlantillaRow({
         ? `Item ${row.item_number}`
         : `Record ${row.id}`;
     const department = row.department_name || row.department_code;
+    const employee =
+        [row.first_name, row.last_name].filter(Boolean).join(' ') ||
+        String(row.employee_number ?? '');
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -132,6 +137,19 @@ function PlantillaRow({
                     <span className="mt-1 block text-xs font-normal text-muted-foreground">
                         {item}
                     </span>
+                    {row.employee_number && (
+                        <span className="mt-1 inline-flex items-center gap-2 text-xs font-normal">
+                            <PersonAvatar
+                                name={employee}
+                                src={
+                                    typeof row.avatar === 'string'
+                                        ? row.avatar
+                                        : null
+                                }
+                            />
+                            {employee}
+                        </span>
+                    )}
                     <span className="mt-1 block text-xs font-normal text-muted-foreground sm:hidden">
                         {department}
                     </span>
@@ -170,7 +188,21 @@ function PlantillaRow({
                 <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-5">
                     {groups.map(([label, fields]) => (
                         <section key={label}>
-                            <h3 className="mb-3 text-sm font-semibold">
+                            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                                {label === 'Employee' &&
+                                    row.employee_number && (
+                                        <PersonAvatar
+                                            name={String(
+                                                row.first_name ||
+                                                    row.employee_number,
+                                            )}
+                                            src={
+                                                typeof row.avatar === 'string'
+                                                    ? row.avatar
+                                                    : null
+                                            }
+                                        />
+                                    )}
                                 {label}
                             </h3>
                             <dl className="grid grid-cols-1 gap-x-5 gap-y-3 border-t pt-3 min-[420px]:grid-cols-2">
@@ -258,6 +290,16 @@ export default function PlantillaItems({ title, fields, records }: Props) {
                             : `${records.total} items`}
                     </span>
                 </div>
+                <DirectorySearch
+                    label="Search Plantilla records"
+                    columns={[
+                        { name: 'position', label: 'Position' },
+                        { name: 'item', label: 'Item number' },
+                        { name: 'department', label: 'Department' },
+                        { name: 'grade', label: 'Salary grade' },
+                        { name: 'employee', label: 'Employee' },
+                    ]}
+                />
                 <Table
                     aria-labelledby="plantilla-records"
                     className="table-fixed"

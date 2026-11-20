@@ -1,3 +1,4 @@
+import PersonAvatar from '@/components/person-avatar';
 import {
     Table,
     TableHeader,
@@ -15,6 +16,7 @@ import {
     CircleOff,
     ClipboardList,
     GitBranch,
+    MoreHorizontal,
     Layers,
     UsersRound,
 } from 'lucide-react';
@@ -29,6 +31,7 @@ export type Field = {
     label: string;
     type: string;
     required?: boolean;
+    account?: boolean;
     options?: { value: string | number; label: string }[];
 };
 
@@ -251,95 +254,116 @@ export function ResourceDirectory({
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {rows.map((row) => (
-                    <TableRow key={row.id}>
-                        <TableHead
-                            scope="row"
-                            className="min-w-40 whitespace-normal"
-                        >
-                            {nameFields
-                                .filter((field) => row[field.name])
-                                .map((field) =>
-                                    renderValue(field, row[field.name]),
-                                )
-                                .join(' ')}
-                            <span className="block text-xs font-normal text-muted-foreground">
-                                Record ID {row.id}
-                            </span>
-                        </TableHead>
-                        {summaryFields.map((field) => (
-                            <TableCell
-                                key={field.name}
-                                className={
-                                    field.type === 'textarea'
-                                        ? 'max-w-sm min-w-48 break-words whitespace-normal'
-                                        : undefined
-                                }
+                {rows.map((row) => {
+                    const name = nameFields
+                        .filter((field) => row[field.name])
+                        .map((field) => renderValue(field, row[field.name]))
+                        .join(' ');
+                    return (
+                        <TableRow key={row.id}>
+                            <TableHead
+                                scope="row"
+                                className="min-w-40 whitespace-normal"
                             >
-                                {renderValue(field, row[field.name])}
-                            </TableCell>
-                        ))}
-                        {detailFields.length > 0 && (
-                            <TableCell>
-                                <details>
-                                    <summary className="cursor-pointer font-medium">
-                                        View details
-                                    </summary>
-                                    <dl className="mt-2 space-y-2">
-                                        {detailFields.map((field) => (
-                                            <div key={field.name}>
-                                                <dt className="text-xs text-muted-foreground">
-                                                    {field.label}
-                                                </dt>
-                                                <dd>
-                                                    {renderValue(
-                                                        field,
-                                                        row[field.name],
-                                                    )}
-                                                </dd>
-                                            </div>
-                                        ))}
-                                    </dl>
-                                </details>
-                            </TableCell>
-                        )}
-                        {canLinkBiometricIds && (
-                            <TableCell>
-                                {typeof row.id === 'number' && (
-                                    <BiometricIdField
-                                        key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
-                                        employeeId={row.id}
-                                        employeeNumber={String(
-                                            row.employee_number,
-                                        )}
-                                        link={{
-                                            id:
-                                                typeof row.biometric_id ===
-                                                'number'
-                                                    ? row.biometric_id
-                                                    : null,
-                                            locked:
-                                                row.biometric_locked === true,
-                                            status:
-                                                row.biometric_status ===
-                                                'verified'
-                                                    ? 'verified'
-                                                    : 'pending',
-                                            note:
-                                                typeof row.biometric_note ===
-                                                'string'
-                                                    ? row.biometric_note
-                                                    : null,
-                                        }}
-                                    />
-                                )}
-                            </TableCell>
-                        )}
-                        {renderActions && (
-                            <TableCell>{renderActions(row)}</TableCell>
-                        )}
-                    </TableRow>
-                ))}
+                                <span className="inline-flex items-center gap-2">
+                                    {layout.nameLabel === 'Employee' && (
+                                        <PersonAvatar
+                                            name={name}
+                                            src={
+                                                typeof row.avatar === 'string'
+                                                    ? row.avatar
+                                                    : null
+                                            }
+                                        />
+                                    )}
+                                    {name}
+                                </span>
+                                <span className="block text-xs font-normal text-muted-foreground">
+                                    Record ID {row.id}
+                                </span>
+                            </TableHead>
+                            {summaryFields.map((field) => (
+                                <TableCell
+                                    key={field.name}
+                                    className={
+                                        field.type === 'textarea'
+                                            ? 'max-w-sm min-w-48 break-words whitespace-normal'
+                                            : undefined
+                                    }
+                                >
+                                    {renderValue(field, row[field.name])}
+                                </TableCell>
+                            ))}
+                            {detailFields.length > 0 && (
+                                <TableCell>
+                                    <details>
+                                        <summary
+                                            aria-label={`View details for ${name}`}
+                                            title="View details"
+                                            className="inline-flex size-9 cursor-pointer list-none items-center justify-center rounded-md hover:bg-accent focus-visible:outline-2 [&::-webkit-details-marker]:hidden"
+                                        >
+                                            <MoreHorizontal
+                                                aria-hidden="true"
+                                                className="size-4"
+                                            />
+                                        </summary>
+                                        <dl className="mt-2 space-y-2">
+                                            {detailFields.map((field) => (
+                                                <div key={field.name}>
+                                                    <dt className="text-xs text-muted-foreground">
+                                                        {field.label}
+                                                    </dt>
+                                                    <dd>
+                                                        {renderValue(
+                                                            field,
+                                                            row[field.name],
+                                                        )}
+                                                    </dd>
+                                                </div>
+                                            ))}
+                                        </dl>
+                                    </details>
+                                </TableCell>
+                            )}
+                            {canLinkBiometricIds && (
+                                <TableCell>
+                                    {typeof row.id === 'number' && (
+                                        <BiometricIdField
+                                            key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
+                                            employeeId={row.id}
+                                            employeeNumber={String(
+                                                row.employee_number,
+                                            )}
+                                            link={{
+                                                id:
+                                                    typeof row.biometric_id ===
+                                                    'number'
+                                                        ? row.biometric_id
+                                                        : null,
+                                                locked:
+                                                    row.biometric_locked ===
+                                                    true,
+                                                status:
+                                                    row.biometric_status ===
+                                                    'verified'
+                                                        ? 'verified'
+                                                        : 'pending',
+                                                note:
+                                                    typeof row.biometric_note ===
+                                                    'string'
+                                                        ? row.biometric_note
+                                                        : null,
+                                            }}
+                                        />
+                                    )}
+                                </TableCell>
+                            )}
+                            {renderActions && (
+                                <TableCell>{renderActions(row)}</TableCell>
+                            )}
+                        </TableRow>
+                    );
+                })}
                 {rows.length === 0 && (
                     <TableRow>
                         <TableCell

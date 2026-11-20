@@ -1,3 +1,6 @@
+import { DirectorySearch } from '@/components/table-search';
+import TableAction from '@/components/table-action';
+import PersonAvatar from '@/components/person-avatar';
 import {
     DirectoryOverview,
     ResourceDirectory,
@@ -8,7 +11,7 @@ import {
 } from '@/components/resource-directory';
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { FileUp } from 'lucide-react';
+import { Check, FileUp, Pencil, Trash2, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
@@ -198,13 +201,6 @@ function ResourceRecords({
             return String(value).replaceAll('_', ' ');
         }
         if (field.type === 'checkbox') return value ? 'Yes' : 'No';
-        if (officeDirectory && field.name === 'parent_department_id') {
-            return (
-                records.data.find(
-                    (office) => String(office.id) === String(value),
-                )?.name ?? value
-            );
-        }
         if (Array.isArray(field.options))
             return (
                 field.options.find(
@@ -240,26 +236,23 @@ function ResourceRecords({
                     typeof row.id === 'number' &&
                     row.status === leaveReviewStage[0] && (
                         <>
-                            <Button
-                                size="sm"
+                            <TableAction
+                                icon={Check}
+                                label={leaveReviewStage[2]}
                                 disabled={reviewing}
                                 onClick={() =>
                                     reviewLeave(Number(row.id), 'advance')
                                 }
-                            >
-                                {leaveReviewStage[2]}
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
+                            />
+                            <TableAction
+                                icon={X}
+                                label={'Reject leave request'}
                                 className="text-destructive"
                                 disabled={reviewing}
                                 onClick={() =>
                                     reviewLeave(Number(row.id), 'reject')
                                 }
-                            >
-                                Reject
-                            </Button>
+                            />
                         </>
                     )}
                 {isAttendance && (
@@ -275,24 +268,20 @@ function ResourceRecords({
                 )}
                 {canManage && row.canManage !== false && (
                     <>
-                        <Button
+                        <TableAction
+                            icon={Pencil}
+                            label={`Edit record ${row.id}`}
                             type="button"
                             onClick={() => edit(row)}
-                            size="sm"
-                            variant="outline"
                             className="mr-2 rounded-full"
-                        >
-                            Edit
-                        </Button>
-                        <Button
+                        />
+                        <TableAction
+                            icon={Trash2}
+                            label={`Delete record ${row.id}`}
                             type="button"
                             onClick={() => remove(row)}
-                            size="sm"
-                            variant="outline"
-                            className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        >
-                            Delete
-                        </Button>
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        />
                     </>
                 )}
             </>
@@ -625,6 +614,10 @@ function ResourceRecords({
                             {records.data.length} on this page
                         </span>
                     </div>
+                    <DirectorySearch
+                        columns={[{ name: 'id', label: 'ID' }, ...fields]}
+                        label={`Search ${title.toLowerCase()}`}
+                    />
                     {directory ? (
                         <ResourceDirectory
                             layout={directory}
@@ -671,20 +664,34 @@ function ResourceRecords({
                                                     key={field.name}
                                                     className="max-w-64 truncate px-3 py-3"
                                                 >
-                                                    {resource === 'employees' &&
-                                                    field.name ===
-                                                        'employment_status' ? (
-                                                        <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">
-                                                            {displayValue(
-                                                                field,
-                                                                row[field.name],
-                                                            )}
-                                                        </span>
-                                                    ) : (
-                                                        displayValue(
-                                                            field,
-                                                            row[field.name],
-                                                        )
+                                                    {(field.name ===
+                                                        'employee_id' ||
+                                                        field.account) &&
+                                                        row[field.name] !=
+                                                            null && (
+                                                            <PersonAvatar
+                                                                name={String(
+                                                                    displayValue(
+                                                                        field,
+                                                                        row[
+                                                                            field
+                                                                                .name
+                                                                        ],
+                                                                    ),
+                                                                )}
+                                                                src={String(
+                                                                    (field.account
+                                                                        ? row[
+                                                                              `${field.name}_avatar`
+                                                                          ]
+                                                                        : row.avatar) ??
+                                                                        '',
+                                                                )}
+                                                            />
+                                                        )}{' '}
+                                                    {displayValue(
+                                                        field,
+                                                        row[field.name],
                                                     )}
                                                 </td>
                                             ))}

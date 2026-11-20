@@ -38,7 +38,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -741,6 +741,10 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                     </p>
                                     <div className="mt-5 flex items-center gap-2.5">
                                         <Avatar className="size-8 border border-border">
+                                            <AvatarImage
+                                                src={auth.user.avatar}
+                                                alt=""
+                                            />
                                             <AvatarFallback className="bg-accent text-[10px] font-semibold text-accent-foreground">
                                                 {auth.user.name
                                                     .split(/\s+/)
@@ -1259,6 +1263,13 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                                     <TableCell className="py-3 pl-0">
                                                         <div className="flex items-center gap-2.5">
                                                             <Avatar className="size-7">
+                                                                <AvatarImage
+                                                                    src={
+                                                                        row.avatar ??
+                                                                        undefined
+                                                                    }
+                                                                    alt=""
+                                                                />
                                                                 <AvatarFallback className="bg-muted text-[9px] font-semibold">
                                                                     {row.subject
                                                                         .split(
