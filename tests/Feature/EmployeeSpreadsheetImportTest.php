@@ -138,7 +138,8 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $password = null;
         $this->post(route('hris.employees.import.store'), ['token' => $token])
             ->assertOk()->assertInertia(function ($page) use (&$password): void {
-                $page->where('result.createdProfiles', 1)->where('result.createdAccounts', 1)->has('credentials', 1);
+                $page->where('result.createdProfiles', 1)->where('result.createdAccounts', 1)->has('credentials', 1)
+                    ->where('credentials.0.reference_code', 'JOREMP-IMPORT-01');
                 $password = $page->toArray()['props']['credentials'][0]['temporary_password'];
             });
         $employee = Employee::query()->where('employee_number', 'EMP-IMPORT-01')->firstOrFail();
@@ -153,6 +154,7 @@ class EmployeeSpreadsheetImportTest extends TestCase
         auth()->logout();
         $this->post('/login', ['email' => $employee->employee_number, 'password' => $password])->assertRedirect();
         $this->assertAuthenticatedAs($employeeUser);
+        $this->get(route('hris.my-profile'))->assertRedirect(route('security.edit'));
         $employeeUser->forceFill(['must_change_password' => false, 'requires_mfa' => false])->save();
         $this->actingAs($employeeUser)->get(route('hris.my-profile'))->assertOk()->assertInertia(fn ($page) => $page
             ->where('employee.department', $department->name)

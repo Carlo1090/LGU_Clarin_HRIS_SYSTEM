@@ -39,6 +39,7 @@ type Props = {
     statusSummary?: { status: string; total: number }[];
     createdAccountCredentials?: {
         employee_number: string;
+        reference_code: string;
         username: string;
         name: string;
         temporary_password: string;
@@ -152,30 +153,32 @@ export default function HrisResourceIndex({
         [fields],
     );
     const form = useForm<FormData>(initialData);
-    const [accountEmail, setAccountEmail] = useState('');
+    const [accountEmail, setAccountEmail] = useState<string | null>('');
 
     useEffect(() => {
         form.setData(initialData);
         setEditingId(null);
+        setAccountEmail('');
     }, [resource]);
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const url = `/hris/${resource}`;
 
+        form.transform((data) =>
+            resource === 'employees' && accountEmail !== null
+                ? { ...data, account_email: accountEmail || null }
+                : data,
+        );
         if (editingId) {
             form.put(`${url}/${editingId}`, {
                 onSuccess: () => {
                     setEditingId(null);
                     form.reset();
+                    setAccountEmail('');
                 },
             });
         } else {
-            form.transform((data) =>
-                resource === 'employees'
-                    ? { ...data, account_email: accountEmail || null }
-                    : data,
-            );
             form.post(url, {
                 onSuccess: () => {
                     form.reset();
@@ -187,6 +190,9 @@ export default function HrisResourceIndex({
 
     const edit = (row: HrisRow) => {
         setEditingId(row.id);
+        setAccountEmail(
+            'account_email' in row ? String(row.account_email ?? '') : null,
+        );
         document
             .getElementById('record-editor')
             ?.scrollIntoView({ block: 'start' });
@@ -204,6 +210,7 @@ export default function HrisResourceIndex({
 
     const cancelEdit = () => {
         setEditingId(null);
+        setAccountEmail('');
         form.reset();
         form.clearErrors();
     };
@@ -534,7 +541,7 @@ export default function HrisResourceIndex({
                                     )}
                                 </label>
                             ))}
-                            {resource === 'employees' && !editingId && (
+                            {resource === 'employees' && accountEmail !== null && (
                                 <label className="space-y-1 text-sm">
                                     <span>Email (optional)</span>
                                     <input
@@ -590,6 +597,12 @@ export default function HrisResourceIndex({
                             Employee number:{' '}
                             <span className="font-mono">
                                 {createdAccountCredentials.employee_number}
+                            </span>
+                        </p>
+                        <p>
+                            Reference code:{' '}
+                            <span className="font-mono">
+                                {createdAccountCredentials.reference_code}
                             </span>
                         </p>
                         <p>

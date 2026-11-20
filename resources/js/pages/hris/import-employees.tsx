@@ -23,6 +23,7 @@ type PreviewRow = {
 };
 type Credential = {
     employee_number: string;
+    reference_code: string;
     username: string;
     name: string;
     temporary_password: string;
@@ -137,6 +138,9 @@ export default function ImportEmployees({
                                                     Employee Number
                                                 </th>
                                                 <th className="p-2">
+                                                    Reference Code
+                                                </th>
+                                                <th className="p-2">
                                                     Username
                                                 </th>
                                                 <th className="p-2">Name</th>
@@ -156,6 +160,11 @@ export default function ImportEmployees({
                                                     <td className="p-2">
                                                         {
                                                             credential.employee_number
+                                                        }
+                                                    </td>
+                                                    <td className="p-2">
+                                                        {
+                                                            credential.reference_code
                                                         }
                                                     </td>
                                                     <td className="p-2">

@@ -201,7 +201,13 @@ class EmployeeSpreadsheetImport
                     $user->forceFill(['employee_id' => $employee->id, 'role_id' => $employeeRole->id, 'requires_mfa' => true, 'must_change_password' => true])->save();
                     $employee->forceFill(['user_id' => $user->id])->save();
                     $createdAccounts++;
-                    $credential = ['employee_number' => $employee->employee_number, 'username' => $employee->employee_number, 'name' => trim($employee->first_name.' '.$employee->last_name), 'temporary_password' => $temporaryPassword];
+                    $credential = [
+                        'employee_number' => $employee->employee_number,
+                        'reference_code' => $employee->referenceCode(),
+                        'username' => $employee->employee_number,
+                        'name' => trim($employee->first_name.' '.$employee->last_name),
+                        'temporary_password' => $temporaryPassword,
+                    ];
                     $credentials[] = $credential;
                     if ($data['email']) {
                         $emailUsers[] = ['email' => $data['email']] + $credential;
