@@ -1,14 +1,18 @@
 import WorkspaceHeader from '@/components/workspace-header';
-import { Form, Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BiometricIdField from '@/components/biometric-id-field';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
-import { Badge } from '@/components/ui/badge';
+import AttendanceDirectory, {
+    type AttendanceDirectoryProps,
+} from '@/components/attendance-directory';
+import RecordPagination, {
+    type RecordPageLink,
+} from '@/components/record-pagination';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 type Field = {
     name: string;
@@ -34,7 +38,7 @@ type Props = {
     leaveReviewStage?: [string, string, string] | null;
     canImport?: boolean;
     officeDirectory?: boolean;
-    attendanceDirectory?: boolean;
+    attendanceDirectory?: false;
     attendanceMonth?: string;
     canManageAttendance?: boolean;
     canLinkBiometricIds?: boolean;
@@ -49,7 +53,7 @@ type Props = {
     accountSetupEmailSent?: boolean | null;
     records: {
         data: HrisRow[];
-        links: { url: string | null; label: string; active: boolean }[];
+        links: RecordPageLink[];
     };
 };
 
@@ -67,36 +71,17 @@ type FormData = Record<string, string | number | boolean | null>;
 const emptyValue = (field: Field): string | number | boolean | null =>
     field.type === 'checkbox' ? false : '';
 
-function AttendanceBadge({
-    complete,
-    review,
-}: {
-    complete: number;
-    review: number;
-}) {
-    return (
-        <div className="space-y-1">
-            {review > 0 ? (
-                <Badge className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                    Needs review
-                </Badge>
-            ) : complete > 0 ? (
-                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-                    Complete logs
-                </Badge>
-            ) : (
-                <Badge variant="secondary">No work logs</Badge>
-            )}
-            {complete + review > 0 && (
-                <p className="text-xs text-muted-foreground tabular-nums">
-                    {complete} complete · {review} to review
-                </p>
-            )}
-        </div>
-    );
+export default function HrisResourceIndex(
+    props: Props | AttendanceDirectoryProps,
+) {
+    if (props.attendanceDirectory) {
+        return <AttendanceDirectory {...props} />;
+    }
+
+    return <ResourceRecords {...props} />;
 }
 
-export default function HrisResourceIndex({
+function ResourceRecords({
     resource,
     title,
     fields,
@@ -104,7 +89,6 @@ export default function HrisResourceIndex({
     leaveReviewStage,
     canImport = false,
     officeDirectory = false,
-    attendanceDirectory = false,
     attendanceMonth,
     canManageAttendance = false,
     canLinkBiometricIds = false,
@@ -280,31 +264,6 @@ export default function HrisResourceIndex({
                             <LeaveFormDemoDialog />
                         )}
                     </WorkspaceHeader>
-                )}
-
-                {attendanceMonth && (
-                    <Form
-                        key={attendanceMonth}
-                        action="/hris/attendance"
-                        method="get"
-                        className="flex flex-wrap items-end gap-3"
-                    >
-                        <label className="space-y-1 text-sm font-medium">
-                            <span>Attendance month</span>
-                            <Input
-                                name="month"
-                                type="month"
-                                defaultValue={attendanceMonth}
-                                required
-                            />
-                        </label>
-                        <Button type="submit" variant="outline">
-                            Show month
-                        </Button>
-                        <p className="basis-full text-sm text-muted-foreground">
-                            Badges summarize recorded workdays for this month.
-                        </p>
-                    </Form>
                 )}
 
                 {resource === 'employees' && statusSummary.length > 0 && (
@@ -596,7 +555,7 @@ export default function HrisResourceIndex({
                             id="records-heading"
                             className="text-lg font-semibold tracking-tight"
                         >
-                            {attendanceDirectory ? 'Employees' : 'Records'}
+                            Records
                         </h2>
                         <span className="text-sm text-muted-foreground">
                             {records.data.length} on this page
@@ -614,11 +573,9 @@ export default function HrisResourceIndex({
                                             Biometric ID
                                         </th>
                                     )}
-                                    {!attendanceDirectory && (
-                                        <th className="px-3 py-3 font-medium">
-                                            ID
-                                        </th>
-                                    )}
+                                    <th className="px-3 py-3 font-medium">
+                                        ID
+                                    </th>
                                     {fields.map((field) => (
                                         <th
                                             key={field.name}
@@ -629,9 +586,7 @@ export default function HrisResourceIndex({
                                     ))}
                                     {hasActions && (
                                         <th className="px-3 py-3 font-medium">
-                                            {attendanceDirectory
-                                                ? 'DTR'
-                                                : 'Actions'}
+                                            Actions
                                         </th>
                                     )}
                                 </tr>
@@ -674,31 +629,15 @@ export default function HrisResourceIndex({
                                                     />
                                                 </td>
                                             )}
-                                        {!attendanceDirectory && (
-                                            <td className="px-3 py-3">
-                                                {row.id}
-                                            </td>
-                                        )}
+                                        <td className="px-3 py-3">{row.id}</td>
                                         {fields.map((field) => (
                                             <td
                                                 key={field.name}
                                                 className="max-w-64 truncate px-3 py-3"
                                             >
-                                                {field.name ===
-                                                'attendance_summary' ? (
-                                                    <AttendanceBadge
-                                                        complete={Number(
-                                                            row.attendance_complete_days ??
-                                                                0,
-                                                        )}
-                                                        review={Number(
-                                                            row.attendance_review_days ??
-                                                                0,
-                                                        )}
-                                                    />
-                                                ) : resource === 'employees' &&
-                                                  field.name ===
-                                                      'employment_status' ? (
+                                                {resource === 'employees' &&
+                                                field.name ===
+                                                    'employment_status' ? (
                                                     <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">
                                                         {displayValue(
                                                             field,
@@ -809,66 +748,20 @@ export default function HrisResourceIndex({
                                         <td
                                             colSpan={
                                                 fields.length +
-                                                Number(!attendanceDirectory) +
+                                                1 +
                                                 Number(canLinkBiometricIds) +
                                                 Number(hasActions)
                                             }
                                             className="px-3 py-8 text-center text-muted-foreground"
                                         >
-                                            {attendanceDirectory
-                                                ? 'No employees found.'
-                                                : 'No records found.'}
+                                            No records found.
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
-                    {records.links.length > 0 && (
-                        <nav
-                            aria-label="Record pages"
-                            className="flex flex-wrap gap-2 border-t p-3"
-                        >
-                            {records.links.map((link, index) => {
-                                const label = link.label
-                                    .replace(/&laquo;|&raquo;/g, '')
-                                    .trim();
-                                const variant = link.active
-                                    ? 'default'
-                                    : 'outline';
-                                const key = `${link.label}-${index}`;
-
-                                return link.url ? (
-                                    <Button
-                                        key={key}
-                                        asChild
-                                        variant={variant}
-                                        size="sm"
-                                    >
-                                        <Link
-                                            href={link.url}
-                                            preserveScroll
-                                            aria-current={
-                                                link.active ? 'page' : undefined
-                                            }
-                                        >
-                                            {label}
-                                        </Link>
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        key={key}
-                                        type="button"
-                                        variant={variant}
-                                        size="sm"
-                                        disabled
-                                    >
-                                        {label}
-                                    </Button>
-                                );
-                            })}
-                        </nav>
-                    )}
+                    <RecordPagination links={records.links} />
                 </section>
             </div>
         </>
