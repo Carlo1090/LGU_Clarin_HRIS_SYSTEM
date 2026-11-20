@@ -625,17 +625,17 @@ function ResourceRecords({
                             {records.data.length} on this page
                         </span>
                     </div>
-                    <div className="overflow-x-auto">
-                        {directory ? (
-                            <ResourceDirectory
-                                layout={directory}
-                                rows={records.data}
-                                fields={fields}
-                                canLinkBiometricIds={canLinkBiometricIds}
-                                renderValue={displayValue}
-                                renderActions={rowActions}
-                            />
-                        ) : (
+                    {directory ? (
+                        <ResourceDirectory
+                            layout={directory}
+                            rows={records.data}
+                            fields={fields}
+                            canLinkBiometricIds={canLinkBiometricIds}
+                            renderValue={displayValue}
+                            renderActions={hasActions ? rowActions : undefined}
+                        />
+                    ) : (
+                        <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead className="workspace-table-head">
                                     <tr>
@@ -711,8 +711,8 @@ function ResourceRecords({
                                     )}
                                 </tbody>
                             </table>
-                        )}
-                    </div>
+                        </div>
+                    )}
                     <RecordPagination links={records.links} />
                 </section>
             </div>

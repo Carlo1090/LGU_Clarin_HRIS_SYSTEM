@@ -1,3 +1,11 @@
+import {
+    Table,
+    TableHeader,
+    TableHead,
+    TableBody,
+    TableCell,
+    TableRow,
+} from '@/components/ui/table';
 import type { ReactNode } from 'react';
 import {
     BriefcaseBusiness,
@@ -9,7 +17,6 @@ import {
     GitBranch,
     Layers,
     UsersRound,
-    type LucideIcon,
 } from 'lucide-react';
 import BiometricIdField from '@/components/biometric-id-field';
 import {
@@ -35,7 +42,7 @@ export type HrisRow = {
 
 type DirectoryLayout = {
     title: string;
-    icon: LucideIcon;
+    nameLabel: string;
     nameFields: string[];
     summaryFields: string[];
 };
@@ -43,7 +50,7 @@ type DirectoryLayout = {
 export const directoryLayouts: Record<string, DirectoryLayout | undefined> = {
     employees: {
         title: 'Employee directory',
-        icon: UsersRound,
+        nameLabel: 'Employee',
         nameFields: ['first_name', 'middle_name', 'last_name', 'suffix'],
         summaryFields: [
             'employee_number',
@@ -54,19 +61,26 @@ export const directoryLayouts: Record<string, DirectoryLayout | undefined> = {
     },
     'leave-applications': {
         title: 'Leave applications',
-        icon: CalendarDays,
+        nameLabel: 'Employee',
         nameFields: ['employee_id'],
-        summaryFields: ['leave_type_id', 'start_date', 'end_date', 'status'],
+        summaryFields: [
+            'leave_type_id',
+            'start_date',
+            'end_date',
+            'days_requested',
+            'reason',
+            'status',
+        ],
     },
     departments: {
         title: 'Office directory',
-        icon: Building2,
+        nameLabel: 'Department',
         nameFields: ['name'],
         summaryFields: ['code', 'parent_department_id', 'description'],
     },
     positions: {
         title: 'Position directory',
-        icon: BriefcaseBusiness,
+        nameLabel: 'Position',
         nameFields: ['title'],
         summaryFields: ['code', 'department_id', 'job_grade', 'is_active'],
     },
@@ -192,116 +206,151 @@ export function ResourceDirectory({
     fields: Field[];
     canLinkBiometricIds: boolean;
     renderValue: (field: Field, value: HrisValue) => HrisValue;
-    renderActions: (row: HrisRow) => ReactNode;
+    renderActions?: (row: HrisRow) => ReactNode;
 }) {
-    const summaryFields = fields.filter((field) =>
-        layout.summaryFields.includes(field.name),
+    const nameFields = layout.nameFields.flatMap((name) =>
+        fields.filter((field) => field.name === name),
+    );
+    const summaryFields = layout.summaryFields.flatMap((name) =>
+        fields.filter((field) => field.name === name),
     );
     const detailFields = fields.filter(
         (field) =>
             !layout.nameFields.includes(field.name) &&
             !layout.summaryFields.includes(field.name),
     );
-    const Icon = layout.icon;
-    function renderField(field: Field, row: HrisRow) {
-        return (
-            <div key={field.name} className="min-w-0">
-                <dt className="text-xs text-muted-foreground">{field.label}</dt>
-                <dd className="mt-1 break-words">
-                    {renderValue(field, row[field.name])}
-                </dd>
-            </div>
-        );
-    }
+    const columnCount =
+        1 +
+        summaryFields.length +
+        Number(detailFields.length > 0) +
+        Number(canLinkBiometricIds) +
+        Number(Boolean(renderActions));
+
     return (
-        <ul className="divide-y border-t">
-            {rows.map((row) => {
-                const nameParts = layout.nameFields.flatMap((name) => {
-                    const field = fields.find((item) => item.name === name);
-                    return field && row[name]
-                        ? [renderValue(field, row[name])]
-                        : [];
-                });
-                return (
-                    <li key={row.id} className="space-y-3 px-4 py-5 sm:px-6">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground">
-                                    <Icon
-                                        aria-hidden="true"
-                                        className="size-5"
-                                    />
-                                </span>
-                                <div className="min-w-0">
-                                    <h3 className="font-semibold break-words">
-                                        {nameParts.join(' ')}
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">
-                                        Record ID {row.id}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                                {renderActions(row)}
-                            </div>
-                        </div>
-                        <dl className="grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
-                            {summaryFields.map((field) =>
-                                renderField(field, row),
-                            )}
-                        </dl>
-                        {(detailFields.length > 0 || canLinkBiometricIds) && (
-                            <details className="rounded-xl border bg-muted/30 px-3 py-2 text-sm">
-                                <summary className="cursor-pointer font-medium">
-                                    {canLinkBiometricIds
-                                        ? 'Record details and biometric ID'
-                                        : 'Record details'}
-                                </summary>
-                                <dl className="my-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                                    {detailFields.map((field) =>
-                                        renderField(field, row),
-                                    )}
-                                </dl>
-                                {canLinkBiometricIds &&
-                                    typeof row.id === 'number' && (
-                                        <BiometricIdField
-                                            key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
-                                            employeeId={row.id}
-                                            employeeNumber={String(
-                                                row.employee_number,
-                                            )}
-                                            link={{
-                                                id:
-                                                    typeof row.biometric_id ===
-                                                    'number'
-                                                        ? row.biometric_id
-                                                        : null,
-                                                locked:
-                                                    row.biometric_locked ===
-                                                    true,
-                                                status:
-                                                    row.biometric_status ===
-                                                    'verified'
-                                                        ? 'verified'
-                                                        : 'pending',
-                                                note:
-                                                    typeof row.biometric_note ===
-                                                    'string'
-                                                        ? row.biometric_note
-                                                        : null,
-                                            }}
-                                        />
-                                    )}
-                            </details>
+        <Table
+            aria-labelledby="records-heading"
+            className="workspace-record-table"
+        >
+            <TableHeader className="workspace-table-head">
+                <TableRow>
+                    <TableHead scope="col">{layout.nameLabel}</TableHead>
+                    {summaryFields.map((field) => (
+                        <TableHead key={field.name} scope="col">
+                            {field.label}
+                        </TableHead>
+                    ))}
+                    {detailFields.length > 0 && (
+                        <TableHead scope="col">Record details</TableHead>
+                    )}
+                    {canLinkBiometricIds && (
+                        <TableHead scope="col">Biometric ID</TableHead>
+                    )}
+                    {renderActions && (
+                        <TableHead scope="col">Actions</TableHead>
+                    )}
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {rows.map((row) => (
+                    <TableRow key={row.id}>
+                        <TableHead
+                            scope="row"
+                            className="min-w-40 whitespace-normal"
+                        >
+                            {nameFields
+                                .filter((field) => row[field.name])
+                                .map((field) =>
+                                    renderValue(field, row[field.name]),
+                                )
+                                .join(' ')}
+                            <span className="block text-xs font-normal text-muted-foreground">
+                                Record ID {row.id}
+                            </span>
+                        </TableHead>
+                        {summaryFields.map((field) => (
+                            <TableCell
+                                key={field.name}
+                                className={
+                                    field.type === 'textarea'
+                                        ? 'max-w-sm min-w-48 break-words whitespace-normal'
+                                        : undefined
+                                }
+                            >
+                                {renderValue(field, row[field.name])}
+                            </TableCell>
+                        ))}
+                        {detailFields.length > 0 && (
+                            <TableCell>
+                                <details>
+                                    <summary className="cursor-pointer font-medium">
+                                        View details
+                                    </summary>
+                                    <dl className="mt-2 space-y-2">
+                                        {detailFields.map((field) => (
+                                            <div key={field.name}>
+                                                <dt className="text-xs text-muted-foreground">
+                                                    {field.label}
+                                                </dt>
+                                                <dd>
+                                                    {renderValue(
+                                                        field,
+                                                        row[field.name],
+                                                    )}
+                                                </dd>
+                                            </div>
+                                        ))}
+                                    </dl>
+                                </details>
+                            </TableCell>
                         )}
-                    </li>
-                );
-            })}
-            {rows.length === 0 && (
-                <li className="p-6 text-sm text-muted-foreground">
-                    No records found.
-                </li>
-            )}
-        </ul>
+                        {canLinkBiometricIds && (
+                            <TableCell>
+                                {typeof row.id === 'number' && (
+                                    <BiometricIdField
+                                        key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
+                                        employeeId={row.id}
+                                        employeeNumber={String(
+                                            row.employee_number,
+                                        )}
+                                        link={{
+                                            id:
+                                                typeof row.biometric_id ===
+                                                'number'
+                                                    ? row.biometric_id
+                                                    : null,
+                                            locked:
+                                                row.biometric_locked === true,
+                                            status:
+                                                row.biometric_status ===
+                                                'verified'
+                                                    ? 'verified'
+                                                    : 'pending',
+                                            note:
+                                                typeof row.biometric_note ===
+                                                'string'
+                                                    ? row.biometric_note
+                                                    : null,
+                                        }}
+                                    />
+                                )}
+                            </TableCell>
+                        )}
+                        {renderActions && (
+                            <TableCell>{renderActions(row)}</TableCell>
+                        )}
+                    </TableRow>
+                ))}
+                {rows.length === 0 && (
+                    <TableRow>
+                        <TableCell
+                            colSpan={columnCount}
+                            className="py-8 text-center text-muted-foreground"
+                        >
+                            No records found.
+                        </TableCell>
+                    </TableRow>
+                )}
+            </TableBody>
+        </Table>
     );
 }

@@ -96,6 +96,14 @@
     font-size: 0.8125rem;
 }
 
+.workspace-record-table :is(th, td) {
+    padding-inline: 1rem;
+}
+
+.workspace-record-table tbody :is(th, td) {
+    padding-block: 0.75rem;
+}
+
 .workspace-page [data-slot='button'].bg-primary {
     border-radius: 999px;
     font-weight: 600;

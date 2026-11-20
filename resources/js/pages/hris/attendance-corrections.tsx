@@ -1,3 +1,11 @@
+import {
+    Table,
+    TableHeader,
+    TableHead,
+    TableBody,
+    TableCell,
+    TableRow,
+} from '@/components/ui/table';
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
@@ -46,6 +54,16 @@ export default function AttendanceCorrections({
     logs: Log[] | null;
     advanceLabel: string;
 }) {
+    const showReview = records.data.some((row) => row.canReview);
+    const columns = [
+        'Employee',
+        'Attendance date',
+        'Proposed time in',
+        'Proposed time out',
+        'Reason',
+        'Status',
+    ];
+    if (showReview) columns.push('Actions');
     const form = useForm({
         attendance_record_id: '',
         time_in: '',
@@ -258,65 +276,88 @@ export default function AttendanceCorrections({
                         {records.data.length} on this page
                     </span>
                 </header>
-                {!records.data.length && (
-                    <p className="border-t p-6 text-sm text-muted-foreground">
-                        No corrections found.
-                    </p>
-                )}
-                {records.data.map((row) => (
-                    <article
-                        key={row.id}
-                        className="space-y-3 border-t px-4 py-5 sm:px-6"
-                    >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <h3 className="font-semibold">
-                                {row.date ?? 'Date unavailable'} ·{' '}
-                                {row.employee}
-                                {row.missingDay && ' · Missing day'}
-                            </h3>
-                            <span className="rounded-full bg-accent px-3 py-1 text-xs text-accent-foreground capitalize">
-                                {row.status.replaceAll('_', ' ')}
-                            </span>
-                        </div>
-                        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Proposed time in
-                                </dt>
-                                <dd>{row.timeIn ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Proposed time out
-                                </dt>
-                                <dd>{row.timeOut ?? '—'}</dd>
-                            </div>
-                        </dl>
-                        <p className="text-sm break-words text-muted-foreground">
-                            {row.reason}
-                        </p>
-                        {row.canReview && (
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    className={button}
-                                    disabled={reviewing}
-                                    onClick={() => review(row.id, 'advance')}
+                <Table
+                    aria-labelledby="correction-history"
+                    className="workspace-record-table"
+                >
+                    <TableHeader className="workspace-table-head">
+                        <TableRow>
+                            {columns.map((column) => (
+                                <TableHead scope="col" key={column}>
+                                    {column}
+                                </TableHead>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {records.data.map((row) => (
+                            <TableRow key={row.id}>
+                                <TableHead scope="row">
+                                    {row.employee}
+                                </TableHead>
+                                <TableCell>
+                                    {row.date ?? 'Date unavailable'}
+                                    {row.missingDay && (
+                                        <span className="block text-xs text-muted-foreground">
+                                            Missing day
+                                        </span>
+                                    )}
+                                </TableCell>
+                                <TableCell>{row.timeIn ?? '—'}</TableCell>
+                                <TableCell>{row.timeOut ?? '—'}</TableCell>
+                                <TableCell className="max-w-sm min-w-48 break-words whitespace-normal">
+                                    {row.reason}
+                                </TableCell>
+                                <TableCell>
+                                    <span className="rounded-full bg-accent px-3 py-1 text-xs text-accent-foreground capitalize">
+                                        {row.status.replaceAll('_', ' ')}
+                                    </span>
+                                </TableCell>
+                                {showReview && (
+                                    <TableCell>
+                                        {row.canReview && (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    className={button}
+                                                    disabled={reviewing}
+                                                    onClick={() =>
+                                                        review(
+                                                            row.id,
+                                                            'advance',
+                                                        )
+                                                    }
+                                                >
+                                                    {advanceLabel}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="rounded-full border px-4 py-2 text-sm text-destructive"
+                                                    disabled={reviewing}
+                                                    onClick={() =>
+                                                        review(row.id, 'reject')
+                                                    }
+                                                >
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                )}
+                            </TableRow>
+                        ))}
+                        {!records.data.length && (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={columns.length}
+                                    className="py-8 text-center text-muted-foreground"
                                 >
-                                    {advanceLabel}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="rounded-full border px-4 py-2 text-sm text-destructive"
-                                    disabled={reviewing}
-                                    onClick={() => review(row.id, 'reject')}
-                                >
-                                    Reject
-                                </button>
-                            </div>
+                                    No corrections found.
+                                </TableCell>
+                            </TableRow>
                         )}
-                    </article>
-                ))}
+                    </TableBody>
+                </Table>
                 {(records.prev_page_url || records.next_page_url) && (
                     <nav
                         aria-label="Correction pages"
