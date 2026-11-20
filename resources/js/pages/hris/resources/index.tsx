@@ -1,3 +1,4 @@
+import WorkspaceHeader from '@/components/workspace-header';
 import { Form, Head, Link, router, useForm } from '@inertiajs/react';
 import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
@@ -252,7 +253,7 @@ export default function HrisResourceIndex({
     return (
         <>
             <Head title={title} />
-            <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+            <div className="workspace-page max-w-7xl">
                 {isAttendance ? (
                     <AttendanceWorkspaceHeader
                         active="records"
@@ -260,42 +261,25 @@ export default function HrisResourceIndex({
                         canManage={canManageAttendance}
                     />
                 ) : (
-                    <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
-                        />
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
-                        />
-                        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-                            <div>
-                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                    {title}
-                                </h1>
-                                <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                                    {moduleDescriptions[resource] ??
-                                        'Manage HRIS records and their linked data.'}
-                                </p>
-                            </div>
-                            {resource === 'employees' && canImport && (
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
-                                >
-                                    <Link href="/hris/employees/import">
-                                        <FileUp aria-hidden="true" />
-                                        Bulk Import Employees
-                                    </Link>
-                                </Button>
-                            )}
-                            {resource === 'leave-applications' && (
-                                <LeaveFormDemoDialog />
-                            )}
-                        </div>
-                    </header>
+                    <WorkspaceHeader
+                        title={title}
+                        description={
+                            moduleDescriptions[resource] ??
+                            'Manage HRIS records and their linked data.'
+                        }
+                    >
+                        {resource === 'employees' && canImport && (
+                            <Button asChild className="dashboard-action">
+                                <Link href="/hris/employees/import">
+                                    <FileUp aria-hidden="true" />
+                                    Bulk Import Employees
+                                </Link>
+                            </Button>
+                        )}
+                        {resource === 'leave-applications' && (
+                            <LeaveFormDemoDialog />
+                        )}
+                    </WorkspaceHeader>
                 )}
 
                 {attendanceMonth && (
@@ -329,8 +313,8 @@ export default function HrisResourceIndex({
                         className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
                     >
                         {statusSummary.map(({ status, total }) => (
-                            <div key={status} className="rounded-lg border p-4">
-                                <p className="text-sm text-muted-foreground capitalize">
+                            <div key={status} className="workspace-metric p-4">
+                                <p className="text-sm capitalize">
                                     {status.replaceAll('_', ' ')}
                                 </p>
                                 <p className="mt-1 text-2xl font-semibold">
@@ -344,7 +328,7 @@ export default function HrisResourceIndex({
                 {canManage && (
                     <section
                         id="record-editor"
-                        className="scroll-mt-20 rounded-2xl border bg-card p-5 sm:p-6"
+                        className="workspace-panel scroll-mt-20 p-5 sm:p-6"
                     >
                         <h2 className="mb-4 text-lg font-medium">
                             {editingId
@@ -605,7 +589,7 @@ export default function HrisResourceIndex({
                 )}
                 <section
                     aria-labelledby="records-heading"
-                    className="overflow-hidden rounded-2xl border bg-card"
+                    className="workspace-panel overflow-hidden"
                 >
                     <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
                         <h2
@@ -620,7 +604,7 @@ export default function HrisResourceIndex({
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-muted text-muted-foreground">
+                            <thead className="workspace-table-head">
                                 <tr>
                                     {canLinkBiometricIds && (
                                         <th

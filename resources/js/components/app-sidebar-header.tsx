@@ -42,10 +42,7 @@ export function AppSidebarHeader() {
         hrisNavigation: Destination[];
         notifications: NotificationFeed;
     }>().props;
-    const isDashboard = usePage().component === 'dashboard';
-    const surface = isDashboard
-        ? 'public-surface dashboard-popover'
-        : 'public-surface';
+    const surface = 'public-surface dashboard-popover';
     const [searchOpen, setSearchOpen] = useState(false);
     const [updating, setUpdating] = useState(false);
     const initials = useInitials();

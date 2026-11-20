@@ -74,7 +74,7 @@ export default function ImportAttendanceLogs({
     }
 
     return (
-        <main className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+        <main className="workspace-page max-w-7xl">
             <Head title="Import Attendance Logs" />
             <AttendanceWorkspaceHeader
                 active="import"
@@ -89,10 +89,7 @@ export default function ImportAttendanceLogs({
                     <Link href="/hris/employees">Link IDs on Employees</Link>
                 </Button>
             </div>
-            <form
-                onSubmit={upload}
-                className="space-y-4 rounded-xl border bg-card p-5"
-            >
+            <form onSubmit={upload} className="workspace-panel space-y-4 p-5">
                 <div className="max-w-xl space-y-2">
                     <label
                         htmlFor="attendance-log"
@@ -147,7 +144,7 @@ export default function ImportAttendanceLogs({
 
             {batch && (
                 <section
-                    className="space-y-3 rounded-xl border bg-card p-5"
+                    className="workspace-panel space-y-3 p-5"
                     aria-labelledby="import-summary"
                 >
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -227,7 +224,7 @@ export default function ImportAttendanceLogs({
 
             {selectedId !== null && punches && (
                 <section
-                    className="space-y-3 rounded-xl border bg-card p-5"
+                    className="workspace-panel space-y-3 p-5"
                     aria-labelledby="punches-heading"
                 >
                     <h2 id="punches-heading" className="text-lg font-semibold">
@@ -249,7 +246,7 @@ export default function ImportAttendanceLogs({
             )}
 
             <section
-                className="space-y-3 rounded-xl border bg-card p-5"
+                className="workspace-panel space-y-3 p-5"
                 aria-labelledby="biometric-groups"
             >
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -274,7 +271,7 @@ export default function ImportAttendanceLogs({
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-muted">
+                        <thead className="workspace-table-head">
                             <tr>
                                 {[
                                     'Biometric ID',

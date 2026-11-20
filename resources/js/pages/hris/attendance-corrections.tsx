@@ -1,3 +1,4 @@
+import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -73,22 +74,17 @@ export default function AttendanceCorrections({
     }
 
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+        <div className="workspace-page max-w-7xl">
             <Head title="Attendance corrections" />
-            <header className="rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                <h1 className="text-3xl font-semibold tracking-tight">
-                    Attendance corrections
-                </h1>
-                <p className="mt-2 text-sm text-white/80">
-                    Request or review missing days and corrections to daily time
-                    records.
-                </p>
-            </header>
+            <WorkspaceHeader
+                title="Attendance corrections"
+                description="Request or review missing days and corrections to daily time records."
+            />
 
             {logs && (
                 <section
                     aria-labelledby="request-heading"
-                    className="rounded-2xl border bg-card p-6"
+                    className="workspace-panel p-6"
                 >
                     <h2 id="request-heading" className="text-lg font-semibold">
                         New correction
@@ -210,14 +206,14 @@ export default function AttendanceCorrections({
             )}
             <section aria-label="Correction history" className="space-y-3">
                 {!records.data.length && (
-                    <p className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
+                    <p className="workspace-panel p-6 text-sm text-muted-foreground">
                         No corrections found.
                     </p>
                 )}
                 {records.data.map((row) => (
                     <article
                         key={row.id}
-                        className="space-y-3 rounded-2xl border bg-card p-5"
+                        className="workspace-panel space-y-3 p-5"
                     >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <h2 className="font-semibold">

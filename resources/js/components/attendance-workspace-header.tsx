@@ -1,3 +1,4 @@
+import WorkspaceHeader from '@/components/workspace-header';
 import { Link } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import { Button } from '@/components/ui/button';
@@ -47,22 +48,10 @@ export default function AttendanceWorkspaceHeader({
 
     return (
         <>
-            <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
-                />
-                <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
-                />
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                    Attendance records
-                </h1>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                    Review and maintain employee time and attendance records.
-                </p>
-            </header>
+            <WorkspaceHeader
+                title="Attendance records"
+                description="Review and maintain employee time and attendance records."
+            />
             <nav aria-label="Attendance views" className="flex flex-wrap gap-2">
                 {viewLink(views[0])}
                 <DailyTimeRecordDialog url="/hris/attendance/dtr/demo" demo />

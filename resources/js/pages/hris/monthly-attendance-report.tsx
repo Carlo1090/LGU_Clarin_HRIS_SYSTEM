@@ -161,7 +161,7 @@ function DailyRecords({
                         aria-label="Daily biometric records"
                         className="w-full text-left text-sm whitespace-nowrap"
                     >
-                        <thead className="bg-muted">
+                        <thead className="workspace-table-head">
                             <tr>
                                 {[
                                     'Date',
@@ -265,7 +265,7 @@ export default function MonthlyAttendanceReport({
     const filters = { month, sort, direction };
 
     return (
-        <main className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+        <main className="workspace-page max-w-7xl">
             <Head title="Monthly Attendance Report" />
             <AttendanceWorkspaceHeader
                 active="report"
@@ -325,12 +325,12 @@ export default function MonthlyAttendanceReport({
                     </Button>
                 )}
             </div>
-            <div className="overflow-x-auto rounded-xl border bg-card">
+            <div className="workspace-panel overflow-x-auto">
                 <table
                     aria-label="Monthly attendance summary"
                     className="w-full text-left text-sm"
                 >
-                    <thead className="bg-muted">
+                    <thead className="workspace-table-head">
                         <tr>
                             <th scope="col" className="p-3 font-medium">
                                 Employee

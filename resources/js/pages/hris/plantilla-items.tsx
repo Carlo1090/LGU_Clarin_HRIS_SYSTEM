@@ -1,3 +1,4 @@
+import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link } from '@inertiajs/react';
 
 type Row = {
@@ -40,19 +41,17 @@ export default function PlantillaItems({ title, fields, records }: Props) {
     return (
         <>
             <Head title={title} />
-            <main className="space-y-6 p-4 md:p-8">
-                <header>
-                    <h1 className="text-2xl font-semibold">{title}</h1>
-                </header>
+            <main className="workspace-page max-w-7xl">
+                <WorkspaceHeader title={title} />
                 <section className="space-y-3">
                     <div>
                         <h2 className="text-lg font-semibold">
                             Plantilla records
                         </h2>
                     </div>
-                    <div className="overflow-x-auto rounded-lg border">
+                    <div className="workspace-panel overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-muted/60">
+                            <thead className="workspace-table-head">
                                 <tr>
                                     {columns.map((column) => (
                                         <th

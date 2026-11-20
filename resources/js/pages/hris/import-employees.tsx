@@ -1,4 +1,5 @@
-﻿import { Head, Link, useForm } from '@inertiajs/react';
+﻿import WorkspaceHeader from '@/components/workspace-header';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import InputError from '@/components/input-error';
@@ -82,31 +83,26 @@ export default function ImportEmployees({
     return (
         <>
             <Head title="Bulk import employees" />
-            <main className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-8">
-                <header>
+            <main className="workspace-page max-w-6xl">
+                <WorkspaceHeader
+                    title="Bulk import employees"
+                    description="Import employee records and create employee sign-in accounts from the EMPLOYEES worksheet. This workflow does not add Plantilla positions."
+                >
                     <Button
                         asChild
                         variant="outline"
                         size="sm"
-                        className="mb-4"
+                        className="text-foreground"
                     >
                         <Link href={index('employees')}>
                             <ArrowLeft aria-hidden="true" />
                             Back to Employees
                         </Link>
                     </Button>
-                    <h1 className="text-2xl font-semibold">
-                        Bulk import employees
-                    </h1>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        Import employee records and create employee sign-in
-                        accounts from the EMPLOYEES worksheet. This workflow
-                        does not add Plantilla positions.
-                    </p>
-                </header>
+                </WorkspaceHeader>
 
                 {result ? (
-                    <section className="space-y-4 rounded-xl border p-5">
+                    <section className="workspace-panel space-y-4 p-5">
                         <h2 className="text-lg font-semibold">
                             Import complete
                         </h2>
@@ -184,7 +180,7 @@ export default function ImportEmployees({
                     </section>
                 ) : (
                     <>
-                        <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
+                        <section className="workspace-panel flex flex-wrap items-center justify-between gap-4 p-4">
                             <div>
                                 <h2 className="font-medium">
                                     Employee import template
@@ -219,7 +215,7 @@ export default function ImportEmployees({
                                 </a>
                             </div>
                         </section>
-                        <section className="space-y-2 rounded-xl border p-4 text-sm">
+                        <section className="workspace-panel space-y-2 p-4 text-sm">
                             <h2 className="font-medium">
                                 Required spreadsheet columns
                             </h2>
@@ -439,7 +435,7 @@ export default function ImportEmployees({
                         )}
                         <form
                             onSubmit={preview}
-                            className="space-y-4 rounded-xl border p-4"
+                            className="workspace-panel space-y-4 p-4"
                         >
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2 md:col-span-2">
@@ -527,7 +523,7 @@ export default function ImportEmployees({
                                     </div>
                                     <div className="overflow-x-auto rounded-xl border">
                                         <table className="w-full text-left text-sm">
-                                            <thead className="bg-muted">
+                                            <thead className="workspace-table-head">
                                                 <tr>
                                                     {[
                                                         'Excel row',
@@ -607,7 +603,7 @@ export default function ImportEmployees({
                                 </section>
                                 <form
                                     onSubmit={commit}
-                                    className="flex flex-wrap items-end gap-3 rounded-xl border p-4"
+                                    className="workspace-panel flex flex-wrap items-end gap-3 p-4"
                                 >
                                     <input
                                         type="hidden"

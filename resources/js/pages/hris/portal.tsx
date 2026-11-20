@@ -1,3 +1,4 @@
+import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, useForm } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
@@ -40,7 +41,7 @@ function LeaveRequestForm({
     return (
         <section
             aria-labelledby="leave-form-heading"
-            className="rounded-2xl border bg-card p-6"
+            className="workspace-panel p-6"
         >
             <h2 id="leave-form-heading" className="text-lg font-semibold">
                 New leave request
@@ -177,17 +178,11 @@ export default function PortalPage({
     canPreviewLeaveForm,
 }: Props) {
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+        <div className="workspace-page max-w-7xl">
             <Head title={title} />
-            <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                <div>
-                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                        {title}
-                    </h1>
-                    <p className="mt-2 text-sm text-white/80">{description}</p>
-                </div>
+            <WorkspaceHeader title={title} description={description}>
                 {canPreviewLeaveForm && <LeaveFormDemoDialog />}
-            </header>
+            </WorkspaceHeader>
 
             {leaveTypes && <LeaveRequestForm types={leaveTypes} />}
             {dtrDemoUrl && (
@@ -201,7 +196,7 @@ export default function PortalPage({
 
             <section
                 aria-label={title}
-                className="overflow-hidden rounded-2xl border bg-card"
+                className="workspace-panel overflow-hidden"
             >
                 {missingEmployee ? (
                     <p className="p-6 text-sm text-muted-foreground">
@@ -228,7 +223,7 @@ export default function PortalPage({
                                 aria-label={title}
                                 className="w-full text-left text-sm"
                             >
-                                <thead className="bg-muted text-muted-foreground">
+                                <thead className="workspace-table-head">
                                     <tr>
                                         {columns.map((column) => (
                                             <th
