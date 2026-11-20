@@ -1,8 +1,15 @@
+import {
+    DirectoryOverview,
+    ResourceDirectory,
+    directoryLayouts,
+    type Field,
+    type HrisValue,
+    type HrisRow,
+} from '@/components/resource-directory';
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import BiometricIdField from '@/components/biometric-id-field';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
@@ -13,22 +20,6 @@ import RecordPagination, {
     type RecordPageLink,
 } from '@/components/record-pagination';
 import { Button } from '@/components/ui/button';
-
-type Field = {
-    name: string;
-    label: string;
-    type: string;
-    required?: boolean;
-    options?: { value: string | number; label: string }[];
-};
-
-type HrisValue = string | number | boolean | null | undefined;
-
-type HrisRow = {
-    id: number | string;
-    canManage?: boolean;
-    [key: string]: HrisValue;
-};
 
 type Props = {
     resource: string;
@@ -63,6 +54,7 @@ const moduleDescriptions: Record<string, string> = {
         'Review municipal offices and maintain department information.',
     attendance: 'Review and maintain employee time and attendance records.',
     'leave-applications': 'Review employee leave requests and their status.',
+    positions: 'Review position assignments, salary grades, and active posts.',
     vacancies: 'Track open positions and recruitment deadlines.',
 };
 
@@ -173,9 +165,9 @@ function ResourceRecords({
 
     const edit = (row: HrisRow) => {
         setEditingId(row.id);
-        document
-            .getElementById('record-editor')
-            ?.scrollIntoView({ block: 'start' });
+        const editor = document.getElementById('record-editor');
+        if (editor instanceof HTMLDetailsElement) editor.open = true;
+        editor?.scrollIntoView({ block: 'start' });
         form.setData(
             Object.fromEntries(
                 fields.map((field) => [
@@ -206,7 +198,14 @@ function ResourceRecords({
             return String(value).replaceAll('_', ' ');
         }
         if (field.type === 'checkbox') return value ? 'Yes' : 'No';
-        if (field.options)
+        if (officeDirectory && field.name === 'parent_department_id') {
+            return (
+                records.data.find(
+                    (office) => String(office.id) === String(value),
+                )?.name ?? value
+            );
+        }
+        if (Array.isArray(field.options))
             return (
                 field.options.find(
                     (option) => String(option.value) === String(value),
@@ -234,6 +233,75 @@ function ResourceRecords({
         return value;
     };
 
+    function rowActions(row: HrisRow) {
+        return (
+            <>
+                {leaveReviewStage &&
+                    typeof row.id === 'number' &&
+                    row.status === leaveReviewStage[0] && (
+                        <>
+                            <Button
+                                size="sm"
+                                disabled={reviewing}
+                                onClick={() =>
+                                    reviewLeave(Number(row.id), 'advance')
+                                }
+                            >
+                                {leaveReviewStage[2]}
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive"
+                                disabled={reviewing}
+                                onClick={() =>
+                                    reviewLeave(Number(row.id), 'reject')
+                                }
+                            >
+                                Reject
+                            </Button>
+                        </>
+                    )}
+                {isAttendance && (
+                    <span className="mr-2">
+                        <DailyTimeRecordDialog
+                            url={
+                                typeof row.dtr_url === 'string'
+                                    ? row.dtr_url
+                                    : `/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`
+                            }
+                        />
+                    </span>
+                )}
+                {canManage && row.canManage !== false && (
+                    <>
+                        <Button
+                            type="button"
+                            onClick={() => edit(row)}
+                            size="sm"
+                            variant="outline"
+                            className="mr-2 rounded-full"
+                        >
+                            Edit
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => remove(row)}
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        >
+                            Delete
+                        </Button>
+                    </>
+                )}
+            </>
+        );
+    }
+
+    const directory = directoryLayouts[resource];
+    const Editor = directory ? 'details' : 'section';
+    const EditorHeading = directory ? 'summary' : 'h2';
     return (
         <>
             <Head title={title} />
@@ -266,36 +334,32 @@ function ResourceRecords({
                     </WorkspaceHeader>
                 )}
 
-                {resource === 'employees' && statusSummary.length > 0 && (
-                    <section
-                        aria-label="Employees by status"
-                        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-                    >
-                        {statusSummary.map(({ status, total }) => (
-                            <div key={status} className="workspace-metric p-4">
-                                <p className="text-sm capitalize">
-                                    {status.replaceAll('_', ' ')}
-                                </p>
-                                <p className="mt-1 text-2xl font-semibold">
-                                    {total}
-                                </p>
-                            </div>
-                        ))}
-                    </section>
+                {directory && (
+                    <DirectoryOverview
+                        resource={resource}
+                        title={title}
+                        rows={records.data}
+                        statusSummary={statusSummary}
+                    />
                 )}
-
                 {canManage && (
-                    <section
+                    <Editor
                         id="record-editor"
-                        className="workspace-panel scroll-mt-20 p-5 sm:p-6"
+                        className="workspace-panel scroll-mt-20 p-5 sm:p-6 [&_summary+*]:mt-4"
                     >
-                        <h2 className="mb-4 text-lg font-medium">
+                        <EditorHeading
+                            className={
+                                directory
+                                    ? 'cursor-pointer text-lg font-semibold'
+                                    : 'mb-4 text-lg font-medium'
+                            }
+                        >
                             {editingId
                                 ? 'Edit record'
                                 : resource === 'employees'
                                   ? 'Create employee account'
                                   : 'Add record'}
-                        </h2>
+                        </EditorHeading>
                         {resource === 'employees' && (
                             <div className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                                 <p>
@@ -482,7 +546,7 @@ function ResourceRecords({
                                 )}
                             </div>
                         </form>
-                    </section>
+                    </Editor>
                 )}
 
                 {resource === 'employees' && createdAccountCredentials && (
@@ -555,211 +619,99 @@ function ResourceRecords({
                             id="records-heading"
                             className="text-lg font-semibold tracking-tight"
                         >
-                            Records
+                            {directory?.title ?? 'Records'}
                         </h2>
                         <span className="text-sm text-muted-foreground">
                             {records.data.length} on this page
                         </span>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="workspace-table-head">
-                                <tr>
-                                    {canLinkBiometricIds && (
-                                        <th
-                                            scope="col"
-                                            className="px-3 py-3 font-medium"
-                                        >
-                                            Biometric ID
-                                        </th>
-                                    )}
-                                    <th className="px-3 py-3 font-medium">
-                                        ID
-                                    </th>
-                                    {fields.map((field) => (
-                                        <th
-                                            key={field.name}
-                                            className="px-3 py-3 font-medium"
-                                        >
-                                            {field.label}
-                                        </th>
-                                    ))}
-                                    {hasActions && (
+                        {directory ? (
+                            <ResourceDirectory
+                                layout={directory}
+                                rows={records.data}
+                                fields={fields}
+                                canLinkBiometricIds={canLinkBiometricIds}
+                                renderValue={displayValue}
+                                renderActions={rowActions}
+                            />
+                        ) : (
+                            <table className="w-full text-left text-sm">
+                                <thead className="workspace-table-head">
+                                    <tr>
                                         <th className="px-3 py-3 font-medium">
-                                            Actions
+                                            ID
                                         </th>
-                                    )}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {records.data.map((row) => (
-                                    <tr
-                                        key={row.id}
-                                        className="border-t transition-colors hover:bg-muted/60"
-                                    >
-                                        {canLinkBiometricIds &&
-                                            typeof row.id === 'number' && (
-                                                <td className="px-3 py-3">
-                                                    <BiometricIdField
-                                                        key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
-                                                        employeeId={row.id}
-                                                        employeeNumber={String(
-                                                            row.employee_number,
-                                                        )}
-                                                        link={{
-                                                            id:
-                                                                typeof row.biometric_id ===
-                                                                'number'
-                                                                    ? row.biometric_id
-                                                                    : null,
-                                                            locked:
-                                                                row.biometric_locked ===
-                                                                true,
-                                                            status:
-                                                                row.biometric_status ===
-                                                                'verified'
-                                                                    ? 'verified'
-                                                                    : 'pending',
-                                                            note:
-                                                                typeof row.biometric_note ===
-                                                                'string'
-                                                                    ? row.biometric_note
-                                                                    : null,
-                                                        }}
-                                                    />
-                                                </td>
-                                            )}
-                                        <td className="px-3 py-3">{row.id}</td>
                                         {fields.map((field) => (
-                                            <td
+                                            <th
                                                 key={field.name}
-                                                className="max-w-64 truncate px-3 py-3"
+                                                className="px-3 py-3 font-medium"
                                             >
-                                                {resource === 'employees' &&
-                                                field.name ===
-                                                    'employment_status' ? (
-                                                    <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">
-                                                        {displayValue(
+                                                {field.label}
+                                            </th>
+                                        ))}
+                                        {hasActions && (
+                                            <th className="px-3 py-3 font-medium">
+                                                Actions
+                                            </th>
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {records.data.map((row) => (
+                                        <tr
+                                            key={row.id}
+                                            className="border-t transition-colors hover:bg-muted/60"
+                                        >
+                                            <td className="px-3 py-3">
+                                                {row.id}
+                                            </td>
+                                            {fields.map((field) => (
+                                                <td
+                                                    key={field.name}
+                                                    className="max-w-64 truncate px-3 py-3"
+                                                >
+                                                    {resource === 'employees' &&
+                                                    field.name ===
+                                                        'employment_status' ? (
+                                                        <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">
+                                                            {displayValue(
+                                                                field,
+                                                                row[field.name],
+                                                            )}
+                                                        </span>
+                                                    ) : (
+                                                        displayValue(
                                                             field,
                                                             row[field.name],
-                                                        )}
-                                                    </span>
-                                                ) : (
-                                                    displayValue(
-                                                        field,
-                                                        row[field.name],
-                                                    )
-                                                )}
-                                            </td>
-                                        ))}
-                                        {leaveReviewStage && (
-                                            <td className="px-3 py-3 whitespace-nowrap">
-                                                {typeof row.id === 'number' &&
-                                                    row.status ===
-                                                        leaveReviewStage[0] && (
-                                                        <>
-                                                            <button
-                                                                type="button"
-                                                                disabled={
-                                                                    reviewing
-                                                                }
-                                                                onClick={() =>
-                                                                    reviewLeave(
-                                                                        Number(
-                                                                            row.id,
-                                                                        ),
-                                                                        'advance',
-                                                                    )
-                                                                }
-                                                                className="mr-2 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground disabled:opacity-50"
-                                                            >
-                                                                {
-                                                                    leaveReviewStage[2]
-                                                                }
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                disabled={
-                                                                    reviewing
-                                                                }
-                                                                onClick={() =>
-                                                                    reviewLeave(
-                                                                        Number(
-                                                                            row.id,
-                                                                        ),
-                                                                        'reject',
-                                                                    )
-                                                                }
-                                                                className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                                                            >
-                                                                Reject
-                                                            </button>
-                                                        </>
+                                                        )
                                                     )}
+                                                </td>
+                                            ))}
+                                            {hasActions && (
+                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                    {rowActions(row)}
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                    {records.data.length === 0 && (
+                                        <tr>
+                                            <td
+                                                colSpan={
+                                                    fields.length +
+                                                    1 +
+                                                    Number(hasActions)
+                                                }
+                                                className="px-3 py-8 text-center text-muted-foreground"
+                                            >
+                                                No records found.
                                             </td>
-                                        )}
-                                        {hasActions && !leaveReviewStage && (
-                                            <td className="px-3 py-3 whitespace-nowrap">
-                                                {isAttendance && (
-                                                    <span className="mr-2">
-                                                        <DailyTimeRecordDialog
-                                                            url={
-                                                                typeof row.dtr_url ===
-                                                                'string'
-                                                                    ? row.dtr_url
-                                                                    : `/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`
-                                                            }
-                                                        />
-                                                    </span>
-                                                )}
-                                                {canManage &&
-                                                    row.canManage !== false && (
-                                                        <>
-                                                            <Button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    edit(row)
-                                                                }
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="mr-2 rounded-full"
-                                                            >
-                                                                Edit
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    remove(row)
-                                                                }
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                            >
-                                                                Delete
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                                {records.data.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={
-                                                fields.length +
-                                                1 +
-                                                Number(canLinkBiometricIds) +
-                                                Number(hasActions)
-                                            }
-                                            className="px-3 py-8 text-center text-muted-foreground"
-                                        >
-                                            No records found.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                     <RecordPagination links={records.links} />
                 </section>

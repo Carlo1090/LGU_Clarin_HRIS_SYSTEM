@@ -1,4 +1,5 @@
-﻿import { Form, Head } from '@inertiajs/react';
+import { WorkspaceMetrics } from '@/components/workspace-metrics';
+import { Form, Head } from '@inertiajs/react';
 import {
     CalendarCheck2,
     CalendarClock,
@@ -134,22 +135,7 @@ export default function AttendanceDirectory({
                         </Button>
                     </Form>
                 </div>
-                <dl className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                    {metrics.map(({ label, icon: Icon, count }) => (
-                        <div
-                            key={label}
-                            className="workspace-metric flex flex-col justify-between gap-3 p-4 sm:p-5"
-                        >
-                            <dt className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium">
-                                {label}
-                                <Icon aria-hidden="true" className="size-4" />
-                            </dt>
-                            <dd className="text-3xl font-semibold tracking-tight">
-                                {count}
-                            </dd>
-                        </div>
-                    ))}
-                </dl>
+                <WorkspaceMetrics metrics={metrics} />
             </section>
             <section
                 className="workspace-panel overflow-hidden"

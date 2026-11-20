@@ -1,5 +1,12 @@
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import {
+    CalendarClock,
+    CalendarMinus,
+    ClipboardList,
+    UserCheck,
+} from 'lucide-react';
+import { WorkspaceOverview } from '@/components/workspace-metrics';
 import { useState } from 'react';
 
 const path = '/hris/attendance-corrections';
@@ -81,6 +88,38 @@ export default function AttendanceCorrections({
                 description="Request or review missing days and corrections to daily time records."
             />
 
+            <WorkspaceOverview
+                title="Correction overview"
+                description="Requests on this page and their review status."
+                metrics={[
+                    {
+                        label: 'Requests',
+                        count: records.data.length,
+                        icon: ClipboardList,
+                    },
+                    {
+                        label: 'Missing days',
+                        count: records.data.filter((row) => row.missingDay)
+                            .length,
+                        icon: CalendarMinus,
+                    },
+                    {
+                        label: 'In review',
+                        count: records.data.filter((row) =>
+                            ['pending', 'department_reviewed'].includes(
+                                row.status,
+                            ),
+                        ).length,
+                        icon: CalendarClock,
+                    },
+                    {
+                        label: 'Ready for your review',
+                        count: records.data.filter((row) => row.canReview)
+                            .length,
+                        icon: UserCheck,
+                    },
+                ]}
+            />
             {logs && (
                 <section
                     aria-labelledby="request-heading"
@@ -204,23 +243,37 @@ export default function AttendanceCorrections({
                     {decisionError}
                 </p>
             )}
-            <section aria-label="Correction history" className="space-y-3">
+            <section
+                aria-labelledby="correction-history"
+                className="workspace-panel overflow-hidden"
+            >
+                <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-5 sm:px-6">
+                    <h2
+                        id="correction-history"
+                        className="text-lg font-semibold"
+                    >
+                        Correction history
+                    </h2>
+                    <span className="text-xs text-muted-foreground">
+                        {records.data.length} on this page
+                    </span>
+                </header>
                 {!records.data.length && (
-                    <p className="workspace-panel p-6 text-sm text-muted-foreground">
+                    <p className="border-t p-6 text-sm text-muted-foreground">
                         No corrections found.
                     </p>
                 )}
                 {records.data.map((row) => (
                     <article
                         key={row.id}
-                        className="workspace-panel space-y-3 p-5"
+                        className="space-y-3 border-t px-4 py-5 sm:px-6"
                     >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <h2 className="font-semibold">
+                            <h3 className="font-semibold">
                                 {row.date ?? 'Date unavailable'} ·{' '}
                                 {row.employee}
                                 {row.missingDay && ' · Missing day'}
-                            </h2>
+                            </h3>
                             <span className="rounded-full bg-accent px-3 py-1 text-xs text-accent-foreground capitalize">
                                 {row.status.replaceAll('_', ' ')}
                             </span>
@@ -267,7 +320,7 @@ export default function AttendanceCorrections({
                 {(records.prev_page_url || records.next_page_url) && (
                     <nav
                         aria-label="Correction pages"
-                        className="flex gap-4 py-2 text-sm"
+                        className="flex gap-4 border-t px-5 py-3 text-sm"
                     >
                         {records.prev_page_url && (
                             <Link
