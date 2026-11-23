@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Hris;
 
 use App\Imports\EmployeeSpreadsheetImport;
+use App\Models\Employee;
 use App\Support\EmployeeImportTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,9 +44,20 @@ class EmployeeImportController
         return Inertia::render('hris/import-employees', [
             'statusOptions' => $template->statuses(),
             'columns' => $template->columns(),
-            'rows' => $previewRows,
+            'rows' => $this->withAvatars($previewRows),
             'token' => is_array($rows) ? $token : null,
         ]);
+    }
+
+    private function withAvatars(array $rows): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+        $photos = Employee::query()->whereIn('employee_number', array_column($rows, 'employee_number'))
+            ->select('employee_number')->addSelect(['avatar' => Employee::accountAvatarQuery()])->pluck('avatar', 'employee_number');
+
+        return array_map(fn ($row) => $row + ['avatar' => $photos->get($row['employee_number'])], $rows);
     }
 
     public function updateTemplate(Request $request, EmployeeImportTemplate $template): RedirectResponse
@@ -90,7 +102,7 @@ class EmployeeImportController
 
         return Inertia::render('hris/import-employees', [
             'result' => collect($result)->except('credentials')->all(),
-            'credentials' => $result['credentials'],
+            'credentials' => $this->withAvatars($result['credentials']),
         ]);
     }
 }

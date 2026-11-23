@@ -38,7 +38,11 @@ export function AppSidebar() {
     ];
 
     return (
-        <Sidebar collapsible="icon" variant="inset" className="portal-sidebar">
+        <Sidebar
+            collapsible="icon"
+            variant="inset"
+            className="portal-sidebar dashboard-sidebar"
+        >
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>

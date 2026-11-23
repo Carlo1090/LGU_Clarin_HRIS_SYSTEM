@@ -1,3 +1,4 @@
+import { Menu, X } from 'lucide-react';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import AppLogo from '@/components/app-logo';
@@ -25,6 +26,7 @@ export default function PublicHeader({
 
     const headerRef = useRef<HTMLElement>(null);
     const [activeSection, setActiveSection] = useState<string>();
+    const [menuOpen, setMenuOpen] = useState(false);
 
     useEffect(() => {
         if (!showNavigation) {
@@ -60,6 +62,9 @@ export default function PublicHeader({
     return (
         <header
             ref={headerRef}
+            onKeyDown={(event) => {
+                if (event.key === 'Escape') setMenuOpen(false);
+            }}
             className="sticky top-0 z-50 border-b border-border/60 bg-background/95 backdrop-blur-md"
         >
             <nav
@@ -74,7 +79,7 @@ export default function PublicHeader({
                     <AppLogo />
                 </Link>
                 {showNavigation && (
-                    <div className="order-last flex w-full items-center gap-1 overflow-x-auto pb-2 text-xs font-medium text-muted-foreground lg:order-none lg:w-auto lg:overflow-visible lg:pb-0 lg:text-sm">
+                    <div className="hidden items-center gap-1 text-sm font-medium text-muted-foreground lg:flex">
                         {navigation.map(({ id, label }) => (
                             <a
                                 key={id}
@@ -93,6 +98,24 @@ export default function PublicHeader({
                     </div>
                 )}
                 <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+                    {showNavigation && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full lg:hidden"
+                            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                            aria-expanded={menuOpen}
+                            aria-controls="mobile-main-navigation"
+                            onClick={() => setMenuOpen((open) => !open)}
+                        >
+                            {menuOpen ? (
+                                <X className="size-5" aria-hidden="true" />
+                            ) : (
+                                <Menu className="size-5" aria-hidden="true" />
+                            )}
+                        </Button>
+                    )}
                     <AppearanceToggle />
                     {auth.user ? (
                         <Button asChild className="rounded-full">
@@ -109,6 +132,34 @@ export default function PublicHeader({
                     ) : null}
                 </div>
             </nav>
+            {showNavigation && (
+                <div
+                    id="mobile-main-navigation"
+                    hidden={!menuOpen}
+                    className="border-t border-border/60 bg-background px-4 pt-2 pb-4 lg:hidden"
+                >
+                    <div className="mx-auto flex max-w-6xl flex-col gap-1">
+                        {navigation.map(({ id, label }) => (
+                            <a
+                                key={id}
+                                href={'#' + id}
+                                aria-current={
+                                    activeSection === id
+                                        ? 'location'
+                                        : undefined
+                                }
+                                onClick={() => {
+                                    setActiveSection(id);
+                                    setMenuOpen(false);
+                                }}
+                                className="rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring aria-[current=location]:bg-accent aria-[current=location]:text-accent-foreground"
+                            >
+                                {label}
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            )}
         </header>
     );
 }

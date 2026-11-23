@@ -10,6 +10,9 @@ Route::middleware(['auth', EnsureHrisAccountReady::class])->group(function () {
     Route::redirect('settings', '/settings/profile');
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('settings/profile/photo', [ProfileController::class, 'uploadPhoto'])->name('profile.photo.update');
+    Route::get('profile-photos/{filename}', [ProfileController::class, 'photo'])
+        ->where('filename', '[A-Za-z0-9]{40}\.(jpg|jpeg|png|webp)')->name('profile.photo.show');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 

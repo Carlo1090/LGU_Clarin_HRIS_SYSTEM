@@ -1,3 +1,4 @@
+import WorkspaceHeader from '@/components/workspace-header';
 import { Head } from '@inertiajs/react';
 
 type EmployeeProfile = Record<string, string | number | null>;
@@ -73,17 +74,15 @@ export default function MyProfile({
     return (
         <>
             <Head title="My HR Profile" />
-            <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
-                <header>
-                    <h1 className="text-2xl font-semibold">My HR Profile</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Employee information maintained by HRMO.
-                    </p>
-                </header>
+            <main className="workspace-page max-w-5xl">
+                <WorkspaceHeader
+                    title="My HR Profile"
+                    description="Employee information maintained by HRMO."
+                />
                 {sections.map((section) => (
                     <section
                         key={section.title}
-                        className="space-y-4 rounded-xl border bg-card p-5"
+                        className="workspace-panel space-y-4 p-5"
                     >
                         <h2 className="font-semibold">{section.title}</h2>
                         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -104,7 +103,7 @@ export default function MyProfile({
                     </section>
                 ))}
                 {customFields.length > 0 && (
-                    <section className="space-y-4 rounded-xl border bg-card p-5">
+                    <section className="workspace-panel space-y-4 p-5">
                         <h2 className="font-semibold">
                             Additional HR information
                         </h2>

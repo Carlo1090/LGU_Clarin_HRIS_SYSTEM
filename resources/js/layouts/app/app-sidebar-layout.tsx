@@ -1,3 +1,5 @@
+import '@/pages/dashboard.css';
+import '@/pages/workspace.css';
 import { AppContent } from '@/components/app-content';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -6,11 +8,11 @@ import type { AppLayoutProps } from '@/types';
 
 export default function AppSidebarLayout({ children }: AppLayoutProps) {
     return (
-        <AppShell variant="sidebar">
+        <AppShell variant="sidebar" className="dashboard-shell">
             <AppSidebar />
             <AppContent
                 variant="sidebar"
-                className="public-surface isolate min-w-0 overflow-x-clip bg-background text-foreground"
+                className="public-surface dashboard-surface isolate min-w-0 overflow-x-clip bg-background text-foreground"
             >
                 <AppSidebarHeader />
                 {children}

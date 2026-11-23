@@ -1,4 +1,25 @@
+import { useTableSearch } from '@/components/table-search';
+import TableAction from '@/components/table-action';
+import PersonAvatar from '@/components/person-avatar';
+import {
+    Table,
+    TableHeader,
+    TableHead,
+    TableBody,
+    TableCell,
+    TableRow,
+} from '@/components/ui/table';
+import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import {
+    Check,
+    X,
+    CalendarClock,
+    CalendarMinus,
+    ClipboardList,
+    UserCheck,
+} from 'lucide-react';
+import { WorkspaceOverview } from '@/components/workspace-metrics';
 import { useState } from 'react';
 
 const path = '/hris/attendance-corrections';
@@ -18,6 +39,7 @@ type Correction = {
     date: string | null;
     missingDay: boolean;
     employee: string;
+    avatar?: string | null;
     timeIn: string | null;
     timeOut: string | null;
     reason: string;
@@ -38,6 +60,37 @@ export default function AttendanceCorrections({
     logs: Log[] | null;
     advanceLabel: string;
 }) {
+    const search = useTableSearch(
+        records.data,
+        [
+            'Employee',
+            'Attendance date',
+            'Time in',
+            'Time out',
+            'Reason',
+            'Status',
+            'Day type',
+        ],
+        (row) => [
+            row.employee,
+            row.date,
+            row.timeIn,
+            row.timeOut,
+            row.reason,
+            row.status.replaceAll('_', ' '),
+            row.missingDay ? 'Missing day' : 'Existing record',
+        ],
+    );
+    const showReview = records.data.some((row) => row.canReview);
+    const columns = [
+        'Employee',
+        'Attendance date',
+        'Proposed time in',
+        'Proposed time out',
+        'Reason',
+        'Status',
+    ];
+    if (showReview) columns.push('Actions');
     const form = useForm({
         attendance_record_id: '',
         time_in: '',
@@ -73,22 +126,49 @@ export default function AttendanceCorrections({
     }
 
     return (
-        <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+        <div className="workspace-page max-w-7xl">
             <Head title="Attendance corrections" />
-            <header className="rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                <h1 className="text-3xl font-semibold tracking-tight">
-                    Attendance corrections
-                </h1>
-                <p className="mt-2 text-sm text-white/80">
-                    Request or review missing days and corrections to daily time
-                    records.
-                </p>
-            </header>
+            <WorkspaceHeader
+                title="Attendance corrections"
+                description="Request or review missing days and corrections to daily time records."
+            />
 
+            <WorkspaceOverview
+                title="Correction overview"
+                description="Requests on this page and their review status."
+                metrics={[
+                    {
+                        label: 'Requests',
+                        count: records.data.length,
+                        icon: ClipboardList,
+                    },
+                    {
+                        label: 'Missing days',
+                        count: records.data.filter((row) => row.missingDay)
+                            .length,
+                        icon: CalendarMinus,
+                    },
+                    {
+                        label: 'In review',
+                        count: records.data.filter((row) =>
+                            ['pending', 'department_reviewed'].includes(
+                                row.status,
+                            ),
+                        ).length,
+                        icon: CalendarClock,
+                    },
+                    {
+                        label: 'Ready for your review',
+                        count: records.data.filter((row) => row.canReview)
+                            .length,
+                        icon: UserCheck,
+                    },
+                ]}
+            />
             {logs && (
                 <section
                     aria-labelledby="request-heading"
-                    className="rounded-2xl border bg-card p-6"
+                    className="workspace-panel p-6"
                 >
                     <h2 id="request-heading" className="text-lg font-semibold">
                         New correction
@@ -208,70 +288,111 @@ export default function AttendanceCorrections({
                     {decisionError}
                 </p>
             )}
-            <section aria-label="Correction history" className="space-y-3">
-                {!records.data.length && (
-                    <p className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
-                        No corrections found.
-                    </p>
-                )}
-                {records.data.map((row) => (
-                    <article
-                        key={row.id}
-                        className="space-y-3 rounded-2xl border bg-card p-5"
+            <section
+                aria-labelledby="correction-history"
+                className="workspace-panel overflow-hidden"
+            >
+                <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-5 sm:px-6">
+                    <h2
+                        id="correction-history"
+                        className="text-lg font-semibold"
                     >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <h2 className="font-semibold">
-                                {row.date ?? 'Date unavailable'} ·{' '}
-                                {row.employee}
-                                {row.missingDay && ' · Missing day'}
-                            </h2>
-                            <span className="rounded-full bg-accent px-3 py-1 text-xs text-accent-foreground capitalize">
-                                {row.status.replaceAll('_', ' ')}
-                            </span>
-                        </div>
-                        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Proposed time in
-                                </dt>
-                                <dd>{row.timeIn ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Proposed time out
-                                </dt>
-                                <dd>{row.timeOut ?? '—'}</dd>
-                            </div>
-                        </dl>
-                        <p className="text-sm break-words text-muted-foreground">
-                            {row.reason}
-                        </p>
-                        {row.canReview && (
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    className={button}
-                                    disabled={reviewing}
-                                    onClick={() => review(row.id, 'advance')}
+                        Correction history
+                    </h2>
+                    <span className="text-xs text-muted-foreground">
+                        {records.data.length} on this page
+                    </span>
+                </header>
+                {search.toolbar}
+                <Table
+                    aria-labelledby="correction-history"
+                    className="workspace-record-table"
+                >
+                    <TableHeader className="workspace-table-head">
+                        <TableRow>
+                            {columns.map((column) => (
+                                <TableHead scope="col" key={column}>
+                                    {column}
+                                </TableHead>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {search.rows.map((row) => (
+                            <TableRow key={row.id}>
+                                <TableHead scope="row">
+                                    <span className="inline-flex items-center gap-2">
+                                        <PersonAvatar
+                                            name={row.employee}
+                                            src={row.avatar}
+                                        />
+                                        {row.employee}
+                                    </span>
+                                </TableHead>
+                                <TableCell>
+                                    {row.date ?? 'Date unavailable'}
+                                    {row.missingDay && (
+                                        <span className="block text-xs text-muted-foreground">
+                                            Missing day
+                                        </span>
+                                    )}
+                                </TableCell>
+                                <TableCell>{row.timeIn ?? '—'}</TableCell>
+                                <TableCell>{row.timeOut ?? '—'}</TableCell>
+                                <TableCell className="max-w-sm min-w-48 break-words whitespace-normal">
+                                    {row.reason}
+                                </TableCell>
+                                <TableCell>
+                                    <span className="rounded-full bg-accent px-3 py-1 text-xs text-accent-foreground capitalize">
+                                        {row.status.replaceAll('_', ' ')}
+                                    </span>
+                                </TableCell>
+                                {showReview && (
+                                    <TableCell>
+                                        {row.canReview && (
+                                            <div className="flex gap-2">
+                                                <TableAction
+                                                    icon={Check}
+                                                    label={advanceLabel}
+                                                    disabled={reviewing}
+                                                    onClick={() =>
+                                                        review(
+                                                            row.id,
+                                                            'advance',
+                                                        )
+                                                    }
+                                                />
+                                                <TableAction
+                                                    icon={X}
+                                                    label="Reject correction"
+                                                    className="text-destructive"
+                                                    disabled={reviewing}
+                                                    onClick={() =>
+                                                        review(row.id, 'reject')
+                                                    }
+                                                />
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                )}
+                            </TableRow>
+                        ))}
+                        {!search.rows.length && (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={columns.length}
+                                    className="py-8 text-center text-muted-foreground"
                                 >
-                                    {advanceLabel}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="rounded-full border px-4 py-2 text-sm text-destructive"
-                                    disabled={reviewing}
-                                    onClick={() => review(row.id, 'reject')}
-                                >
-                                    Reject
-                                </button>
-                            </div>
+                                    No corrections found.
+                                </TableCell>
+                            </TableRow>
                         )}
-                    </article>
-                ))}
+                    </TableBody>
+                </Table>
                 {(records.prev_page_url || records.next_page_url) && (
                     <nav
                         aria-label="Correction pages"
-                        className="flex gap-4 py-2 text-sm"
+                        className="flex gap-4 border-t px-5 py-3 text-sm"
                     >
                         {records.prev_page_url && (
                             <Link

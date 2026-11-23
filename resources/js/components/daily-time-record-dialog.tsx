@@ -1,3 +1,4 @@
+import { Eye } from 'lucide-react';
 import { http } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import DailyTimeRecordPreview, {
@@ -101,9 +102,11 @@ export default function DailyTimeRecordDialog({
                 <Button
                     type="button"
                     variant="outline"
-                    size={demo ? 'default' : 'sm'}
+                    size={demo ? 'default' : 'icon'}
+                    aria-label={demo ? 'View DTR demo' : 'Preview DTR'}
+                    title={demo ? 'View DTR demo' : 'Preview DTR'}
                 >
-                    {demo ? 'View DTR demo' : 'Preview DTR'}
+                    {demo ? 'View DTR demo' : <Eye aria-hidden="true" />}
                 </Button>
             </DialogTrigger>
             <DialogContent

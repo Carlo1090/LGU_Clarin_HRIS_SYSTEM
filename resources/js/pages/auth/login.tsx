@@ -13,6 +13,29 @@ import { redirect as googleRedirect } from '@/routes/google';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
+function GoogleIcon() {
+    return (
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 shrink-0">
+            <path
+                fill="#4285F4"
+                d="M21.35 12.21c0-.7-.06-1.39-.18-2.05H12v3.89h5.25a4.48 4.48 0 0 1-1.94 2.94v2.53h3.15c1.85-1.71 2.89-4.23 2.89-7.31Z"
+            />
+            <path
+                fill="#34A853"
+                d="M12 21.7c2.64 0 4.85-.87 6.46-2.18l-3.15-2.53c-.87.58-1.99.92-3.31.92-2.55 0-4.7-1.72-5.47-4.04H3.28v2.61A9.75 9.75 0 0 0 12 21.7Z"
+            />
+            <path
+                fill="#FBBC05"
+                d="M6.53 13.87a5.85 5.85 0 0 1 0-3.74V7.52H3.28a9.7 9.7 0 0 0 0 8.96l3.25-2.61Z"
+            />
+            <path
+                fill="#EA4335"
+                d="M12 6.09c1.44 0 2.73.5 3.75 1.47l2.81-2.81A9.39 9.39 0 0 0 12 2.3a9.75 9.75 0 0 0-8.72 5.22l3.25 2.61C7.3 7.81 9.45 6.09 12 6.09Z"
+            />
+        </svg>
+    );
+}
+
 type Props = {
     status?: string;
     canResetPassword: boolean;
@@ -37,37 +60,6 @@ export default function Login({
                     {status}
                 </div>
             )}
-            {googleError && <InputError message={googleError} role="alert" />}
-            <div className="grid gap-2">
-                {canSignInWithGoogle ? (
-                    <Button
-                        asChild
-                        variant="outline"
-                        className="h-11 w-full rounded-full"
-                    >
-                        <a href={googleRedirect.url()}>Continue with Google</a>
-                    </Button>
-                ) : (
-                    <Button
-                        type="button"
-                        variant="outline"
-                        className="h-11 w-full rounded-full"
-                        disabled
-                    >
-                        Continue with Google
-                    </Button>
-                )}
-                {!canSignInWithGoogle && (
-                    <p className="text-center text-xs text-muted-foreground">
-                        Google sign-in is currently unavailable.
-                    </p>
-                )}
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <Separator className="flex-1" />
-                Or sign in with your password
-                <Separator className="flex-1" />
-            </div>
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}
@@ -158,12 +150,47 @@ export default function Login({
                                 )}
                             </Button>
                         </div>
-                        <p className="text-center text-sm leading-6 text-muted-foreground">
-                            Contact HRMO for an account invitation.
-                        </p>
                     </>
                 )}
             </Form>
+            <div className="mt-6 space-y-4">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <Separator className="flex-1" />
+                    Or continue with
+                    <Separator className="flex-1" />
+                </div>
+                {googleError && (
+                    <InputError message={googleError} role="alert" />
+                )}
+                {canSignInWithGoogle ? (
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="h-11 w-full rounded-full border border-black bg-background text-foreground hover:bg-muted dark:border-white/70"
+                    >
+                        <a href={googleRedirect.url()}>
+                            <GoogleIcon /> Continue with Google
+                        </a>
+                    </Button>
+                ) : (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 w-full rounded-full border border-black bg-background text-foreground dark:border-white/70"
+                        disabled
+                    >
+                        <GoogleIcon /> Continue with Google
+                    </Button>
+                )}
+                {!canSignInWithGoogle && (
+                    <p className="text-center text-xs text-muted-foreground">
+                        Google sign-in is currently unavailable.
+                    </p>
+                )}
+            </div>
+            <p className="mt-6 text-center text-sm leading-6 text-muted-foreground">
+                Contact HRMO for an account invitation.
+            </p>
         </>
     );
 }

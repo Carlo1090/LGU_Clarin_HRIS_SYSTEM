@@ -1,0 +1,142 @@
+.workspace-page {
+    width: 100%;
+    min-width: 0;
+    margin-inline: auto;
+    padding: clamp(0.875rem, 2vw, 1.5rem);
+}
+
+.workspace-page > * + * {
+    margin-block-start: 1.25rem;
+}
+
+.workspace-banner,
+.workspace-panel,
+.workspace-metric {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 1.5rem;
+    background-color: var(--card);
+    box-shadow: 0 12px 36px -26px rgb(28 71 34 / 35%);
+}
+
+.workspace-banner {
+    container-type: inline-size;
+    border-color: #2f5837;
+    color: white;
+    background: linear-gradient(115deg, #142d1c, #1c4722 62%, #467322);
+}
+
+.workspace-banner-content.spotlight-card {
+    display: grid;
+    align-items: center;
+    padding: 1.5rem;
+}
+
+.workspace-banner-copy {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.workspace-banner-copy h1 {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.12;
+}
+
+.workspace-banner-copy p {
+    max-width: 62ch;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: #e1f2d8;
+}
+
+.workspace-banner-copy [data-slot='button'] {
+    margin-top: 1rem;
+    border-radius: 999px;
+}
+
+.workspace-banner-art {
+    display: none;
+}
+
+@container (min-width: 40rem) {
+    .workspace-banner-content.spotlight-card {
+        min-height: 9rem;
+        padding: 1.75rem 2rem;
+        padding-right: min(30%, 16rem);
+    }
+
+    .workspace-banner-art {
+        display: block;
+        position: absolute;
+        bottom: 0;
+        right: 1.25rem;
+        width: min(24%, 12rem);
+        height: 92%;
+        object-fit: contain;
+        object-position: bottom;
+        pointer-events: none;
+    }
+}
+
+.workspace-metric {
+    color: var(--metric-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.workspace-metric p:first-child {
+    color: var(--metric-muted);
+}
+
+.workspace-table-head {
+    background: var(--accent);
+    color: var(--accent-foreground);
+    font-size: 0.8125rem;
+}
+
+.workspace-record-table :is(th, td) {
+    padding-inline: 1rem;
+}
+
+.workspace-record-table tbody :is(th, td) {
+    padding-block: 0.75rem;
+}
+
+.workspace-page [data-slot='button'].bg-primary {
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+    .workspace-banner {
+        animation: workspace-appear 240ms ease-out both;
+    }
+
+    @keyframes workspace-appear {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+}
+
+@media screen {
+    .workspace-dtr header {
+        padding: 1.25rem;
+        border: 1px solid var(--border);
+        border-radius: 1.5rem;
+        background: var(--card);
+    }
+
+    .workspace-dtr header .bg-primary {
+        border-radius: 999px;
+        background: #a6eb20;
+        color: #142014;
+    }
+}

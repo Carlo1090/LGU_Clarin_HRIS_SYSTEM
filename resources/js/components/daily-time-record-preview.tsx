@@ -1,3 +1,4 @@
+import { useTableSearch } from '@/components/table-search';
 import { Link, router } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,34 @@ export default function DailyTimeRecordPreview({
     busy?: boolean;
     error?: string;
 }) {
+    const days = Array.from({ length: 31 }, (_, index) => index + 1);
+    const search = useTableSearch(
+        days,
+        [
+            'Day',
+            'AM in',
+            'AM out',
+            'PM in',
+            'PM out',
+            'Undertime hours',
+            'Undertime minutes',
+            'Remarks',
+        ],
+        (day) => {
+            const row = records[day];
+            return [
+                day,
+                row?.amIn,
+                row?.amOut,
+                row?.pmIn,
+                row?.pmOut,
+                row?.undertimeHours,
+                row?.undertimeMinutes,
+                row?.remarks,
+            ];
+        },
+        'Search DTR entries',
+    );
     function updatePreview(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const filters = new FormData(event.currentTarget);
@@ -151,6 +180,7 @@ export default function DailyTimeRecordPreview({
                 )}
             </header>
 
+            {search.toolbar}
             <div className="overflow-x-auto print:overflow-visible">
                 <article className="mx-auto max-w-xl min-w-[29rem] border bg-white px-5 py-7 font-[Arial,sans-serif] text-sm leading-tight text-black sm:px-8 print:max-w-[150mm] print:min-w-0 print:border-0 print:p-0 print:text-[10pt]">
                     <div className="flex justify-between gap-2">
@@ -213,12 +243,18 @@ export default function DailyTimeRecordPreview({
                             </tr>
                         </thead>
                         <tbody className="tabular-nums">
-                            {Array.from({ length: 31 }, (_, index) => {
-                                const day = index + 1;
+                            {days.map((day) => {
                                 const record = records[day];
 
                                 return (
-                                    <tr key={day} className="h-6 print:h-[5mm]">
+                                    <tr
+                                        key={day}
+                                        className={
+                                            search.rows.includes(day)
+                                                ? 'h-6 print:h-[5mm]'
+                                                : 'hidden print:table-row print:h-[5mm]'
+                                        }
+                                    >
                                         <th scope="row" className="font-normal">
                                             {day}
                                         </th>

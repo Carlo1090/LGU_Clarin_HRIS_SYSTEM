@@ -27,6 +27,7 @@ export type AttendanceImportPreview = {
 };
 
 export type BiometricPunchGroup = {
+    avatar?: string | null;
     biometric_id: number;
     employee_number: string | null;
     first_name: string | null;

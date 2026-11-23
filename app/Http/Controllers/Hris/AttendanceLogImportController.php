@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Hris;
 use App\Http\Requests\Hris\ImportAttendanceLogRequest;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
+use App\Models\Employee;
 use App\Services\AttendanceLogParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,7 +64,8 @@ class AttendanceLogImportController
         $groups = (clone $punchQuery)
             ->leftJoin('employees as owner', 'owner.biometric_id', '=', 'attendance_punches.machine_user_id')
             ->selectRaw('attendance_punches.machine_user_id as biometric_id, owner.employee_number, owner.first_name, owner.last_name, COUNT(*) as punch_count, MIN(punched_at) as first_punch, MAX(punched_at) as last_punch')
-            ->groupBy('attendance_punches.machine_user_id', 'owner.employee_number', 'owner.first_name', 'owner.last_name')
+            ->addSelect(['avatar' => Employee::accountAvatarQuery('owner')])
+            ->groupBy('attendance_punches.machine_user_id', 'owner.id', 'owner.user_id', 'owner.employee_number', 'owner.first_name', 'owner.last_name')
             ->orderBy('attendance_punches.machine_user_id')
             ->simplePaginate(20, pageName: 'group_page')->withQueryString();
 

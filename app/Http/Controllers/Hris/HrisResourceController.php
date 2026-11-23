@@ -358,13 +358,31 @@ class HrisResourceController extends Controller
     {
         Gate::authorize('view-hris-resource', $resource);
         $config = $this->resourceConfig($resource);
+        $search = $request->validate(['q' => ['nullable', 'string', 'max:120'], 'column' => ['nullable', 'string', 'max:64']]);
+        $term = trim($search['q'] ?? '');
+        $column = $search['column'] ?? '';
         if ($resource === 'plantilla-items') {
-            $records = PlantillaItem::query()->with(['department', 'employee'])->orderBy('item_number')->orderBy('id')->paginate(20)->through(
-                fn (PlantillaItem $record) => ['id' => $record->id, 'department_code' => $record->department_code ?? $record->department?->code,
-                    'department_name' => $record->department_name ?? $record->department?->name,
-                    'employee_number' => $record->employee?->employee_number]
-                    + collect(self::PLANTILLA_FIELDS)->mapWithKeys(fn (array $field) => [$field['name'] => $this->plantillaValue($record, $field['name'])])->all(),
-            );
+            $records = PlantillaItem::query()->with(['department', 'employee' => fn ($query) => $query->addSelect(['avatar' => Employee::accountAvatarQuery()])])
+                ->when($term !== '', function ($query) use ($term, $column) {
+                    $query->where(function ($match) use ($term, $column) {
+                        foreach (['position' => 'position_title', 'item' => 'item_number', 'department' => 'department_name', 'grade' => 'salary_grade'] as $key => $attribute) {
+                            if ($column === '' || $column === $key) {
+                                $match->orWhereLike($attribute, '%'.$term.'%');
+                            }
+                        }
+                        if ($column === '' || $column === 'department') {
+                            $match->orWhereHas('department', fn ($office) => $office->whereLike('name', '%'.$term.'%')->orWhereLike('code', '%'.$term.'%'));
+                        }
+                        if ($column === '' || $column === 'employee') {
+                            $match->orWhereHas('employee', fn ($person) => $person->whereLike('employee_number', '%'.$term.'%')->orWhereLike('first_name', '%'.$term.'%')->orWhereLike('last_name', '%'.$term.'%'));
+                        }
+                    });
+                })->orderBy('item_number')->orderBy('id')->paginate(20)->withQueryString()->through(
+                    fn (PlantillaItem $record) => ['id' => $record->id, 'department_code' => $record->department_code ?? $record->department?->code,
+                        'department_name' => $record->department_name ?? $record->department?->name,
+                        'employee_number' => $record->employee?->employee_number, 'avatar' => $record->employee?->avatar]
+                        + collect(self::PLANTILLA_FIELDS)->mapWithKeys(fn (array $field) => [$field['name'] => $this->plantillaValue($record, $field['name'])])->all(),
+                );
 
             return Inertia::render('hris/plantilla-items', [
                 'title' => $config['title'],
@@ -384,6 +402,14 @@ class HrisResourceController extends Controller
             $startDate = $month.'-01';
             $endDate = Date::parse($startDate)->endOfMonth()->toDateString();
             $records = Employee::query()
+                ->when($term !== '', fn ($query) => $query->where(function ($match) use ($column, $term) {
+                    if ($column === '' || $column === 'employee') {
+                        $match->orWhereLike('first_name', '%'.$term.'%')->orWhereLike('last_name', '%'.$term.'%')->orWhereLike('employee_number', '%'.$term.'%');
+                    }
+                    if ($column === '' || $column === 'department') {
+                        $match->orWhereHas('department', fn ($office) => $office->whereLike('name', '%'.$term.'%'));
+                    }
+                }))
                 ->when($departmentHead, fn ($query) => $departmentId
                     ? $query->where('department_id', $departmentId)
                     : $query->whereRaw('1 = 0'))
@@ -393,7 +419,8 @@ class HrisResourceController extends Controller
                         ->latest('id')->select(['id', 'employee_id', 'attendance_date', 'time_in', 'time_out', 'status']),
                 ])
                 ->orderBy('last_name')->orderBy('first_name')->orderBy('id')
-                ->paginate(20, ['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id', 'biometric_id'])
+                ->select(['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id', 'biometric_id'])
+                ->addSelect(['avatar' => Employee::accountAvatarQuery()])->paginate(20)
                 ->withQueryString();
             $punchDays = AttendancePunch::query()
                 ->whereIn('biometric_id', $records->getCollection()->pluck('biometric_id')->filter())
@@ -406,6 +433,7 @@ class HrisResourceController extends Controller
                 'name' => trim("{$employee->last_name}, {$employee->first_name} {$employee->suffix}"),
                 'employee_number' => $employee->employee_number,
                 'department' => $employee->department?->name,
+                'avatar' => $employee->avatar,
                 'dtr_url' => route('hris.attendance.dtr', ['employee' => $employee, 'month' => $month], false),
             ] + $this->attendanceLogSummary($employee, $punchDays->get($employee->biometric_id, collect())));
 
@@ -442,11 +470,25 @@ class HrisResourceController extends Controller
                 ->map(fn ($name, $code) => ['id' => $code, 'name' => $name, 'code' => $code, 'parent_department_id' => null, 'description' => null, 'canManage' => false])
                 ->values())->values();
 
+            $officeNames = $records->pluck('name', 'id');
+            $fields = array_map(fn ($field) => $field['name'] === 'parent_department_id'
+                ? array_merge($field, ['options' => $officeNames->map(fn ($label, $value) => compact('label', 'value'))->values()])
+                : $field, $config['fields']);
+            if ($term !== '') {
+                $records = $records->filter(function ($row) use ($column, $term, $officeNames) {
+                    $row['parent_department_id'] = $officeNames->get($row['parent_department_id']);
+                    $values = $column === '' ? collect($row)->except('canManage') : collect($row)->only($column);
+
+                    return $values->contains(fn ($value) => Str::contains((string) $value, $term, ignoreCase: true));
+                })->values();
+            }
+
             return Inertia::render('hris/resources/index', [
                 'resource' => $resource, 'title' => $config['title'],
-                'canManage' => false, 'fields' => $config['fields'],
+                'canManage' => false,
                 'records' => ['data' => $records, 'links' => []], 'editing' => null,
                 'officeDirectory' => true,
+                'fields' => $fields,
             ]);
         }
 
@@ -466,6 +508,30 @@ class HrisResourceController extends Controller
                 ->map(fn ($status) => ['status' => $status->employment_status, 'total' => $status->total])->values()
             : [];
 
+        if ($term !== '') {
+            $terms = $column === '' ? preg_split('/\s+/u', $term) : [$term];
+            foreach ($terms as $word) {
+                $query->where(function ($match) use ($fields, $column, $word) {
+                    foreach ($fields as $field) {
+                        $name = $field['name'];
+                        if ($column !== '' && $column !== $name) {
+                            continue;
+                        }
+                        $match->orWhereLike($name, '%'.$word.'%');
+                        if (isset($field['options']) && is_iterable($field['options'])) {
+                            $values = collect($field['options'])->filter(fn ($option) => Str::contains((string) $option['label'], $word, ignoreCase: true))->pluck('value');
+                            $match->orWhereIn($name, $values);
+                        } elseif ($field['type'] === 'checkbox' && in_array(strtolower($word), ['yes', 'no'], true)) {
+                            $match->orWhere($name, strtolower($word) === 'yes');
+                        }
+                    }
+                    if ($column === '' || $column === 'id') {
+                        $match->orWhereLike('id', '%'.$word.'%');
+                    }
+                });
+            }
+        }
+
         if ($resource === 'employees') {
             $query->orderByRaw("CASE LOWER(employment_status) WHEN 'active' THEN 1 WHEN 'on leave' THEN 2 WHEN 'inactive' THEN 3 WHEN 'terminated' THEN 4 ELSE 5 END")
                 ->orderBy('employment_status')->orderBy('last_name')->orderBy('first_name');
@@ -478,6 +544,14 @@ class HrisResourceController extends Controller
         }
 
         $records = ($resource === 'employees' ? $query : $query->latest('id'))->paginate(20)->withQueryString();
+
+        $employeeIds = $resource === 'employees'
+            ? $records->getCollection()->modelKeys()
+            : $records->getCollection()->pluck('employee_id')->filter();
+        $avatars = Employee::query()->whereKey($employeeIds)->select('employees.id')->addSelect(['avatar' => Employee::accountAvatarQuery()])->pluck('avatar', 'id');
+        $accountFields = array_column(array_filter($fields, fn ($field) => $field['account'] ?? false), 'name');
+        $accountIds = collect($accountFields)->flatMap(fn ($field) => $records->getCollection()->pluck($field))->filter()->unique();
+        $accountAvatars = $accountIds->isEmpty() ? collect() : User::query()->whereKey($accountIds)->pluck('avatar', 'id');
 
         return Inertia::render('hris/resources/index', [
             'resource' => $resource,
@@ -492,7 +566,8 @@ class HrisResourceController extends Controller
             'createdAccountCredentials' => $resource === 'employees' ? $request->session()->get('createdAccountCredentials') : null,
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'fields' => $fields,
-            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()]
+            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->employee_id)]
+                + collect($accountFields)->mapWithKeys(fn ($field) => [$field.'_avatar' => $accountAvatars->get($record->getAttribute($field))])->all()
                 + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
                 + ($canEditEmployeeEmail && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
                 + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
@@ -910,7 +985,7 @@ class HrisResourceController extends Controller
             'departments' => Department::query()->orderBy('name')->pluck('name', 'id'),
             'positions' => Position::query()->orderBy('title')->pluck('title', 'id'),
             'employees' => Employee::query()->when($departmentId !== null, fn ($query) => $query->where('department_id', $departmentId))->orderBy('employee_number')->get()->mapWithKeys(fn (Employee $employee) => [
-                $employee->id => $employee->employee_number.' — '.$employee->first_name.' '.$employee->last_name,
+                $employee->id => $employee->employee_number.' â€” '.$employee->first_name.' '.$employee->last_name,
             ]),
             'leave-types' => LeaveType::query()->orderBy('name')->pluck('name', 'id'),
             'payroll-periods' => PayrollPeriod::query()->orderByDesc('start_date')->pluck('code', 'id'),
@@ -923,6 +998,9 @@ class HrisResourceController extends Controller
 
         return array_map(function (array $field) use ($optionQueries): array {
             if (isset($field['options'])) {
+                if ($field['options'] === 'users') {
+                    $field['account'] = true;
+                }
                 $field['options'] = $optionQueries[$field['options']]->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values();
             }
 
