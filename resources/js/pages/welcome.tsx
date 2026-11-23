@@ -191,7 +191,7 @@ export default function Welcome() {
                                     alt="Three LGU Clarin officials in municipal uniforms"
                                     width={1293}
                                     height={1217}
-                                    className="max-h-[600px] w-auto max-w-full object-contain drop-shadow-2xl"
+                                    className="max-h-[800px] w-auto max-w-full object-contain drop-shadow-2xl"
                                 />
                             </div>
                         </div>
@@ -589,7 +589,7 @@ export default function Welcome() {
                                             alt=""
                                             width={1164}
                                             height={1351}
-                                            className="aspect-[3/2] object-contain object-right"
+                                            className="aspect-[3/2] object-contain object-right scale-125"
                                             loading="lazy"
                                             decoding="async"
                                             draggable={false}

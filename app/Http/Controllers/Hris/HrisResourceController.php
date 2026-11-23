@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -195,6 +196,7 @@ class HrisResourceController extends Controller
                 ['name' => 'end_date', 'label' => 'End date', 'type' => 'date', 'required' => true],
                 ['name' => 'days_requested', 'label' => 'Days requested', 'type' => 'number', 'required' => true],
                 ['name' => 'reason', 'label' => 'Reason', 'type' => 'textarea', 'required' => true],
+                ['name' => 'commutation', 'label' => 'Commutation requested', 'type' => 'checkbox'],
                 ['name' => 'status', 'label' => 'Status', 'type' => 'text', 'required' => true],
             ],
             'rules' => ['employee_id' => 'required|exists:employees,id', 'leave_type_id' => 'required|exists:leave_types,id', 'start_date' => 'required|date', 'end_date' => 'required|date|after_or_equal:start_date', 'days_requested' => 'required|integer|min:1', 'reason' => 'required|string', 'status' => 'required|string|max:255'],
@@ -535,6 +537,12 @@ class HrisResourceController extends Controller
                 ->orderBy('employment_status')->orderBy('last_name')->orderBy('first_name');
         }
 
+        $canManage = $resource !== 'leave-applications' && Gate::allows('manage-hris-resource', $resource);
+        $canEditEmployeeEmail = $resource === 'employees' && $canManage;
+        if ($canEditEmployeeEmail) {
+            $query->with('user:id,email,role_id', 'user.role:id,name');
+        }
+
         $records = ($resource === 'employees' ? $query : $query->latest('id'))->paginate(20)->withQueryString();
 
         $employeeIds = $resource === 'employees'
@@ -548,8 +556,9 @@ class HrisResourceController extends Controller
         return Inertia::render('hris/resources/index', [
             'resource' => $resource,
             'title' => $config['title'],
-            'canManage' => $resource !== 'leave-applications' && Gate::allows('manage-hris-resource', $resource),
+            'canManage' => $canManage,
             'leaveReviewStage' => $resource === 'leave-applications' ? LeaveReviewController::stage($request->user()) : null,
+            'canCreateLeaveOnBehalf' => $resource === 'leave-applications' && $request->user()->role?->name === 'HRMO Head',
             'canImport' => $resource === 'employees' && $request->user()->role?->name === 'HRMO Head',
             'canManageAttendance' => $canManageAttendance,
             'canLinkBiometricIds' => $canLinkBiometricIds,
@@ -560,6 +569,7 @@ class HrisResourceController extends Controller
             'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->employee_id)]
                 + collect($accountFields)->mapWithKeys(fn ($field) => [$field.'_avatar' => $accountAvatars->get($record->getAttribute($field))])->all()
                 + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
+                + ($canEditEmployeeEmail && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
                 + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
             'editing' => $request->integer('edit') ?: null,
         ]);
@@ -689,6 +699,7 @@ class HrisResourceController extends Controller
             return to_route('hris.resources.index', ['resource' => $resource])->with([
                 'createdAccountCredentials' => [
                     'employee_number' => $employee->employee_number,
+                    'reference_code' => $employee->referenceCode(),
                     'username' => $employee->employee_number,
                     'name' => trim($employee->first_name.' '.$employee->last_name),
                     'temporary_password' => $temporaryPassword,
@@ -728,7 +739,32 @@ class HrisResourceController extends Controller
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
         $entry = $model::query()->findOrFail($record);
-        $entry->update($request->validate($this->validationRules($config, $entry)));
+        $data = $request->validate($this->validationRules($config, $entry));
+        if ($entry instanceof Employee && $request->has('account_email')) {
+            DB::transaction(function () use ($entry, $request, $data): void {
+                $account = $entry->user()->lockForUpdate()->first();
+                if ($account?->role?->name !== 'Employee') {
+                    throw ValidationException::withMessages(['account_email' => 'Email can only be edited for a linked Employee account.']);
+                }
+
+                $email = $request->input('account_email');
+                $validated = validator([
+                    'account_email' => is_string($email) ? Str::lower($email) : $email,
+                ], [
+                    'account_email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($account)],
+                ])->validate();
+
+                $account->email = $validated['account_email'];
+                if ($account->isDirty('email')) {
+                    $account->email_verified_at = null;
+                    $account->save();
+                }
+
+                $entry->update($data);
+            });
+        } else {
+            $entry->update($data);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record updated.']);
 

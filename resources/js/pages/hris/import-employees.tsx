@@ -28,6 +28,7 @@ type PreviewRow = {
 };
 type Credential = {
     employee_number: string;
+    reference_code: string;
     username: string;
     name: string;
     avatar?: string | null;
@@ -167,6 +168,9 @@ export default function ImportEmployees({
                                                     Employee Number
                                                 </th>
                                                 <th className="p-2">
+                                                    Reference Code
+                                                </th>
+                                                <th className="p-2">
                                                     Username
                                                 </th>
                                                 <th className="p-2">Name</th>
@@ -182,6 +186,7 @@ export default function ImportEmployees({
                                                         key={
                                                             credential.employee_number
                                                         }
+<<<<<<< HEAD
                                                         className="border-t"
                                                     >
                                                         <td className="p-2">
@@ -217,6 +222,27 @@ export default function ImportEmployees({
                                                     </tr>
                                                 ),
                                             )}
+=======
+                                                    </td>
+                                                    <td className="p-2">
+                                                        {
+                                                            credential.reference_code
+                                                        }
+                                                    </td>
+                                                    <td className="p-2">
+                                                        {credential.username}
+                                                    </td>
+                                                    <td className="p-2">
+                                                        {credential.name}
+                                                    </td>
+                                                    <td className="p-2 font-mono">
+                                                        {
+                                                            credential.temporary_password
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            ))}
+>>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd
                                         </tbody>
                                     </table>
                                 </div>

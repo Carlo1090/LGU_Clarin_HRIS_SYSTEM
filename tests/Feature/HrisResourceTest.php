@@ -436,7 +436,7 @@ class HrisResourceTest extends TestCase
         $user = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
         $url = route('hris.resources.store', ['resource' => 'employees']);
         $record = [
-            'employee_number' => 'EMP-MANUAL-01', 'first_name' => 'Jordan', 'last_name' => 'Sample',
+            'employee_number' => '0042', 'first_name' => 'Jo', 'last_name' => 'Sample',
             'department_id' => Department::factory()->create()->id,
             'employment_status' => 'unknown', 'appointment_status' => 'unknown',
         ];
@@ -444,15 +444,30 @@ class HrisResourceTest extends TestCase
         $this->actingAs($user)->post($url, $record)->assertSessionHasErrors(['employment_status', 'appointment_status']);
         $this->actingAs($user)->post($url, array_merge($record, ['employment_status' => 'active', 'appointment_status' => 'CT']))
             ->assertRedirect(route('hris.resources.index', ['resource' => 'employees']));
-        $employee = Employee::query()->where('employee_number', 'EMP-MANUAL-01')->firstOrFail();
+        $employee = Employee::query()->where('employee_number', '0042')->firstOrFail();
         $account = User::query()->where('employee_id', $employee->id)->firstOrFail();
         $this->assertSame('CT', $employee->appointment_status);
         $this->assertNull($account->email);
         $this->assertTrue($account->must_change_password);
         $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))
             ->assertOk()->assertInertia(fn ($page) => $page
-            ->where('createdAccountCredentials.username', 'EMP-MANUAL-01')
-            ->where('createdAccountCredentials.employee_number', 'EMP-MANUAL-01')
+            ->where('createdAccountCredentials.username', '0042')
+            ->where('createdAccountCredentials.employee_number', '0042')
+            ->where('createdAccountCredentials.reference_code', 'JO0042')
             ->has('createdAccountCredentials.temporary_password'));
+
+        $account->forceFill(['email' => 'old@example.com', 'email_verified_at' => now()])->save();
+        $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))
+            ->assertOk()->assertInertia(fn ($page) => $page
+            ->where('records.data.0.account_email', 'old@example.com'));
+
+        User::factory()->create(['email' => 'taken@example.com']);
+        $updateUrl = route('hris.resources.update', ['resource' => 'employees', 'record' => $employee->id]);
+        $record = array_merge($record, ['employment_status' => 'active', 'appointment_status' => 'CT']);
+        $this->put($updateUrl, $record + ['account_email' => 'TAKEN@example.com'])->assertSessionHasErrors('account_email');
+        $this->assertSame('old@example.com', $account->fresh()->email);
+        $this->put($updateUrl, $record + ['account_email' => 'NEW@example.com'])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('new@example.com', $account->fresh()->email);
+        $this->assertNull($account->fresh()->email_verified_at);
     }
 }
