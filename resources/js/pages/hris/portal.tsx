@@ -23,14 +23,17 @@ type Props = {
     dtrDemoUrl?: string | null;
     leaveTypes?: { id: number; name: string }[] | null;
     leaveApplicant?: LeaveApplicant | null;
+    filingDate?: string | null;
 };
 
 function LeaveRequestForm({
     types,
     applicant,
+    filingDate,
 }: {
     types: { id: number; name: string }[];
     applicant: LeaveApplicant;
+    filingDate: string;
 }) {
     const form = useForm({
         leave_type_id: '',
@@ -39,6 +42,7 @@ function LeaveRequestForm({
         days_requested: '',
         reason: '',
         reason_details: '',
+        commutation: false,
     });
 
     const reasonDetail = leaveReasons
@@ -266,10 +270,39 @@ function LeaveRequestForm({
                             </p>
                         )}
                     </fieldset>
+                    <fieldset className="rounded-lg border p-4 sm:col-span-2 xl:col-span-4">
+                        <legend className="px-1 text-sm font-semibold">
+                            Commutation
+                        </legend>
+                        <div className="flex flex-wrap gap-6 text-sm">
+                            {[
+                                { value: false, label: 'Not requested' },
+                                { value: true, label: 'Requested' },
+                            ].map(({ value, label }) => (
+                                <label
+                                    key={label}
+                                    className="flex items-center gap-2"
+                                >
+                                    <input
+                                        type="radio"
+                                        name="commutation"
+                                        checked={
+                                            form.data.commutation === value
+                                        }
+                                        onChange={() =>
+                                            form.setData('commutation', value)
+                                        }
+                                    />
+                                    {label}
+                                </label>
+                            ))}
+                        </div>
+                    </fieldset>
                     <div className="flex flex-wrap items-center gap-3 border-t pt-4 sm:col-span-2 xl:col-span-4">
                         <LeaveFormPreviewDialog
                             draft={{
                                 applicant,
+                                filingDate,
                                 leaveType:
                                     types.find(
                                         ({ id }) =>
@@ -281,6 +314,7 @@ function LeaveRequestForm({
                                 daysRequested: form.data.days_requested,
                                 reason: form.data.reason,
                                 reasonDetails: form.data.reason_details,
+                                commutation: form.data.commutation,
                             }}
                         />
                         <button
@@ -321,6 +355,7 @@ export default function PortalPage({
     dtrDemoUrl,
     leaveTypes,
     leaveApplicant,
+    filingDate,
 }: Props) {
     return (
         <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
@@ -338,6 +373,7 @@ export default function PortalPage({
                 <LeaveRequestForm
                     types={leaveTypes}
                     applicant={leaveApplicant}
+                    filingDate={filingDate ?? ''}
                 />
             )}
             {dtrDemoUrl && (
