@@ -15,9 +15,10 @@ class DemoEmployeeImportDirectorySeeder extends Seeder
             ?? Department::query()->orderBy('id')->first();
 
         if ($department === null) {
-            $this->command?->warn('Skipping employee import demo position: no existing department was found.');
-
-            return;
+            $department = Department::firstOrCreate(
+                ['code' => 'MAYOR'],
+                ['name' => Department::PLANTILLA_OFFICES['MAYOR']],
+            );
         }
 
         DB::transaction(function () use ($department): void {
