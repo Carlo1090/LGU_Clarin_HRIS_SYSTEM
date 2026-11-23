@@ -11,11 +11,11 @@ class DemoEmployeeImportDirectorySeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_demo_position_is_added_to_existing_mayor_department_idempotently(): void
+    public function test_demo_position_is_added_to_an_existing_department_idempotently(): void
     {
         $department = Department::query()->create([
-            'code' => 'MAYOR',
-            'name' => 'Office of the Municipal Mayor',
+            'code' => 'EXISTING-DEPT',
+            'name' => 'Existing Department',
         ]);
         $seeder = new DemoEmployeeImportDirectorySeeder;
 

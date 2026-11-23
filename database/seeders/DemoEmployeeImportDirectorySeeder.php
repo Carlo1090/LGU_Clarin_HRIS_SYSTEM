@@ -11,9 +11,11 @@ class DemoEmployeeImportDirectorySeeder extends Seeder
 {
     public function run(): void
     {
-        $department = Department::query()->where('code', 'MAYOR')->first();
+        $department = Department::query()->where('code', 'MAYOR')->first()
+            ?? Department::query()->orderBy('id')->first();
+
         if ($department === null) {
-            $this->command?->warn('Skipping employee import demo position: the MAYOR department does not exist.');
+            $this->command?->warn('Skipping employee import demo position: no existing department was found.');
 
             return;
         }
@@ -29,5 +31,7 @@ class DemoEmployeeImportDirectorySeeder extends Seeder
                 ],
             );
         });
+
+        $this->command?->info("Ensured Demo Import Clerk under {$department->name} ({$department->code}).");
     }
 }
