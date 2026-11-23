@@ -1,4 +1,3 @@
-import { useTableSearch } from '@/components/table-search';
 import { Eye } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
@@ -152,21 +151,6 @@ function Signature({ children }: { children: ReactNode }) {
     );
 }
 
-<<<<<<< HEAD:resources/js/components/leave-form-demo-dialog.tsx
-const creditRows = [
-    ['Total Earned', '18.75', '14.50'],
-    ['Less this application', '3.00', '0.00'],
-    ['Balance', '15.75', '14.50'],
-];
-
-function LeaveFormDemo() {
-    const search = useTableSearch(
-        creditRows,
-        ['Credit', 'Vacation leave', 'Sick leave'],
-        (row) => row,
-        'Search sample leave credits',
-    );
-=======
 function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
     const selectedType = draft
         ? draft.leaveType.trim().toLowerCase()
@@ -177,10 +161,8 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
             ? draft.leaveType
             : '';
 
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd:resources/js/components/leave-form-preview-dialog.tsx
     return (
         <div className="overflow-x-auto print:overflow-visible">
-            {search.toolbar}
             <article className="mx-auto max-w-3xl min-w-[34rem] border border-black bg-white p-4 font-[Arial,sans-serif] text-[11px] leading-snug text-black print:max-w-[185mm] print:min-w-0 print:border-0 print:p-0 print:text-[8pt] print:leading-tight print:[&_section]:p-1.5">
                 <header className="grid grid-cols-[1fr_2.4fr_1fr] items-start gap-2">
                     <div className="italic">
@@ -410,36 +392,20 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {creditRows.map(
-                                        ([label, vacation, sick]) => (
-                                            <tr
-                                                key={label}
-                                                className={
-                                                    search.rows.some(
-                                                        (row) =>
-                                                            row[0] === label,
-                                                    )
-                                                        ? undefined
-                                                        : 'hidden print:table-row'
-                                                }
+                                    {[
+                                        ['Total Earned', '18.75', '14.50'],
+                                        [
+                                            'Less this application',
+                                            '3.00',
+                                            '0.00',
+                                        ],
+                                        ['Balance', '15.75', '14.50'],
+                                    ].map(([label, vacation, sick]) => (
+                                        <tr key={label}>
+                                            <th
+                                                scope="row"
+                                                className="text-left font-normal"
                                             >
-<<<<<<< HEAD:resources/js/components/leave-form-demo-dialog.tsx
-                                                <th
-                                                    scope="row"
-                                                    className="text-left font-normal"
-                                                >
-                                                    {label}
-                                                </th>
-                                                <td className="text-center">
-                                                    {vacation}
-                                                </td>
-                                                <td className="text-center">
-                                                    {sick}
-                                                </td>
-                                            </tr>
-                                        ),
-                                    )}
-=======
                                                 {label}
                                             </th>
                                             <td className="text-center">
@@ -450,7 +416,6 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                                             </td>
                                         </tr>
                                     ))}
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd:resources/js/components/leave-form-preview-dialog.tsx
                                 </tbody>
                             </table>
                             <Signature>(Authorized Officer)</Signature>

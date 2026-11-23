@@ -1,5 +1,3 @@
-import { useTableSearch } from '@/components/table-search';
-import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, useForm } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormPreviewDialog, {
@@ -57,7 +55,7 @@ function LeaveRequestForm({
     return (
         <section
             aria-labelledby="leave-form-heading"
-            className="workspace-panel p-6"
+            className="rounded-2xl border bg-card p-6"
         >
             <h2 id="leave-form-heading" className="text-lg font-semibold">
                 New leave request
@@ -359,15 +357,9 @@ export default function PortalPage({
     leaveApplicant,
     filingDate,
 }: Props) {
-    const search = useTableSearch(records?.data ?? [], columns, (row) => row);
     return (
-        <div className="workspace-page max-w-7xl">
+        <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
             <Head title={title} />
-<<<<<<< HEAD
-            <WorkspaceHeader title={title} description={description}>
-                {canPreviewLeaveForm && <LeaveFormDemoDialog />}
-            </WorkspaceHeader>
-=======
             <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
                 <div>
                     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -376,7 +368,6 @@ export default function PortalPage({
                     <p className="mt-2 text-sm text-white/80">{description}</p>
                 </div>
             </header>
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd
 
             {leaveTypes && leaveApplicant && (
                 <LeaveRequestForm
@@ -396,7 +387,7 @@ export default function PortalPage({
 
             <section
                 aria-label={title}
-                className="workspace-panel overflow-hidden"
+                className="overflow-hidden rounded-2xl border bg-card"
             >
                 {missingEmployee ? (
                     <p className="p-6 text-sm text-muted-foreground">
@@ -418,13 +409,12 @@ export default function PortalPage({
                     </dl>
                 ) : (
                     <>
-                        {search.toolbar}
                         <div className="overflow-x-auto">
                             <table
                                 aria-label={title}
                                 className="w-full text-left text-sm"
                             >
-                                <thead className="workspace-table-head">
+                                <thead className="bg-muted text-muted-foreground">
                                     <tr>
                                         {columns.map((column) => (
                                             <th
@@ -438,7 +428,7 @@ export default function PortalPage({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {search.rows.map((row, index) => (
+                                    {records?.data.map((row, index) => (
                                         <tr
                                             key={index}
                                             className="border-t hover:bg-muted/60"
@@ -460,7 +450,7 @@ export default function PortalPage({
                                             ))}
                                         </tr>
                                     ))}
-                                    {!search.rows.length && (
+                                    {!records?.data.length && (
                                         <tr>
                                             <td
                                                 colSpan={columns.length}
