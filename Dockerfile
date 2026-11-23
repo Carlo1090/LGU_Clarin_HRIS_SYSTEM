@@ -45,7 +45,8 @@ RUN composer install \
 
 COPY . .
 
-RUN composer dump-autoload \
+RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php \
+    && composer dump-autoload \
     --no-dev \
     --classmap-authoritative \
     --no-interaction \
@@ -63,7 +64,9 @@ COPY --from=build /var/www/html/public/build ./public/build
 COPY --from=build /var/www/html/bootstrap/cache ./bootstrap/cache
 COPY docker/apache-site.conf /etc/apache2/sites-available/000-default.conf
 
-RUN sed -i 's/^Listen 80$/Listen 10000/' /etc/apache2/ports.conf \
+RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php \
+    && php artisan package:discover --ansi \
+    && sed -i 's/^Listen 80$/Listen 10000/' /etc/apache2/ports.conf \
     && a2enmod rewrite headers \
     && mkdir -p \
         storage/app/private \
