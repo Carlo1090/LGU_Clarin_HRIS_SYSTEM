@@ -1,9 +1,10 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
-import { useRef, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type {
+    AttendanceImportPreview,
     BiometricPunchGroup,
     ImportBatchSummary,
 } from '@/types/attendance';
@@ -48,28 +49,54 @@ export default function ImportAttendanceLogs({
     month,
     selectedId,
     punches,
+    preview,
+    timezone,
 }: {
     batch: ImportBatchSummary | null;
     groups: Page<BiometricPunchGroup>;
     unassigned: boolean;
     month: string | null;
     selectedId: number | null;
-    punches: Page<{ id: number; punched_at: string }> | null;
+    punches: Page<{
+        id: number;
+        punched_at: string;
+        device_id: number | null;
+        punch_state: number | null;
+        verify_mode: number | null;
+        work_code: number | null;
+        derived_slot: string | null;
+        is_duplicate: boolean;
+        flags: Record<string, boolean | string>;
+    }> | null;
+    preview: AttendanceImportPreview | null;
+    timezone: string;
 }) {
     const inputRef = useRef<HTMLInputElement>(null);
-    const form = useForm<{ file: File | null }>({ file: null });
-    const removal = useForm({});
+    const [previewReady, setPreviewReady] = useState(false);
+    const form = useForm<{ file: File | null; confirm: boolean }>({
+        file: null,
+        confirm: false,
+    });
     const monthFilter = month ? { month } : {};
 
-    function upload(event: FormEvent<HTMLFormElement>) {
+    function previewUpload(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        setPreviewReady(false);
+        form.setData('confirm', false);
+        form.post(logsUrl, { onSuccess: () => setPreviewReady(true) });
+    }
+
+    function confirmImport() {
+        form.setData('confirm', true);
         form.post(logsUrl, {
             onSuccess: () => {
+                setPreviewReady(false);
                 form.reset();
                 if (inputRef.current) {
                     inputRef.current.value = '';
                 }
             },
+            onFinish: () => form.setData('confirm', false),
         });
     }
 
@@ -90,7 +117,7 @@ export default function ImportAttendanceLogs({
                 </Button>
             </div>
             <form
-                onSubmit={upload}
+                onSubmit={previewUpload}
                 className="space-y-4 rounded-xl border bg-card p-5"
             >
                 <div className="max-w-xl space-y-2">
@@ -112,6 +139,7 @@ export default function ImportAttendanceLogs({
                                 'file',
                                 event.target.files?.[0] ?? null,
                             );
+                            setPreviewReady(false);
                             form.clearErrors('file');
                         }}
                     />
@@ -124,13 +152,9 @@ export default function ImportAttendanceLogs({
                 <div className="flex flex-wrap items-center gap-3">
                     <Button
                         type="submit"
-                        disabled={
-                            !form.data.file ||
-                            form.processing ||
-                            removal.processing
-                        }
+                        disabled={!form.data.file || form.processing}
                     >
-                        Import log
+                        Preview import
                     </Button>
                     {form.processing && (
                         <p
@@ -145,6 +169,91 @@ export default function ImportAttendanceLogs({
                 </div>
             </form>
 
+            {preview && previewReady && (
+                <section
+                    className="space-y-4 rounded-xl border bg-card p-5"
+                    aria-labelledby="preview-heading"
+                >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2
+                                id="preview-heading"
+                                className="text-lg font-semibold"
+                            >
+                                Import preview
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                Device timestamps are stored as local
+                                {` ${timezone}`} time without adjustment.
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            disabled={
+                                !form.data.file ||
+                                !previewReady ||
+                                form.processing ||
+                                preview.total_rows === 0
+                            }
+                            onClick={confirmImport}
+                        >
+                            {form.processing
+                                ? 'Importing…'
+                                : 'Confirm and import'}
+                        </Button>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+                        {[
+                            ['Rows read', preview.total_rows],
+                            [
+                                'Date range',
+                                preview.date_range.from
+                                    ? `${preview.date_range.from.slice(0, 10)} – ${preview.date_range.to?.slice(0, 10)}`
+                                    : '—',
+                            ],
+                            [
+                                'Distinct machine IDs',
+                                preview.distinct_machine_ids,
+                            ],
+                            ['Unlinked IDs', preview.unlinked_ids.length],
+                            ['Already imported / repeated', preview.would_skip],
+                            ['Malformed rows', preview.invalid_count],
+                        ].map(([label, value]) => (
+                            <div
+                                key={label}
+                                className="rounded-lg bg-muted p-3"
+                            >
+                                <dt>{label}</dt>
+                                <dd className="mt-1 text-lg font-semibold tabular-nums">
+                                    {value}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                    {preview.unlinked_ids.length > 0 && (
+                        <p className="text-sm text-amber-800 dark:text-amber-300">
+                            Unlinked machine IDs:{' '}
+                            {preview.unlinked_ids.join(', ')}. These punches
+                            will still be imported.
+                        </p>
+                    )}
+                    {preview.errors.length > 0 && (
+                        <details open className="text-sm">
+                            <summary className="cursor-pointer font-medium">
+                                Malformed rows ({preview.invalid_count})
+                            </summary>
+                            <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto">
+                                {preview.errors.map(({ line, reason }) => (
+                                    <li key={line}>
+                                        Line {line} — {reason}
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
+                </section>
+            )}
+
             {batch && (
                 <section
                     className="space-y-3 rounded-xl border bg-card p-5"
@@ -157,26 +266,6 @@ export default function ImportAttendanceLogs({
                         >
                             Import summary
                         </h2>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            disabled={removal.processing || form.processing}
-                            onClick={() => {
-                                const count = batch.inserted_count;
-                                const punches =
-                                    count === 1 ? 'punch' : 'punches';
-                                if (
-                                    window.confirm(
-                                        `Remove "${batch.file_name}"? This will delete the ${count} attendance ${punches} added by this import.`,
-                                    )
-                                ) {
-                                    removal.delete(`${logsUrl}/${batch.id}`);
-                                }
-                            }}
-                        >
-                            {removal.processing ? 'Removing…' : 'Remove import'}
-                        </Button>
                     </div>
                     <p className="text-sm break-all text-muted-foreground">
                         {batch.file_name}
@@ -199,12 +288,6 @@ export default function ImportAttendanceLogs({
                             </div>
                         ))}
                     </dl>
-                    {batch.clock_offset_seconds !== 0 && (
-                        <p className="text-sm">
-                            Applied clock offset {batch.clock_offset_seconds}{' '}
-                            seconds.
-                        </p>
-                    )}
                     {batch.invalid_lines.length > 0 && (
                         <details className="text-sm">
                             <summary className="cursor-pointer font-medium">
@@ -236,7 +319,30 @@ export default function ImportAttendanceLogs({
                     {punches.data.length ? (
                         <ol className="grid gap-2 text-sm tabular-nums sm:grid-cols-2 lg:grid-cols-3">
                             {punches.data.map((punch) => (
-                                <li key={punch.id}>{punch.punched_at}</li>
+                                <li key={punch.id}>
+                                    {punch.punched_at} · state{' '}
+                                    {punch.punch_state ?? 'unknown'} · verify{' '}
+                                    {punch.verify_mode === 1
+                                        ? 'fingerprint'
+                                        : punch.verify_mode === 0
+                                          ? 'PIN'
+                                          : (punch.verify_mode ??
+                                            'unknown')}{' '}
+                                    · device {punch.device_id ?? '—'}
+                                    {punch.is_duplicate ? ' · duplicate' : ''}
+                                    {Object.keys(punch.flags).length > 0 && (
+                                        <span className="block">
+                                            Flags:{' '}
+                                            {Object.entries(punch.flags)
+                                                .map(([name, value]) =>
+                                                    typeof value === 'boolean'
+                                                        ? name
+                                                        : `${name}: ${value}`,
+                                                )
+                                                .join(', ')}
+                                        </span>
+                                    )}
+                                </li>
                             ))}
                         </ol>
                     ) : (

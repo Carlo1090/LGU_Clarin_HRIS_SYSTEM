@@ -45,9 +45,14 @@ RUN composer install \
 
 COPY . .
 
-RUN php artisan package:discover --ansi \
-    && npm ci \
-    && npm run build \
+RUN composer dump-autoload \
+    --no-dev \
+    --classmap-authoritative \
+    --no-interaction \
+    --no-scripts \
+    && php artisan package:discover --ansi \
+    && corepack pnpm@10.28.0 install --frozen-lockfile \
+    && corepack pnpm@10.28.0 run build \
     && rm -rf node_modules
 
 FROM php-base AS production
