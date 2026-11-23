@@ -8,7 +8,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 
-const leaveTypes = [
+export const leaveTypes = [
     [
         'Vacation Leave',
         'Sec. 51, Rule XVI, Omnibus Rules Implementing E.O. No. 292',
@@ -44,6 +44,60 @@ const leaveTypes = [
     ['Special Emergency (Calamity) Leave', 'CSC MC No. 2, s. 2012, as amended'],
     ['Adoption Leave', 'R.A. No. 8552'],
 ];
+
+export const leaveReasons = [
+    {
+        title: 'In case of Vacation/Special Privilege Leave',
+        options: [
+            { label: 'Within the Philippines', detail: '' },
+            { label: 'Abroad', detail: 'Destination' },
+        ],
+    },
+    {
+        title: 'In case of Sick Leave',
+        options: [
+            { label: 'In Hospital', detail: 'Illness' },
+            { label: 'Out Patient', detail: 'Illness' },
+        ],
+    },
+    {
+        title: 'In case of Special Leave Benefits for Women',
+        options: [{ label: 'Specify Illness', detail: 'Illness' }],
+    },
+    {
+        title: 'In case of Study Leave',
+        options: [
+            { label: 'Completion of Master’s Degree', detail: '' },
+            { label: 'BAR/Board Examination Review', detail: '' },
+        ],
+    },
+    {
+        title: 'Other purpose',
+        options: [
+            { label: 'Monetization of Leave Credits', detail: '' },
+            { label: 'Terminal Leave', detail: '' },
+            { label: 'Other reason', detail: 'Reason' },
+        ],
+    },
+];
+
+export type LeaveApplicant = {
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    department: string | null;
+    position: string | null;
+};
+
+type LeaveDraft = {
+    applicant: LeaveApplicant;
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    daysRequested: string;
+    reason: string;
+    reasonDetails: string;
+};
 
 function Choice({
     checked = false,
@@ -93,7 +147,16 @@ function Signature({ children }: { children: ReactNode }) {
     );
 }
 
-function LeaveFormDemo() {
+function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
+    const selectedType = draft
+        ? draft.leaveType.trim().toLowerCase()
+        : 'vacation leave';
+    const otherType =
+        draft &&
+        !leaveTypes.some(([name]) => name.toLowerCase() === selectedType)
+            ? draft.leaveType
+            : '';
+
     return (
         <div className="overflow-x-auto print:overflow-visible">
             <article className="mx-auto max-w-3xl min-w-[34rem] border border-black bg-white p-4 font-[Arial,sans-serif] text-[11px] leading-snug text-black print:max-w-[185mm] print:min-w-0 print:border-0 print:p-0 print:text-[8pt] print:leading-tight print:[&_section]:p-1.5">
@@ -102,7 +165,7 @@ function LeaveFormDemo() {
                         <p>Civil Service Form No. 6</p>
                         <p>Revised 2020</p>
                         <p className="mt-1 font-bold not-italic">
-                            Demo · Fictional data
+                            {draft ? 'Draft preview' : 'Demo · Fictional data'}
                         </p>
                     </div>
                     <div className="flex items-center justify-center gap-2 text-center">
@@ -130,16 +193,33 @@ function LeaveFormDemo() {
                         <div className="p-2">
                             <p>1. OFFICE/DEPARTMENT</p>
                             <p className="mt-1 font-semibold">
-                                Sample Administrative Office
+                                {draft
+                                    ? draft.applicant.department
+                                    : 'Sample Administrative Office'}
                             </p>
                         </div>
                         <div className="p-2">
                             <p>2. NAME</p>
                             <dl className="mt-1 grid grid-cols-3 gap-2 text-center">
                                 {[
-                                    ['Last', 'Sample'],
-                                    ['First', 'Jamie'],
-                                    ['Middle', 'Demo'],
+                                    [
+                                        'Last',
+                                        draft
+                                            ? draft.applicant.lastName
+                                            : 'Sample',
+                                    ],
+                                    [
+                                        'First',
+                                        draft
+                                            ? draft.applicant.firstName
+                                            : 'Jamie',
+                                    ],
+                                    [
+                                        'Middle',
+                                        draft
+                                            ? draft.applicant.middleName
+                                            : 'Demo',
+                                    ],
                                 ].map(([label, name]) => (
                                     <div
                                         key={label}
@@ -158,12 +238,16 @@ function LeaveFormDemo() {
                     </div>
                     <div className="grid grid-cols-[1.1fr_1.4fr_0.8fr] gap-2 p-2">
                         <FormLine label="3. DATE OF FILING">
-                            November 16, 2026
+                            {!draft && 'November 16, 2026'}
                         </FormLine>
                         <FormLine label="4. POSITION">
-                            Administrative Aide
+                            {draft
+                                ? draft.applicant.position
+                                : 'Administrative Aide'}
                         </FormLine>
-                        <FormLine label="5. SALARY">₱20,000.00</FormLine>
+                        <FormLine label="5. SALARY">
+                            {!draft && '₱20,000.00'}
+                        </FormLine>
                     </div>
 
                     <h4 className="border-y border-black px-2 py-1 text-center font-bold">
@@ -175,8 +259,13 @@ function LeaveFormDemo() {
                                 6.A TYPE OF LEAVE TO BE AVAILED OF
                             </h5>
                             <ul className="space-y-1">
-                                {leaveTypes.map(([name, reference], index) => (
-                                    <Choice key={name} checked={index === 0}>
+                                {leaveTypes.map(([name, reference]) => (
+                                    <Choice
+                                        key={name}
+                                        checked={
+                                            name.toLowerCase() === selectedType
+                                        }
+                                    >
                                         {name}{' '}
                                         <small className="text-[9px] leading-tight">
                                             ({reference})
@@ -184,63 +273,57 @@ function LeaveFormDemo() {
                                     </Choice>
                                 ))}
                             </ul>
-                            <FormLine label="Others" />
+                            <FormLine label="Others">{otherType}</FormLine>
                         </section>
                         <section className="space-y-2 p-2">
                             <h5 className="font-bold">6.B DETAILS OF LEAVE</h5>
-                            <div>
-                                <p className="italic">
-                                    In case of Vacation/Special Privilege Leave
-                                </p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                    <Choice checked>
-                                        Within the Philippines{' '}
-                                        <strong>Cebu City</strong>
-                                    </Choice>
-                                    <Choice>
-                                        Abroad (Specify) ____________________
-                                    </Choice>
-                                </ul>
-                            </div>
-                            <div>
-                                <p className="italic">In case of Sick Leave</p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                    <Choice>
-                                        In Hospital (Specify Illness)
-                                        ______________
-                                    </Choice>
-                                    <Choice>
-                                        Out Patient (Specify Illness)
-                                        ______________
-                                    </Choice>
-                                </ul>
-                            </div>
-                            <div>
-                                <p className="italic">
-                                    In case of Special Leave Benefits for Women
-                                </p>
-                                <FormLine label="(Specify Illness)" />
-                            </div>
-                            <div>
-                                <p className="italic">In case of Study Leave</p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                    <Choice>
-                                        Completion of Master’s Degree
-                                    </Choice>
-                                    <Choice>
-                                        BAR/Board Examination Review
-                                    </Choice>
-                                </ul>
-                            </div>
-                            <div>
-                                <p className="italic">Other purpose</p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                    <Choice>
-                                        Monetization of Leave Credits
-                                    </Choice>
-                                    <Choice>Terminal Leave</Choice>
-                                </ul>
-                            </div>
+                            {leaveReasons.map(({ title, options }) => (
+                                <div key={title}>
+                                    <p className="italic">{title}</p>
+                                    <ul className="mt-0.5 space-y-0.5">
+                                        {options
+                                            .filter(
+                                                ({ label }) =>
+                                                    label !== 'Other reason' ||
+                                                    draft?.reason === label,
+                                            )
+                                            .map(({ label, detail }) => (
+                                                <Choice
+                                                    key={label}
+                                                    checked={
+                                                        draft
+                                                            ? draft.reason ===
+                                                              label
+                                                            : label ===
+                                                              'Within the Philippines'
+                                                    }
+                                                >
+                                                    {label}
+                                                    {detail &&
+                                                        ' (Specify ' +
+                                                            detail.toLowerCase() +
+                                                            ')'}
+                                                    {draft?.reason === label &&
+                                                        draft.reasonDetails && (
+                                                            <strong className="ml-1 wrap-anywhere whitespace-pre-wrap">
+                                                                {
+                                                                    draft.reasonDetails
+                                                                }
+                                                            </strong>
+                                                        )}
+                                                    {!draft &&
+                                                        label ===
+                                                            'Within the Philippines' && (
+                                                            <strong>
+                                                                {' '}
+                                                                Cebu City
+                                                            </strong>
+                                                        )}
+                                                </Choice>
+                                            ))}
+                                    </ul>
+                                </div>
+                            ))}
                         </section>
                     </div>
                     <div className="grid grid-cols-2 divide-x divide-black border-t border-black">
@@ -249,16 +332,18 @@ function LeaveFormDemo() {
                                 6.C NUMBER OF WORKING DAYS APPLIED FOR
                             </h5>
                             <p className="border-b border-black px-1 font-semibold">
-                                3 days
+                                {draft ? draft.daysRequested : '3 days'}
                             </p>
                             <FormLine label="INCLUSIVE DATES">
-                                November 23–25, 2026
+                                {draft
+                                    ? `${draft.startDate || '—'} – ${draft.endDate || '—'}`
+                                    : 'November 23–25, 2026'}
                             </FormLine>
                         </section>
                         <section className="p-2">
                             <h5 className="mb-1 font-bold">6.D COMMUTATION</h5>
                             <ul className="space-y-1">
-                                <Choice checked>Not Requested</Choice>
+                                <Choice checked={!draft}>Not Requested</Choice>
                                 <Choice>Requested</Choice>
                             </ul>
                             <Signature>(Signature of Applicant)</Signature>
@@ -273,7 +358,9 @@ function LeaveFormDemo() {
                             <h5 className="font-bold">
                                 7.A CERTIFICATION OF LEAVE CREDITS
                             </h5>
-                            <FormLine label="As of">November 16, 2026</FormLine>
+                            <FormLine label="As of">
+                                {!draft && 'November 16, 2026'}
+                            </FormLine>
                             <table
                                 aria-label="Sample leave credits"
                                 className="w-full border-collapse [&_td]:border [&_td]:border-black [&_td]:p-1 [&_th]:border [&_th]:border-black [&_th]:p-1"
@@ -303,10 +390,10 @@ function LeaveFormDemo() {
                                                 {label}
                                             </th>
                                             <td className="text-center">
-                                                {vacation}
+                                                {!draft && vacation}
                                             </td>
                                             <td className="text-center">
-                                                {sick}
+                                                {!draft && sick}
                                             </td>
                                         </tr>
                                     ))}
@@ -319,7 +406,7 @@ function LeaveFormDemo() {
                                 7.B RECOMMENDATION
                             </h5>
                             <ul className="mb-auto space-y-1">
-                                <Choice checked>For approval</Choice>
+                                <Choice checked={!draft}>For approval</Choice>
                                 <Choice>
                                     For disapproval due to __________________
                                 </Choice>
@@ -332,7 +419,7 @@ function LeaveFormDemo() {
                             <h5 className="font-bold">7.C APPROVED FOR</h5>
                             <p>
                                 <strong className="border-b border-black px-3">
-                                    3
+                                    {draft ? '___' : '3'}
                                 </strong>{' '}
                                 days with pay
                             </p>
@@ -356,13 +443,21 @@ function LeaveFormDemo() {
     );
 }
 
-export default function LeaveFormDemoDialog() {
+export default function LeaveFormPreviewDialog({
+    draft,
+}: {
+    draft?: LeaveDraft;
+}) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button type="button" variant="secondary" className="ml-auto">
+                <Button
+                    type="button"
+                    variant="secondary"
+                    className={draft ? undefined : 'ml-auto'}
+                >
                     <Eye aria-hidden="true" />
-                    Preview Leave Form
+                    {draft ? 'Preview request' : 'Preview Leave Form'}
                 </Button>
             </DialogTrigger>
             <DialogContent
@@ -371,14 +466,18 @@ export default function LeaveFormDemoDialog() {
                 className="max-h-[90dvh] overflow-y-auto sm:max-w-4xl"
             >
                 <DialogTitle className="pr-8 print:hidden">
-                    Leave application demo
+                    {draft
+                        ? 'Review your leave request'
+                        : 'Leave application demo'}
                 </DialogTitle>
-                <div className="flex justify-end print:hidden">
-                    <Button type="button" onClick={() => window.print()}>
-                        Print demo
-                    </Button>
-                </div>
-                <LeaveFormDemo />
+                {!draft && (
+                    <div className="flex justify-end print:hidden">
+                        <Button type="button" onClick={() => window.print()}>
+                            Print demo
+                        </Button>
+                    </div>
+                )}
+                <LeaveFormPreview draft={draft} />
             </DialogContent>
         </Dialog>
     );

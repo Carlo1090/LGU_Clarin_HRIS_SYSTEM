@@ -33,7 +33,7 @@ test('employee portal returns only the signed-in employee records', function () 
             ->where('hrisNavigation.1.href', '/hris/portal/my-leave-requests')
             ->where('dtrPreviewUrl', "/hris/attendance/dtr/{$employee->id}")
             ->where('dtrDemoUrl', '/hris/attendance/dtr/demo')
-            ->where('canPreviewLeaveForm', false)
+            ->where('leaveApplicant', null)
             ->has('records.data', 1)
             ->where('records.data.0.0', '2026-11-03'));
 
@@ -211,7 +211,9 @@ test('employees can submit pending leave for themselves and cannot submit overla
     $this->post($url, $data)->assertSessionHasErrors('start_date');
     $this->assertDatabaseCount('leave_applications', 1);
     $this->get($url)->assertInertia(fn (Assert $page) => $page
-        ->where('canPreviewLeaveForm', true)
+        ->where('leaveApplicant.firstName', $employee->first_name)
+        ->where('leaveApplicant.lastName', $employee->last_name)
+        ->where('leaveTypes.0.id', $type->id)
         ->has('records.data', 1)
         ->where('records.data.0.4', 'pending'));
 });

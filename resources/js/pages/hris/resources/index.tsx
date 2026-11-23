@@ -2,8 +2,9 @@ import { Form, Head, Link, router, useForm } from '@inertiajs/react';
 import { FileUp } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BiometricIdField from '@/components/biometric-id-field';
+import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
-import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
+import LeaveFormPreviewDialog from '@/components/leave-form-preview-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -259,89 +260,49 @@ export default function HrisResourceIndex({
         <>
             <Head title={title} />
             <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
-                <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
+                {isAttendance ? (
+                    <AttendanceWorkspaceHeader
+                        active="records"
+                        month={attendanceMonth}
+                        canManage={canManageAttendance}
                     />
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
-                    />
-                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-                        <div>
-                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                {title}
-                            </h1>
-                            <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                                {moduleDescriptions[resource] ??
-                                    'Manage HRIS records and their linked data.'}
-                            </p>
-                        </div>
-                        {resource === 'employees' && canImport && (
-                            <Button
-                                asChild
-                                size="lg"
-                                className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
-                            >
-                                <Link href="/hris/employees/import">
-                                    <FileUp aria-hidden="true" />
-                                    Bulk Import Employees
-                                </Link>
-                            </Button>
-                        )}
-                        {resource === 'leave-applications' && (
-                            <LeaveFormDemoDialog />
-                        )}
-                    </div>
-                </header>
-
-                {isAttendance && (
-                    <nav
-                        aria-label="Attendance views"
-                        className="flex flex-wrap gap-2"
-                    >
-                        <Button
-                            asChild
-                            variant={
-                                attendanceDirectory ? 'default' : 'outline'
-                            }
-                        >
-                            <Link
-                                href="/hris/attendance"
-                                aria-current={
-                                    attendanceDirectory ? 'page' : undefined
-                                }
-                            >
-                                Employees
-                            </Link>
-                        </Button>
-                        <DailyTimeRecordDialog
-                            url="/hris/attendance/dtr/demo"
-                            demo
+                ) : (
+                    <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
                         />
-                        {canManageAttendance && (
-                            <>
-                                <Button asChild variant="outline">
-                                    <Link href="/hris/attendance/logs">
-                                        Import Attendance Logs
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
+                        />
+                        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+                            <div>
+                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                                    {title}
+                                </h1>
+                                <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+                                    {moduleDescriptions[resource] ??
+                                        'Manage HRIS records and their linked data.'}
+                                </p>
+                            </div>
+                            {resource === 'employees' && canImport && (
+                                <Button
+                                    asChild
+                                    size="lg"
+                                    className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
+                                >
+                                    <Link href="/hris/employees/import">
+                                        <FileUp aria-hidden="true" />
+                                        Bulk Import Employees
                                     </Link>
                                 </Button>
-                                <Button asChild variant="outline">
-                                    <Link
-                                        href="/hris/attendance/monthly-report"
-                                        data={
-                                            attendanceMonth
-                                                ? { month: attendanceMonth }
-                                                : undefined
-                                        }
-                                    >
-                                        Monthly Attendance Report
-                                    </Link>
-                                </Button>
-                            </>
-                        )}
-                    </nav>
+                            )}
+                            {resource === 'leave-applications' && (
+                                <LeaveFormPreviewDialog />
+                            )}
+                        </div>
+                    </header>
                 )}
 
                 {attendanceMonth && (
@@ -560,10 +521,10 @@ export default function HrisResourceIndex({
                                 </label>
                             )}
                             <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
-                                <button
+                                <Button
                                     type="submit"
                                     disabled={form.processing}
-                                    className="rounded-full bg-primary px-5 py-2 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                                    className="rounded-full"
                                 >
                                     {form.processing
                                         ? 'Saving…'
@@ -572,15 +533,16 @@ export default function HrisResourceIndex({
                                           : resource === 'employees'
                                             ? 'Create account'
                                             : 'Create record'}
-                                </button>
+                                </Button>
                                 {editingId && (
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={cancelEdit}
-                                        className="rounded-full border px-4 py-2 hover:bg-muted"
+                                        variant="outline"
+                                        className="rounded-full"
                                     >
                                         Cancel
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </form>
@@ -843,24 +805,28 @@ export default function HrisResourceIndex({
                                                 {canManage &&
                                                     row.canManage !== false && (
                                                         <>
-                                                            <button
+                                                            <Button
                                                                 type="button"
                                                                 onClick={() =>
                                                                     edit(row)
                                                                 }
-                                                                className="mr-2 rounded-full border px-3 py-1 font-medium hover:bg-accent hover:text-accent-foreground"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="mr-2 rounded-full"
                                                             >
                                                                 Edit
-                                                            </button>
-                                                            <button
+                                                            </Button>
+                                                            <Button
                                                                 type="button"
                                                                 onClick={() =>
                                                                     remove(row)
                                                                 }
-                                                                className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
                                                             >
                                                                 Delete
-                                                            </button>
+                                                            </Button>
                                                         </>
                                                     )}
                                             </td>
@@ -887,20 +853,51 @@ export default function HrisResourceIndex({
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex flex-wrap gap-2 border-t p-3">
-                        {records.links.map((link, index) => (
-                            <Link
-                                key={`${link.label}-${index}`}
-                                href={link.url ?? '#'}
-                                preserveScroll
-                                className={`rounded border px-3 py-1 text-sm ${link.active ? 'bg-primary text-primary-foreground' : ''} ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
-                            >
-                                {link.label
+                    {records.links.length > 0 && (
+                        <nav
+                            aria-label="Record pages"
+                            className="flex flex-wrap gap-2 border-t p-3"
+                        >
+                            {records.links.map((link, index) => {
+                                const label = link.label
                                     .replace(/&laquo;|&raquo;/g, '')
-                                    .trim()}
-                            </Link>
-                        ))}
-                    </div>
+                                    .trim();
+                                const variant = link.active
+                                    ? 'default'
+                                    : 'outline';
+                                const key = `${link.label}-${index}`;
+
+                                return link.url ? (
+                                    <Button
+                                        key={key}
+                                        asChild
+                                        variant={variant}
+                                        size="sm"
+                                    >
+                                        <Link
+                                            href={link.url}
+                                            preserveScroll
+                                            aria-current={
+                                                link.active ? 'page' : undefined
+                                            }
+                                        >
+                                            {label}
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        key={key}
+                                        type="button"
+                                        variant={variant}
+                                        size="sm"
+                                        disabled
+                                    >
+                                        {label}
+                                    </Button>
+                                );
+                            })}
+                        </nav>
+                    )}
                 </section>
             </div>
         </>
