@@ -45,7 +45,12 @@ RUN composer install \
 
 COPY . .
 
-RUN php artisan package:discover --ansi \
+RUN composer dump-autoload \
+    --no-dev \
+    --classmap-authoritative \
+    --no-interaction \
+    --no-scripts \
+    && php artisan package:discover --ansi \
     && npm ci \
     && npm run build \
     && rm -rf node_modules
