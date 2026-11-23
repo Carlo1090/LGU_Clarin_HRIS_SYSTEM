@@ -502,24 +502,27 @@ export default function HrisResourceIndex({
                                     )}
                                 </label>
                             ))}
-                            {resource === 'employees' && accountEmail !== null && (
-                                <label className="space-y-1 text-sm">
-                                    <span>Email (optional)</span>
-                                    <input
-                                        type="email"
-                                        value={accountEmail}
-                                        onChange={(event) =>
-                                            setAccountEmail(event.target.value)
-                                        }
-                                        className="w-full rounded-xl border border-input bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-ring"
-                                    />
-                                    {form.errors.account_email && (
-                                        <span className="block text-sm text-destructive">
-                                            {form.errors.account_email}
-                                        </span>
-                                    )}
-                                </label>
-                            )}
+                            {resource === 'employees' &&
+                                accountEmail !== null && (
+                                    <label className="space-y-1 text-sm">
+                                        <span>Email (optional)</span>
+                                        <input
+                                            type="email"
+                                            value={accountEmail}
+                                            onChange={(event) =>
+                                                setAccountEmail(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            className="w-full rounded-xl border border-input bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-ring"
+                                        />
+                                        {form.errors.account_email && (
+                                            <span className="block text-sm text-destructive">
+                                                {form.errors.account_email}
+                                            </span>
+                                        )}
+                                    </label>
+                                )}
                             <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
                                 <Button
                                     type="submit"
