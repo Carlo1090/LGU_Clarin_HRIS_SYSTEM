@@ -81,9 +81,10 @@ class HrisResourceTest extends TestCase
         $employee = Employee::factory()->create();
         $employee->forceFill(['biometric_id' => 15])->save();
         $batch = AttendanceImport::query()->create(['file_name' => 'test.dat', 'status' => 'completed']);
-        foreach (['19 07:50:00', '19 12:03:00', '19 12:50:00', '19 17:02:00', '20 07:54:00', '22 07:55:00'] as $punch) {
+        foreach (['19 07:50:00', '19 12:03:00', '19 12:50:00', '19 17:02:00', '20 07:54:00', '22 07:55:00'] as $device => $punch) {
             AttendancePunch::query()->insert([
-                'attendance_import_id' => $batch->id, 'biometric_id' => 15,
+                'attendance_import_id' => $batch->id, 'import_batch_id' => $batch->id,
+                'biometric_id' => 15, 'machine_user_id' => 15, 'device_id' => $device,
                 'punched_at' => '2026-10-'.$punch, 'created_at' => now(),
             ]);
         }

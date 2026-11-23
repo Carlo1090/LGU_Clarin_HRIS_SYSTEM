@@ -33,13 +33,19 @@ test('the monthly report groups linked punches by date and preserves unknown lat
         [16, '2026-10-21', '08:01:00'],
         [17, '2026-10-21', '08:01:00'],
     ] as [$id, $date, $start]) {
-        foreach (['17:00:00', $start, '12:01:00', '13:00:00'] as $time) {
-            $file .= "{$id}\t{$date} {$time}\n";
+        foreach ([
+            ['17:00:00', 1],
+            [$start, 0],
+            ['12:01:00', 2],
+            ['13:00:00', 3],
+        ] as [$time, $state]) {
+            $file .= "{$id}\t{$date} {$time}\t1\t{$state}\t1\t0\n";
         }
     }
-    $file .= "15\t2026-10-21 17:00:00\n99\t2026-10-21 08:00:00\n98\t2026-11-01 08:00:00\n";
+    $file .= "15\t2026-10-21 17:00:00\t1\t1\t1\t0\n99\t2026-10-21 08:00:00\t1\t0\t1\t0\n98\t2026-11-01 08:00:00\t1\t0\t1\t0\n";
     $this->actingAs($hr)->from($logs)->post($logs, [
         'file' => UploadedFile::fake()->createWithContent('monthly.dat', $file),
+        'confirm' => true,
     ])->assertSessionHasNoErrors();
 
     foreach ([[$adams, 15, 5], [$brown, 16, 0], [$zulu, 17, null]] as [$employee, $biometricId, $grace]) {
@@ -89,7 +95,8 @@ test('the monthly report groups linked punches by date and preserves unknown lat
     $this->from('/hris/employees')->put("/hris/employees/{$withoutPunches->id}/biometric-id", ['biometric_id' => 99])
         ->assertSessionHasNoErrors();
     $this->from($logs)->post($logs, [
-        'file' => UploadedFile::fake()->createWithContent('additional.dat', "99\t2026-10-22 08:00:00\n"),
+        'file' => UploadedFile::fake()->createWithContent('additional.dat', "99\t2026-10-22 08:00:00\t1\t0\t1\t0\n"),
+        'confirm' => true,
     ])->assertSessionHasNoErrors();
     $this->get($url."?month=2026-10&employee={$withoutPunches->id}")->assertInertia(fn (Assert $page) => $page
         ->where('unlinkedIds', 0)->has('detail.days', 2));
@@ -104,11 +111,18 @@ test('clock-in rules are effective-dated, reversible and restricted to attendanc
     $file = '';
     foreach (['19', '20', '21', '22'] as $day) {
         foreach (['08:10:00', '12:00:00', '13:00:00', '17:00:00'] as $time) {
-            $file .= "15\t2026-10-{$day} {$time}\n";
+            $state = match ($time) {
+                '08:10:00' => 0,
+                '12:00:00' => 2,
+                '13:00:00' => 3,
+                default => 1,
+            };
+            $file .= "15\t2026-10-{$day} {$time}\t1\t{$state}\t1\t0\n";
         }
     }
     $this->actingAs($hr)->post('/hris/attendance/logs', [
         'file' => UploadedFile::fake()->createWithContent('rule-dates.dat', $file),
+        'confirm' => true,
     ])->assertSessionHasNoErrors();
     $this->from($url)->put($rule, ['effective_from' => '2026-10-20', 'starts_at' => '08:00', 'grace_minutes' => 0])->assertSessionHasNoErrors();
     $this->put($rule, ['effective_from' => '2026-10-21', 'starts_at' => '08:00', 'grace_minutes' => 10])->assertSessionHasNoErrors();

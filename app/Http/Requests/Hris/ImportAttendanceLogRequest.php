@@ -16,7 +16,7 @@ class ImportAttendanceLogRequest extends FormRequest
     {
         return [
             'file' => ['required', 'file', 'extensions:dat,txt', 'max:5120'],
-            'clock_offset_seconds' => ['nullable', 'integer', 'between:-86400,86400'],
+            'confirm' => ['sometimes', 'boolean'],
         ];
     }
 }

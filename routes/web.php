@@ -6,6 +6,7 @@ use App\Http\Controllers\Hris\AccountInvitationController;
 use App\Http\Controllers\Hris\AttendanceCorrectionController;
 use App\Http\Controllers\Hris\AttendanceLogImportController;
 use App\Http\Controllers\Hris\BiometricLinkController;
+use App\Http\Controllers\Hris\DailyPunchController;
 use App\Http\Controllers\Hris\DailyTimeRecordController;
 use App\Http\Controllers\Hris\EmployeeImportController;
 use App\Http\Controllers\Hris\HrisResourceController;
@@ -54,7 +55,8 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
         Route::post('leave-applications/{leave}/review', LeaveReviewController::class)->name('leave.review');
         Route::get('attendance/logs', [AttendanceLogImportController::class, 'index'])->name('attendance-logs.index');
         Route::post('attendance/logs', [AttendanceLogImportController::class, 'store'])->name('attendance-logs.store');
-        Route::delete('attendance/logs/{batch}', [AttendanceLogImportController::class, 'destroy'])->whereNumber('batch')->name('attendance-logs.destroy');
+        Route::get('attendance/daily-punches', [DailyPunchController::class, 'index'])->name('attendance.daily-punches.index');
+        Route::get('attendance/daily-punches/export', [DailyPunchController::class, 'export'])->name('attendance.daily-punches.export');
         Route::get('attendance/monthly-report', [MonthlyAttendanceReportController::class, 'index'])->name('attendance-report.index');
         Route::put('attendance/monthly-report/{employee}/clock-in-rule', [MonthlyAttendanceReportController::class, 'saveRule'])->whereNumber('employee')->name('attendance-report.clock-in-rule.update');
         Route::put('employees/{employee}/biometric-id', BiometricLinkController::class)->whereNumber('employee')->name('employees.biometric-id.update');

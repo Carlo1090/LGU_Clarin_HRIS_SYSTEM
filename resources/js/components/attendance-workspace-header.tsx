@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/button';
 const views = [
     { id: 'records', label: 'Employees', href: '/hris/attendance' },
     {
+        id: 'daily',
+        label: 'Daily Punches',
+        href: '/hris/attendance/daily-punches',
+    },
+    {
         id: 'import',
         label: 'Import Attendance Logs',
         href: '/hris/attendance/logs',
@@ -54,8 +59,9 @@ export default function AttendanceWorkspaceHeader({
             />
             <nav aria-label="Attendance views" className="flex flex-wrap gap-2">
                 {viewLink(views[0])}
+                {viewLink(views[1])}
                 <DailyTimeRecordDialog url="/hris/attendance/dtr/demo" demo />
-                {canManage && views.slice(1).map(viewLink)}
+                {canManage && views.slice(2).map(viewLink)}
             </nav>
         </>
     );
