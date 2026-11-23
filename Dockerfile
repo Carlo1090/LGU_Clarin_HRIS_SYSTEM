@@ -79,4 +79,4 @@ RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php \
 
 EXPOSE 10000
 
-CMD ["apache2-foreground"]
+CMD ["sh", "-c", "php artisan migrate --force && exec apache2-foreground"]
