@@ -1,0 +1,33 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Department;
+use Database\Seeders\DemoEmployeeImportDirectorySeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class DemoEmployeeImportDirectorySeederTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_demo_position_is_added_to_existing_mayor_department_idempotently(): void
+    {
+        $department = Department::query()->create([
+            'code' => 'MAYOR',
+            'name' => 'Office of the Municipal Mayor',
+        ]);
+        $seeder = new DemoEmployeeImportDirectorySeeder;
+
+        $seeder->run();
+        $seeder->run();
+
+        $this->assertDatabaseCount('departments', 1);
+        $this->assertDatabaseCount('positions', 1);
+        $this->assertDatabaseHas('positions', [
+            'department_id' => $department->id,
+            'code' => 'DEMO-IMPORT-CLERK',
+            'title' => 'Demo Import Clerk',
+        ]);
+    }
+}
