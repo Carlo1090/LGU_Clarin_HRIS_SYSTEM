@@ -85,18 +85,22 @@ export type LeaveApplicant = {
     firstName: string;
     middleName: string | null;
     lastName: string;
+    suffix?: string | null;
     department: string | null;
     position: string | null;
+    salary?: string | null;
 };
 
-type LeaveDraft = {
+export type LeaveDraft = {
     applicant: LeaveApplicant;
+    filingDate: string;
     leaveType: string;
     startDate: string;
     endDate: string;
     daysRequested: string;
     reason: string;
     reasonDetails: string;
+    commutation: boolean;
 };
 
 function Choice({
@@ -205,7 +209,12 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                                     [
                                         'Last',
                                         draft
-                                            ? draft.applicant.lastName
+                                            ? [
+                                                  draft.applicant.lastName,
+                                                  draft.applicant.suffix,
+                                              ]
+                                                  .filter(Boolean)
+                                                  .join(' ')
                                             : 'Sample',
                                     ],
                                     [
@@ -238,7 +247,7 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                     </div>
                     <div className="grid grid-cols-[1.1fr_1.4fr_0.8fr] gap-2 p-2">
                         <FormLine label="3. DATE OF FILING">
-                            {!draft && 'November 16, 2026'}
+                            {draft?.filingDate ?? 'November 16, 2026'}
                         </FormLine>
                         <FormLine label="4. POSITION">
                             {draft
@@ -246,7 +255,11 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                                 : 'Administrative Aide'}
                         </FormLine>
                         <FormLine label="5. SALARY">
-                            {!draft && '₱20,000.00'}
+                            {draft
+                                ? draft.applicant.salary
+                                    ? `₱${draft.applicant.salary}`
+                                    : ''
+                                : '₱20,000.00'}
                         </FormLine>
                     </div>
 
@@ -343,8 +356,14 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                         <section className="p-2">
                             <h5 className="mb-1 font-bold">6.D COMMUTATION</h5>
                             <ul className="space-y-1">
-                                <Choice checked={!draft}>Not Requested</Choice>
-                                <Choice>Requested</Choice>
+                                <Choice
+                                    checked={draft ? !draft.commutation : true}
+                                >
+                                    Not Requested
+                                </Choice>
+                                <Choice checked={draft?.commutation}>
+                                    Requested
+                                </Choice>
                             </ul>
                             <Signature>(Signature of Applicant)</Signature>
                         </section>
@@ -445,14 +464,17 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
 
 export default function LeaveFormPreviewDialog({
     draft,
+    disabled = false,
 }: {
     draft?: LeaveDraft;
+    disabled?: boolean;
 }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
                 <Button
                     type="button"
+                    disabled={disabled}
                     variant="secondary"
                     className={draft ? undefined : 'ml-auto'}
                 >
@@ -470,13 +492,11 @@ export default function LeaveFormPreviewDialog({
                         ? 'Review your leave request'
                         : 'Leave application demo'}
                 </DialogTitle>
-                {!draft && (
-                    <div className="flex justify-end print:hidden">
-                        <Button type="button" onClick={() => window.print()}>
-                            Print demo
-                        </Button>
-                    </div>
-                )}
+                <div className="flex justify-end print:hidden">
+                    <Button type="button" onClick={() => window.print()}>
+                        Print form
+                    </Button>
+                </div>
                 <LeaveFormPreview draft={draft} />
             </DialogContent>
         </Dialog>

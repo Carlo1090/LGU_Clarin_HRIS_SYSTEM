@@ -1,5 +1,5 @@
 import { Form, Head, Link, router, useForm } from '@inertiajs/react';
-import { FileUp } from 'lucide-react';
+import { FileUp, Plus } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BiometricIdField from '@/components/biometric-id-field';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
@@ -31,6 +31,7 @@ type Props = {
     fields: Field[];
     canManage: boolean;
     leaveReviewStage?: [string, string, string] | null;
+    canCreateLeaveOnBehalf?: boolean;
     canImport?: boolean;
     officeDirectory?: boolean;
     attendanceDirectory?: boolean;
@@ -101,6 +102,7 @@ export default function HrisResourceIndex({
     fields,
     canManage,
     leaveReviewStage,
+    canCreateLeaveOnBehalf = false,
     canImport = false,
     officeDirectory = false,
     attendanceDirectory = false,
@@ -292,7 +294,21 @@ export default function HrisResourceIndex({
                                 </Button>
                             )}
                             {resource === 'leave-applications' && (
-                                <LeaveFormPreviewDialog />
+                                <div className="flex flex-wrap items-center gap-3">
+                                    {canCreateLeaveOnBehalf && (
+                                        <Button
+                                            asChild
+                                            size="lg"
+                                            className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
+                                        >
+                                            <Link href="/hris/leave-applications/create">
+                                                <Plus aria-hidden="true" />
+                                                Create leave form
+                                            </Link>
+                                        </Button>
+                                    )}
+                                    <LeaveFormPreviewDialog />
+                                </div>
                             )}
                         </div>
                     </header>

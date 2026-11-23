@@ -77,6 +77,7 @@ class PortalController extends Controller
             'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
             'days_requested' => ['required', 'integer', 'min:1'],
             'reason' => ['required', 'string', 'max:2000'],
+            'commutation' => ['sometimes', 'boolean'],
         ]);
 
         $calendarDays = Carbon::parse($data['start_date'])->diffInDays(Carbon::parse($data['end_date'])) + 1;
@@ -98,7 +99,7 @@ class PortalController extends Controller
                 throw ValidationException::withMessages(['start_date' => 'These dates overlap an existing leave request under review or already approved.']);
             }
 
-            $lockedEmployee->leaveApplications()->create($data + ['status' => 'pending']);
+            $lockedEmployee->leaveApplications()->create($data + ['commutation' => false, 'status' => 'pending']);
         });
 
         return to_route('hris.portal', ['page' => 'my-leave-requests']);
@@ -195,9 +196,14 @@ class PortalController extends Controller
                 'firstName' => $employee->first_name,
                 'middleName' => $employee->middle_name,
                 'lastName' => $employee->last_name,
-                'department' => $employee->department?->name,
-                'position' => $employee->position?->title,
+                'suffix' => $employee->suffix,
+                'department' => $employee->plantillaItem?->department_name ?? $employee->department?->name,
+                'position' => $employee->plantillaItem?->position_title ?? $employee->position?->title,
+                'salary' => $employee->plantillaItem?->actual_annual_salary === null
+                    ? null
+                    : number_format((float) $employee->plantillaItem->actual_annual_salary / 12, 2),
             ] : null,
+            'filingDate' => $page === 'my-leave-requests' ? now('Asia/Manila')->format('F j, Y') : null,
             'leaveTypes' => $page === 'my-leave-requests' && $employee
                 ? LeaveType::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])
                 : null,

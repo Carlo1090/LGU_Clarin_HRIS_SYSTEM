@@ -9,6 +9,7 @@ use App\Http\Controllers\Hris\BiometricLinkController;
 use App\Http\Controllers\Hris\DailyTimeRecordController;
 use App\Http\Controllers\Hris\EmployeeImportController;
 use App\Http\Controllers\Hris\HrisResourceController;
+use App\Http\Controllers\Hris\LeaveApplicationController;
 use App\Http\Controllers\Hris\LeaveReviewController;
 use App\Http\Controllers\Hris\MonthlyAttendanceReportController;
 use App\Http\Controllers\Hris\PortalController;
@@ -43,6 +44,10 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
             ->name('portal');
         Route::post('portal/my-leave-requests', [PortalController::class, 'submitLeave'])
             ->name('portal.leave.store');
+        Route::get('leave-applications/create', [LeaveApplicationController::class, 'create'])
+            ->name('leave-applications.create');
+        Route::post('leave-applications/on-behalf', [LeaveApplicationController::class, 'store'])
+            ->name('leave-applications.on-behalf');
         Route::post('leave-applications/{leave}/review', LeaveReviewController::class)->name('leave.review');
         Route::get('attendance/logs', [AttendanceLogImportController::class, 'index'])->name('attendance-logs.index');
         Route::post('attendance/logs', [AttendanceLogImportController::class, 'store'])->name('attendance-logs.store');
