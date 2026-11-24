@@ -120,6 +120,10 @@ export default function ImportAttendanceLogs({
         });
     }
 
+    function confirmAndShowAll() {
+        router.visit(logsUrl);
+    }
+
     return (
         <main className="workspace-page max-w-7xl">
             <Head title="Import Attendance Logs" />
@@ -191,14 +195,25 @@ export default function ImportAttendanceLogs({
                         >
                             Import summary
                         </h2>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={deleteImport}
-                        >
-                            Delete imported logs
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {batch.status === 'completed' && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={confirmAndShowAll}
+                                >
+                                    Confirm and show all IDs
+                                </Button>
+                            )}
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={deleteImport}
+                            >
+                                Delete imported logs
+                            </Button>
+                        </div>
                     </div>
                     <p className="text-sm break-all text-muted-foreground">
                         {batch.file_name}
