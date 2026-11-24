@@ -527,7 +527,7 @@ class HrisResourceController extends Controller
             : [];
 
         if ($term !== '') {
-            $terms = $column === '' ? preg_split('/\s+/u', $term) : [$term];
+            $terms = $column === '' ? (preg_split('/\s+/u', $term) ?: [$term]) : [$term];
             foreach ($terms as $word) {
                 $query->where(function ($match) use ($fields, $column, $word) {
                     foreach ($fields as $field) {
@@ -596,10 +596,10 @@ class HrisResourceController extends Controller
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'assignBiometricId' => $resource === 'employees' ? $assignBiometricId : null,
             'fields' => $fields,
-            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->employee_id)]
+            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->getAttribute('employee_id'))]
                 + collect($accountFields)->mapWithKeys(fn ($field) => [$field.'_avatar' => $accountAvatars->get($record->getAttribute($field))])->all()
                 + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
-                + ($canEditEmployeeEmail && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
+                + ($canEditEmployeeEmail && $record instanceof Employee && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
                 + ($resource === 'employees' ? ['work_schedule' => $scheduleLabels->get($record->getKey())] : [])
                 + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record instanceof Announcement && $field['type'] === 'datetime-local'
                     ? $record->getAttribute($field['name'])?->setTimezone(Announcement::TIMEZONE)->format('Y-m-d\TH:i')

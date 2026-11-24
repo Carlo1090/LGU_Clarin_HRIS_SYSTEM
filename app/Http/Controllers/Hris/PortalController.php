@@ -197,8 +197,8 @@ class PortalController extends Controller
                 'middleName' => $employee->middle_name,
                 'lastName' => $employee->last_name,
                 'suffix' => $employee->suffix,
-                'department' => $employee->plantillaItem?->department_name ?? $employee->department?->name,
-                'position' => $employee->plantillaItem?->position_title ?? $employee->position?->title,
+                'department' => $employee->plantillaItem->department_name ?? $employee->department?->name,
+                'position' => $employee->plantillaItem->position_title ?? $employee->position?->title,
                 'salary' => $employee->plantillaItem?->actual_annual_salary === null
                     ? null
                     : number_format((float) $employee->plantillaItem->actual_annual_salary / 12, 2),

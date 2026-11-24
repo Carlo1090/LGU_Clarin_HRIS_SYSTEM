@@ -167,11 +167,12 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
         !leaveTypes.some(([name]) => name.toLowerCase() === selectedType)
             ? draft.leaveType
             : '';
+
     const search = useTableSearch(
         creditRows,
         ['Credit', 'Vacation leave', 'Sick leave'],
-        (row) => row,
-        'Search sample leave credits',
+        (row) => (draft ? [row[0], '', ''] : row),
+        'Search leave credits',
     );
     return (
         <div className="overflow-x-auto print:overflow-visible">
