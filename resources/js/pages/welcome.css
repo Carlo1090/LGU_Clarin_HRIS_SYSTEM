@@ -1,3 +1,7 @@
+.welcome-page {
+    --welcome-width: clamp(72rem, calc(36rem + 40vw), 100rem);
+}
+
 /* Landing page treatments for the shared React Bits components. */
 .public-surface .landing-reveal.scroll-reveal {
     margin: 0;

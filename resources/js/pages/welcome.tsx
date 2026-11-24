@@ -75,15 +75,15 @@ export default function Welcome() {
                 /> */}
             </Head>
 
-            <div className="public-surface min-h-screen overflow-x-clip bg-background text-foreground antialiased selection:bg-[#A6EB20] selection:text-primary-foreground">
+            <div className="public-surface welcome-page min-h-screen overflow-x-clip bg-background text-foreground antialiased selection:bg-[#A6EB20] selection:text-primary-foreground">
                 <PublicHeader showNavigation />
 
                 <main>
                     {/* Hero Section */}
-                    <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 pt-10 pb-20 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:px-10">
+                    <section className="mx-auto grid w-full max-w-[var(--welcome-width)] items-center gap-12 px-6 pt-10 pb-20 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:px-10">
                         {/* Left Column */}
                         <div data-aos="fade-up">
-                            <h1 className="text-4xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-5xl lg:text-[54px]">
+                            <h1 className="text-4xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-5xl lg:text-[clamp(3.375rem,3.6vw,4.5rem)]">
                                 Our people.
                                 <br />
                                 <span className="text-accent-foreground">
@@ -191,7 +191,7 @@ export default function Welcome() {
                                     alt="Three LGU Clarin officials in municipal uniforms"
                                     width={1293}
                                     height={1217}
-                                    className="max-h-[800px] w-auto max-w-full object-contain drop-shadow-2xl"
+                                    className="max-h-[800px] 2xl:max-h-[min(46rem,75svh)] w-auto max-w-full object-contain drop-shadow-2xl"
                                 />
                             </div>
                         </div>
@@ -233,7 +233,7 @@ export default function Welcome() {
                     {/* Features Section */}
                     <section
                         id="features"
-                        className="mx-auto max-w-6xl px-6 py-20 lg:px-10"
+                        className="mx-auto max-w-[var(--welcome-width)] px-6 py-20 lg:px-10"
                     >
                         <div
                             data-aos="fade-up"
@@ -405,7 +405,7 @@ export default function Welcome() {
                         aria-labelledby="how-it-works-title"
                         className="relative overflow-hidden bg-[#A6EB20] py-20 text-[#142014] sm:py-24"
                     >
-                        <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2 lg:gap-16 lg:px-10">
+                        <div className="mx-auto grid max-w-[var(--welcome-width)] items-center gap-14 px-6 lg:grid-cols-2 lg:gap-16 lg:px-10">
                             {/* Headline, benefits, and portal access */}
                             <div>
                                 <p
@@ -694,7 +694,7 @@ export default function Welcome() {
                     <section
                         id="users"
                         aria-labelledby="users-heading"
-                        className="mx-auto max-w-6xl px-6 py-16 lg:px-10"
+                        className="mx-auto max-w-[var(--welcome-width)] px-6 py-16 lg:px-10"
                     >
                         <h2
                             id="users-heading"
@@ -738,7 +738,7 @@ export default function Welcome() {
                     <section
                         id="about"
                         aria-labelledby="about-title"
-                        className="mx-auto max-w-6xl px-6 py-20 lg:px-10"
+                        className="mx-auto max-w-[var(--welcome-width)] px-6 py-20 lg:px-10"
                     >
                         <div className="mx-auto max-w-3xl text-center">
                             <p
@@ -938,7 +938,7 @@ export default function Welcome() {
                         aria-labelledby="employee-showcase-title"
                         className="employee-showcase bg-white py-12 text-[#142014]"
                     >
-                        <div className="mx-auto max-w-6xl px-6 lg:px-10">
+                        <div className="mx-auto max-w-[var(--welcome-width)] px-6 lg:px-10">
                             <div className="relative overflow-hidden rounded-[2.5rem] border border-[#E4E9DF] bg-white px-6 pt-8 pb-0 text-[#142014] shadow-xl shadow-[#142014]/5 sm:px-12 sm:pt-10">
                                 {/* Subtle Top & Bottom Radial Ambient Glow */}
                                 <div
@@ -1138,7 +1138,7 @@ export default function Welcome() {
 
                 {/* Creative Custom Footer Styled Like Reference Layout */}
                 <footer
-                    className="mx-auto max-w-6xl px-6 pb-16 lg:px-10"
+                    className="mx-auto max-w-[var(--welcome-width)] px-6 pb-16 lg:px-10"
                     data-aos="fade-up"
                 >
                     <div className="relative overflow-hidden rounded-[3rem] border border-border/80 bg-muted px-6 pt-16 pb-12 text-foreground shadow-sm sm:px-10 lg:px-14">

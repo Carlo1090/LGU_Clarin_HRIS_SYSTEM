@@ -69,7 +69,7 @@ export default function PublicHeader({
         >
             <nav
                 aria-label="Main navigation"
-                className="mx-auto flex min-h-20 w-full max-w-6xl flex-wrap items-center justify-between gap-x-3 px-4 sm:px-6 lg:flex-nowrap lg:px-10"
+                className="mx-auto flex min-h-20 w-full max-w-[var(--welcome-width,72rem)] flex-wrap items-center justify-between gap-x-3 px-4 sm:px-6 lg:flex-nowrap lg:px-10"
             >
                 <Link
                     href={home()}
@@ -138,7 +138,7 @@ export default function PublicHeader({
                     hidden={!menuOpen}
                     className="border-t border-border/60 bg-background px-4 pt-2 pb-4 lg:hidden"
                 >
-                    <div className="mx-auto flex max-w-6xl flex-col gap-1">
+                    <div className="mx-auto flex max-w-[var(--welcome-width,72rem)] flex-col gap-1">
                         {navigation.map(({ id, label }) => (
                             <a
                                 key={id}
