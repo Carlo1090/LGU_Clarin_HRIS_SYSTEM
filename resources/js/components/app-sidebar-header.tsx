@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import {
     Bell,
     CheckCheck,
@@ -223,16 +223,6 @@ export function AppSidebarHeader() {
                     </DropdownMenuContent>
                 </DropdownMenu>
                 <AppearanceToggle />
-                <Button
-                    asChild
-                    variant="ghost"
-                    size="icon"
-                    className="hidden rounded-full sm:inline-flex"
-                >
-                    <Link href={edit()} aria-label="Account settings">
-                        <Settings2 className="size-4" aria-hidden="true" />
-                    </Link>
-                </Button>
                 {auth.user && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
