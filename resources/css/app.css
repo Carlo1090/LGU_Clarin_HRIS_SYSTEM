@@ -146,6 +146,21 @@
         @apply bg-background text-foreground;
     }
 }
+:is(.welcome-page, .login-page) {
+    --welcome-width: clamp(72rem, calc(36rem + 40vw), 100rem);
+}
+
+/* Scale rem-based cards, gutters and type together on wide public viewports. */
+@media (min-width: 90rem) {
+    html:has(:is(.welcome-page, .login-page)) {
+        font-size: max(100%, 0.85vw);
+    }
+
+    :is(.welcome-page, .login-page) {
+        --welcome-width: 88%;
+    }
+}
+
 /* Public pages share the landing palette in both appearance modes. */
 .public-surface {
     color-scheme: light;
