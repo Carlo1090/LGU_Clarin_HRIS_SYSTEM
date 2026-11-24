@@ -378,20 +378,27 @@ export default function ImportAttendanceLogs({
                         Imported punches by Biometric ID
                         {month ? ` · ${month}` : ''}
                     </h2>
-                    <Button asChild size="sm" variant="outline">
-                        <Link
-                            href={logsUrl}
-                            data={
-                                unassigned
-                                    ? monthFilter
-                                    : { ...monthFilter, unassigned: 1 }
-                            }
-                        >
-                            {unassigned
-                                ? 'Show all IDs'
-                                : 'Show unassigned IDs'}
-                        </Link>
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button asChild size="sm" variant="outline">
+                            <Link
+                                href={logsUrl}
+                                data={
+                                    unassigned
+                                        ? monthFilter
+                                        : { ...monthFilter, unassigned: 1 }
+                                }
+                            >
+                                {unassigned
+                                    ? 'Show all IDs'
+                                    : 'Show unassigned IDs'}
+                            </Link>
+                        </Button>
+                        <Button asChild size="sm">
+                            <Link href="/hris/employees">
+                                Assign employee
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
                 {search.toolbar}
                 <div className="overflow-x-auto">
