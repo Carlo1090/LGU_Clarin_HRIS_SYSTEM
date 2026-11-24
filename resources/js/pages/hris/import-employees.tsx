@@ -60,8 +60,13 @@ export default function ImportEmployees({
 }) {
     const credentialSearch = useTableSearch(
         credentials,
-        ['Employee number', 'Name', 'Username'],
-        (row) => [row.employee_number, row.name, row.username],
+        ['Employee number', 'Reference code', 'Name', 'Username'],
+        (row) => [
+            row.employee_number,
+            row.reference_code,
+            row.name,
+            row.username,
+        ],
         'Search created accounts',
     );
     const previewSearch = useTableSearch(
@@ -186,12 +191,16 @@ export default function ImportEmployees({
                                                         key={
                                                             credential.employee_number
                                                         }
-<<<<<<< HEAD
                                                         className="border-t"
                                                     >
                                                         <td className="p-2">
                                                             {
                                                                 credential.employee_number
+                                                            }
+                                                        </td>
+                                                        <td className="p-2">
+                                                            {
+                                                                credential.reference_code
                                                             }
                                                         </td>
                                                         <td className="p-2">
@@ -222,27 +231,6 @@ export default function ImportEmployees({
                                                     </tr>
                                                 ),
                                             )}
-=======
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {
-                                                            credential.reference_code
-                                                        }
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {credential.username}
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {credential.name}
-                                                    </td>
-                                                    <td className="p-2 font-mono">
-                                                        {
-                                                            credential.temporary_password
-                                                        }
-                                                    </td>
-                                                </tr>
-                                            ))}
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd
                                         </tbody>
                                     </table>
                                 </div>

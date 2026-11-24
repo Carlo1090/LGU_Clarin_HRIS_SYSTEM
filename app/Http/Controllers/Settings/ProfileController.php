@@ -25,6 +25,7 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         return Inertia::render('settings/profile', [
+            'details' => $request->user()->only(['phone', 'location', 'bio']),
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
         ]);
@@ -52,7 +53,7 @@ class ProfileController extends Controller
     {
         $request->validate(['photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=4096,max_height=4096']]);
         $path = $request->file('photo')->store('profile-photos', 'local');
-        abort_unless($path, 500, 'The photo could not be saved.');
+        abort_if($path === false, 500, 'The photo could not be saved.');
 
         try {
             $previous = DB::transaction(function () use ($request, $path) {

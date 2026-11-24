@@ -363,20 +363,9 @@ export default function PortalPage({
     return (
         <div className="workspace-page max-w-7xl">
             <Head title={title} />
-<<<<<<< HEAD
             <WorkspaceHeader title={title} description={description}>
-                {canPreviewLeaveForm && <LeaveFormDemoDialog />}
+                {leaveTypes && <LeaveFormPreviewDialog />}
             </WorkspaceHeader>
-=======
-            <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                <div>
-                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                        {title}
-                    </h1>
-                    <p className="mt-2 text-sm text-white/80">{description}</p>
-                </div>
-            </header>
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd
 
             {leaveTypes && leaveApplicant && (
                 <LeaveRequestForm

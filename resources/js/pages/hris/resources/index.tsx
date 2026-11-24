@@ -1,4 +1,3 @@
-
 import { DirectorySearch } from '@/components/table-search';
 import TableAction from '@/components/table-action';
 import PersonAvatar from '@/components/person-avatar';
@@ -12,26 +11,17 @@ import {
 } from '@/components/resource-directory';
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { Check, FileUp, Pencil, Trash2, X } from 'lucide-react';
-=======
-import { Form, Head, Link, router, useForm } from '@inertiajs/react';
-import { FileUp, Plus } from 'lucide-react';
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd
+import { Check, FileUp, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
-<<<<<<< HEAD
-import LeaveFormDemoDialog from '@/components/leave-form-demo-dialog';
+import LeaveFormPreviewDialog from '@/components/leave-form-preview-dialog';
 import AttendanceDirectory, {
     type AttendanceDirectoryProps,
 } from '@/components/attendance-directory';
 import RecordPagination, {
     type RecordPageLink,
 } from '@/components/record-pagination';
-=======
-import LeaveFormPreviewDialog from '@/components/leave-form-preview-dialog';
-import { Badge } from '@/components/ui/badge';
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd
 import { Button } from '@/components/ui/button';
 
 type Props = {
@@ -183,18 +173,12 @@ function ResourceRecords({
 
     const edit = (row: HrisRow) => {
         setEditingId(row.id);
-<<<<<<< HEAD
-        const editor = document.getElementById('record-editor');
-        if (editor instanceof HTMLDetailsElement) editor.open = true;
-        editor?.scrollIntoView({ block: 'start' });
-=======
         setAccountEmail(
             'account_email' in row ? String(row.account_email ?? '') : null,
         );
-        document
-            .getElementById('record-editor')
-            ?.scrollIntoView({ block: 'start' });
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd
+        const editor = document.getElementById('record-editor');
+        if (editor instanceof HTMLDetailsElement) editor.open = true;
+        editor?.scrollIntoView({ block: 'start' });
         form.setData(
             Object.fromEntries(
                 fields.map((field) => [
@@ -327,73 +311,12 @@ function ResourceRecords({
                         canManage={canManageAttendance}
                     />
                 ) : (
-<<<<<<< HEAD
                     <WorkspaceHeader
                         title={title}
                         description={
                             moduleDescriptions[resource] ??
                             'Manage HRIS records and their linked data.'
                         }
-=======
-                    <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
-                        />
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
-                        />
-                        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-                            <div>
-                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                    {title}
-                                </h1>
-                                <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                                    {moduleDescriptions[resource] ??
-                                        'Manage HRIS records and their linked data.'}
-                                </p>
-                            </div>
-                            {resource === 'employees' && canImport && (
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
-                                >
-                                    <Link href="/hris/employees/import">
-                                        <FileUp aria-hidden="true" />
-                                        Bulk Import Employees
-                                    </Link>
-                                </Button>
-                            )}
-                            {resource === 'leave-applications' && (
-                                <div className="flex flex-wrap items-center gap-3">
-                                    {canCreateLeaveOnBehalf && (
-                                        <Button
-                                            asChild
-                                            size="lg"
-                                            className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
-                                        >
-                                            <Link href="/hris/leave-applications/create">
-                                                <Plus aria-hidden="true" />
-                                                Create leave form
-                                            </Link>
-                                        </Button>
-                                    )}
-                                    <LeaveFormPreviewDialog />
-                                </div>
-                            )}
-                        </div>
-                    </header>
-                )}
-
-                {attendanceMonth && (
-                    <Form
-                        key={attendanceMonth}
-                        action="/hris/attendance"
-                        method="get"
-                        className="flex flex-wrap items-end gap-3"
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd
                     >
                         {resource === 'employees' && canImport && (
                             <Button asChild className="dashboard-action">
@@ -404,7 +327,20 @@ function ResourceRecords({
                             </Button>
                         )}
                         {resource === 'leave-applications' && (
-                            <LeaveFormDemoDialog />
+                            <div className="flex flex-wrap gap-2">
+                                {canCreateLeaveOnBehalf && (
+                                    <Button
+                                        asChild
+                                        className="dashboard-action"
+                                    >
+                                        <Link href="/hris/leave-applications/create">
+                                            <Plus aria-hidden="true" />
+                                            Create leave form
+                                        </Link>
+                                    </Button>
+                                )}
+                                <LeaveFormPreviewDialog />
+                            </div>
                         )}
                     </WorkspaceHeader>
                 )}

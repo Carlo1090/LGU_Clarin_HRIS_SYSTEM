@@ -152,21 +152,12 @@ function Signature({ children }: { children: ReactNode }) {
     );
 }
 
-<<<<<<< HEAD:resources/js/components/leave-form-demo-dialog.tsx
 const creditRows = [
     ['Total Earned', '18.75', '14.50'],
     ['Less this application', '3.00', '0.00'],
     ['Balance', '15.75', '14.50'],
 ];
 
-function LeaveFormDemo() {
-    const search = useTableSearch(
-        creditRows,
-        ['Credit', 'Vacation leave', 'Sick leave'],
-        (row) => row,
-        'Search sample leave credits',
-    );
-=======
 function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
     const selectedType = draft
         ? draft.leaveType.trim().toLowerCase()
@@ -177,7 +168,12 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
             ? draft.leaveType
             : '';
 
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd:resources/js/components/leave-form-preview-dialog.tsx
+    const search = useTableSearch(
+        creditRows,
+        ['Credit', 'Vacation leave', 'Sick leave'],
+        (row) => (draft ? [row[0], '', ''] : row),
+        'Search leave credits',
+    );
     return (
         <div className="overflow-x-auto print:overflow-visible">
             {search.toolbar}
@@ -423,7 +419,6 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                                                         : 'hidden print:table-row'
                                                 }
                                             >
-<<<<<<< HEAD:resources/js/components/leave-form-demo-dialog.tsx
                                                 <th
                                                     scope="row"
                                                     className="text-left font-normal"
@@ -431,26 +426,14 @@ function LeaveFormPreview({ draft }: { draft?: LeaveDraft }) {
                                                     {label}
                                                 </th>
                                                 <td className="text-center">
-                                                    {vacation}
+                                                    {!draft && vacation}
                                                 </td>
                                                 <td className="text-center">
-                                                    {sick}
+                                                    {!draft && sick}
                                                 </td>
                                             </tr>
                                         ),
                                     )}
-=======
-                                                {label}
-                                            </th>
-                                            <td className="text-center">
-                                                {!draft && vacation}
-                                            </td>
-                                            <td className="text-center">
-                                                {!draft && sick}
-                                            </td>
-                                        </tr>
-                                    ))}
->>>>>>> 2bcfedee3e691c4d958da8917ba2da6b47d6ffcd:resources/js/components/leave-form-preview-dialog.tsx
                                 </tbody>
                             </table>
                             <Signature>(Authorized Officer)</Signature>

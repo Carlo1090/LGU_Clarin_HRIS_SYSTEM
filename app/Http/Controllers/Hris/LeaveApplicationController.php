@@ -60,8 +60,8 @@ class LeaveApplicationController extends Controller
                 'middleName' => $employee->middle_name,
                 'lastName' => $employee->last_name,
                 'suffix' => $employee->suffix,
-                'department' => $employee->plantillaItem?->department_name ?? $employee->department?->name,
-                'position' => $employee->plantillaItem?->position_title ?? $employee->position?->title,
+                'department' => $employee->plantillaItem->department_name ?? $employee->department?->name,
+                'position' => $employee->plantillaItem->position_title ?? $employee->position?->title,
                 'salary' => $employee->plantillaItem?->actual_annual_salary === null
                     ? null
                     : number_format((float) $employee->plantillaItem->actual_annual_salary / 12, 2),
@@ -100,7 +100,7 @@ class LeaveApplicationController extends Controller
         }
 
         DB::transaction(function () use ($user, $data): void {
-            $employee = Employee::query()->lockForUpdate()->findOrFail($data['employee_id']);
+            $employee = Employee::query()->whereKey($data['employee_id'])->lockForUpdate()->firstOrFail();
             if ($employee->user_id !== null) {
                 throw ValidationException::withMessages(['employee_id' => 'Choose an employee without a linked system account.']);
             }

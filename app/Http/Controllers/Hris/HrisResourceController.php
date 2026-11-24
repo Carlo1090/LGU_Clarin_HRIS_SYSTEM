@@ -509,7 +509,7 @@ class HrisResourceController extends Controller
             : [];
 
         if ($term !== '') {
-            $terms = $column === '' ? preg_split('/\s+/u', $term) : [$term];
+            $terms = $column === '' ? (preg_split('/\s+/u', $term) ?: [$term]) : [$term];
             foreach ($terms as $word) {
                 $query->where(function ($match) use ($fields, $column, $word) {
                     foreach ($fields as $field) {
@@ -566,10 +566,10 @@ class HrisResourceController extends Controller
             'createdAccountCredentials' => $resource === 'employees' ? $request->session()->get('createdAccountCredentials') : null,
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'fields' => $fields,
-            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->employee_id)]
+            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->getAttribute('employee_id'))]
                 + collect($accountFields)->mapWithKeys(fn ($field) => [$field.'_avatar' => $accountAvatars->get($record->getAttribute($field))])->all()
                 + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
-                + ($canEditEmployeeEmail && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
+                + ($canEditEmployeeEmail && $record instanceof Employee && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
                 + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
             'editing' => $request->integer('edit') ?: null,
         ]);
