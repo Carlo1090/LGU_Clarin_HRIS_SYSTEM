@@ -393,6 +393,11 @@ export default function ImportAttendanceLogs({
                                     : 'Show unassigned IDs'}
                             </Link>
                         </Button>
+                        <Button asChild size="sm">
+                            <Link href="/hris/employees">
+                                Assign employee
+                            </Link>
+                        </Button>
                     </div>
                 </div>
                 {search.toolbar}
@@ -445,21 +450,6 @@ export default function ImportAttendanceLogs({
                                         >
                                             {group.biometric_id}
                                         </Link>
-                                        {!group.employee_number && (
-                                            <div className="mt-1">
-                                                <Button asChild size="sm">
-                                                    <Link
-                                                        href="/hris/employees"
-                                                        data={{
-                                                            assign_biometric_id:
-                                                                group.biometric_id,
-                                                        }}
-                                                    >
-                                                        Assign employee
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                        )}
                                     </th>
                                     <td className="p-3">
                                         {group.employee_number ? (
