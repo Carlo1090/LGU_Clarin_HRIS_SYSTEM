@@ -68,6 +68,58 @@ type FormData = Record<string, string | number | boolean | null>;
 const emptyValue = (field: Field): string | number | boolean | null =>
     field.type === 'checkbox' ? false : '';
 
+/* ---------- Employee form field overrides ---------- */
+
+const SUFFIX_OPTIONS = ['Jr.', 'Sr.', 'I', 'II', 'III', 'IV', 'V'].map(
+    (value) => ({ value, label: value }),
+);
+
+const SEX_OPTIONS = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
+];
+
+// Converts older values such as "M" / "F" so they match the dropdown.
+const normalizeSex = (value: HrisValue): HrisValue => {
+    if (typeof value !== 'string') return value;
+
+    const key = value.trim().toLowerCase();
+
+    if (key === 'm' || key === 'male') return 'Male';
+    if (key === 'f' || key === 'female') return 'Female';
+
+    return value;
+};
+
+const isSexField = (name: string) => name === 'gender' || name === 'sex';
+
+const applyEmployeeFieldOverrides = (field: Field): Field => {
+    if (field.name === 'middle_name') {
+        return { ...field, label: 'Middle name (optional)', required: false };
+    }
+
+    if (field.name === 'suffix') {
+        return {
+            ...field,
+            label: 'Suffix (optional)',
+            type: 'select',
+            required: false,
+            options: SUFFIX_OPTIONS,
+        };
+    }
+
+    if (isSexField(field.name)) {
+        return {
+            ...field,
+            label: 'Sex',
+            type: 'select',
+            options: SEX_OPTIONS,
+        };
+    }
+
+    return field;
+};
+
 function AttendanceBadge({
     complete,
     review,
@@ -100,7 +152,7 @@ function AttendanceBadge({
 export default function HrisResourceIndex({
     resource,
     title,
-    fields,
+    fields: serverFields,
     canManage,
     leaveReviewStage,
     canCreateLeaveOnBehalf = false,
@@ -115,6 +167,13 @@ export default function HrisResourceIndex({
     accountSetupEmailSent = null,
     records,
 }: Props) {
+    const fields = useMemo(
+        () =>
+            resource === 'employees'
+                ? serverFields.map(applyEmployeeFieldOverrides)
+                : serverFields,
+        [resource, serverFields],
+    );
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
     const isAttendance = resource === 'attendance';
@@ -201,12 +260,20 @@ export default function HrisResourceIndex({
             ?.scrollIntoView({ block: 'start' });
         form.setData(
             Object.fromEntries(
-                fields.map((field) => [
-                    field.name,
-                    row[field.name] === null || row[field.name] === undefined
-                        ? emptyValue(field)
-                        : row[field.name],
-                ]),
+                fields.map((field) => {
+                    const raw = row[field.name];
+
+                    if (raw === null || raw === undefined) {
+                        return [field.name, emptyValue(field)];
+                    }
+
+                    return [
+                        field.name,
+                        resource === 'employees' && isSexField(field.name)
+                            ? normalizeSex(raw)
+                            : raw,
+                    ];
+                }),
             ),
         );
     };
@@ -228,6 +295,9 @@ export default function HrisResourceIndex({
         if (value === null || value === undefined || value === '') return '—';
         if (resource === 'leave-applications' && field.name === 'status') {
             return String(value).replaceAll('_', ' ');
+        }
+        if (resource === 'employees' && isSexField(field.name)) {
+            return normalizeSex(value) as string | number | boolean;
         }
         if (field.type === 'checkbox') return value ? 'Yes' : 'No';
         if (field.options)
