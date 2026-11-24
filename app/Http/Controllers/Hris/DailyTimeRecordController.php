@@ -10,11 +10,65 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DailyTimeRecordController extends Controller
 {
+    public function confirmReview(Request $request, Employee $employee): RedirectResponse
+    {
+        Gate::authorize('manage-hris-resource', 'attendance');
+
+        $data = $request->validate([
+            'attendance_date' => ['required', 'date'],
+            'am_in' => ['required', 'date_format:H:i'],
+            'am_out' => ['required', 'date_format:H:i'],
+            'pm_in' => ['required', 'date_format:H:i'],
+            'pm_out' => ['required', 'date_format:H:i'],
+        ]);
+
+        $date = Date::parse($data['attendance_date'])->toDateString();
+        $amIn = Date::parse($date.' '.$data['am_in']);
+        $amOut = Date::parse($date.' '.$data['am_out']);
+        $pmIn = Date::parse($date.' '.$data['pm_in']);
+        $pmOut = Date::parse($date.' '.$data['pm_out']);
+
+        if ($amIn->gt($amOut) || $amOut->gt($pmIn) || $pmIn->gt($pmOut)) {
+            throw ValidationException::withMessages([
+                'pm_in' => 'Use a chronological sequence: AM In, AM Out, PM In, PM Out.',
+            ]);
+        }
+
+        DB::transaction(function () use ($employee, $date, $amIn, $amOut, $pmIn, $pmOut): void {
+            $record = $employee->attendanceRecords()->where('attendance_date', $date)->latest('id')->first();
+            $values = [
+                'time_in' => $amIn,
+                'am_out' => $amOut,
+                'pm_in' => $pmIn,
+                'time_out' => $pmOut,
+                'total_hours' => round(
+                    $amIn->diffInMinutes($amOut) / 60 +
+                    $pmIn->diffInMinutes($pmOut) / 60,
+                    2,
+                ),
+                'status' => 'present',
+                'source' => 'manual-review',
+            ];
+
+            if ($record) {
+                $record->update($values);
+            } else {
+                $employee->attendanceRecords()->create($values + ['attendance_date' => $date]);
+            }
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance day confirmed.']);
+
+        return back();
+    }
     public function __invoke(Request $request, Employee $employee): Response|JsonResponse
     {
         $user = $request->user();
@@ -55,11 +109,13 @@ class DailyTimeRecordController extends Controller
         $records = $attendance
             ->whereBetween('attendance_date', [$startDate, $endDate])
             ->latest('id')
-            ->get(['attendance_date', 'time_in', 'time_out', 'status'])
+            ->get(['attendance_date', 'time_in', 'am_out', 'pm_in', 'time_out', 'status'])
             ->unique('attendance_date')
             ->keyBy(fn (AttendanceRecord $record) => (int) substr($record->attendance_date, -2))
             ->map(fn (AttendanceRecord $record) => [
                 'amIn' => $record->time_in ? Date::parse($record->time_in)->format('H:i') : null,
+                'amOut' => $record->am_out ? Date::parse($record->am_out)->format('H:i') : null,
+                'pmIn' => $record->pm_in ? Date::parse($record->pm_in)->format('H:i') : null,
                 'pmOut' => $record->time_out ? Date::parse($record->time_out)->format('H:i') : null,
                 'remarks' => $record->status === 'present' ? null : ucfirst(str_replace('_', ' ', $record->status)),
             ])->all();
@@ -88,6 +144,8 @@ class DailyTimeRecordController extends Controller
             'periodLabel' => $periodLabel,
             'records' => (object) $records,
             'punchTimes' => (object) $punchTimes->all(),
+            'canReview' => Gate::allows('manage-hris-resource', 'attendance'),
+            'reviewUrl' => route('hris.attendance.dtr.review', $employee, false),
             'previewUrl' => route('hris.attendance.dtr', $employee, false),
             'backUrl' => $selfService
                 ? route('hris.portal', 'my-attendance', false)

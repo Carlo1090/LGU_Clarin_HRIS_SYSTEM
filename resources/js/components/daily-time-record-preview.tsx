@@ -12,6 +12,8 @@ export type DailyTimeRecordData = {
     periodLabel: string;
     officialHours?: string;
     punchTimes?: Record<string, string[]>;
+    canReview?: boolean;
+    reviewUrl?: string;
     records: Partial<
         Record<
             number,
@@ -49,6 +51,8 @@ export default function DailyTimeRecordPreview({
     periodLabel,
     officialHours,
     punchTimes,
+    canReview = false,
+    reviewUrl,
     records,
     previewUrl,
     backUrl,
@@ -305,6 +309,55 @@ export default function DailyTimeRecordPreview({
                         ))}
                     </dl>
                 </details>
+            )}
+            {!demo && canReview && reviewUrl && punchTimes && month && (
+                <section className="rounded-lg border p-4 print:hidden" aria-labelledby="manual-review-heading">
+                    <h2 id="manual-review-heading" className="font-semibold">
+                        Manually confirm review days
+                    </h2>
+                    <div className="mt-3 grid gap-3">
+                        {Object.entries(punchTimes)
+                            .filter(([day]) => !(
+                                records[Number(day)]?.amIn &&
+                                records[Number(day)]?.amOut &&
+                                records[Number(day)]?.pmIn &&
+                                records[Number(day)]?.pmOut
+                            ))
+                            .map(([day, times]) => (
+                                <form
+                                    key={day}
+                                    className="grid items-end gap-2 rounded-md border p-3 sm:grid-cols-5"
+                                    onSubmit={(event) => {
+                                        event.preventDefault();
+                                        const data = new FormData(event.currentTarget);
+                                        router.put(reviewUrl, {
+                                            attendance_date: `${month}-${day.padStart(2, '0')}`,
+                                            am_in: String(data.get('am_in')),
+                                            am_out: String(data.get('am_out')),
+                                            pm_in: String(data.get('pm_in')),
+                                            pm_out: String(data.get('pm_out')),
+                                        }, { preserveScroll: true });
+                                    }}
+                                >
+                                    <strong className="sm:row-span-1">Day {day}</strong>
+                                    {[
+                                        ['am_in', 'AM In', times[0] ?? '08:00'],
+                                        ['am_out', 'AM Out', times[1] ?? times[0] ?? '12:00'],
+                                        ['pm_in', 'PM In', times[2] ?? times[1] ?? times[0] ?? '13:00'],
+                                        ['pm_out', 'PM Out', times[3] ?? times[times.length - 1] ?? '17:00'],
+                                    ].map(([name, label, value]) => (
+                                        <label key={name} className="grid gap-1 text-xs">
+                                            {label}
+                                            <Input type="time" name={name} defaultValue={value.slice(0, 5)} required />
+                                        </label>
+                                    ))}
+                                    <Button type="submit" size="sm" className="sm:col-start-5">
+                                        Confirm day
+                                    </Button>
+                                </form>
+                            ))}
+                    </div>
+                </section>
             )}
         </div>
     );
