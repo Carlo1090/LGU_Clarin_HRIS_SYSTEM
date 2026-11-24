@@ -108,6 +108,42 @@ class AttendanceLogParser
         }, attempts: 3);
     }
 
+    public function importIntoBatch(AttendanceImport $batch, UploadedFile $file, User $actor): void
+    {
+        $parsed = $this->parseFile($file);
+        $stamp = now(config('attendance.timezone', 'Asia/Manila'));
+        $inserted = $duplicate = 0;
+
+        foreach (array_chunk($parsed['rows'], 500) as $chunk) {
+            $rows = array_map(fn (array $row): array => $this->storageRow($row, $batch->id, $stamp), $chunk);
+            $written = AttendancePunch::query()->insertOrIgnore($rows);
+            $inserted += $written;
+            $duplicate += count($rows) - $written;
+            $this->deriver->refreshRows($chunk);
+        }
+
+        $counts = [
+            'total_lines' => $parsed['total_rows'],
+            'inserted_count' => $inserted,
+            'duplicate_count' => $duplicate,
+            'invalid_count' => count($parsed['errors']),
+        ];
+        $batch->update($counts + [
+            'status' => 'completed',
+            'imported_at' => $stamp,
+            'invalid_lines' => array_slice($parsed['errors'], 0, 1000),
+        ]);
+        $this->verifier->verifyPending($actor);
+
+        AuditLog::query()->create([
+            'user_id' => $actor->id,
+            'action' => 'attendance.logs_imported',
+            'model_type' => AttendanceImport::class,
+            'model_id' => $batch->id,
+            'metadata' => json_encode($counts, JSON_THROW_ON_ERROR),
+        ]);
+    }
+
     /**
      * @return array{
      *     total_rows: int,

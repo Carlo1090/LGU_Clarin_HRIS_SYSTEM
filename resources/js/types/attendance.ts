@@ -8,6 +8,8 @@ export type EmployeeBiometricLink = {
 export type ImportBatchSummary = {
     id: number;
     file_name: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    error_message?: string | null;
     total_lines: number;
     inserted_count: number;
     duplicate_count: number;

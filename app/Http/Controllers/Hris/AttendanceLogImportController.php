@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Hris;
 
 use App\Http\Requests\Hris\ImportAttendanceLogRequest;
+use App\Jobs\ImportAttendanceLogJob;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\AuditLog;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,8 +37,31 @@ class AttendanceLogImportController
             ));
         }
 
-        $batch = $parser->import($request->file('file'), $request->user());
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance log imported.']);
+        $file = $request->file('file');
+        $hash = hash_file('sha256', $file->getRealPath());
+        if ($hash === false) {
+            throw ValidationException::withMessages(['file' => 'The log file could not be read.']);
+        }
+        $storedPath = $file->storeAs(
+            'attendance-imports',
+            Str::uuid().'.'.$file->getClientOriginalExtension(),
+            'local',
+        );
+        $batch = AttendanceImport::query()->create([
+            'file_name' => Str::limit($file->getClientOriginalName(), 255, ''),
+            'file_sha256' => $hash,
+            'uploaded_by' => $request->user()->id,
+            'status' => 'processing',
+            'imported_at' => now(config('attendance.timezone', 'Asia/Manila')),
+        ]);
+
+        ImportAttendanceLogJob::dispatch(
+            $batch->id,
+            $request->user()->id,
+            $storedPath,
+            $file->getClientOriginalName(),
+        );
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance log import started.']);
 
         return to_route('hris.attendance-logs.index', ['batch' => $batch->id]);
     }
@@ -134,7 +160,7 @@ class AttendanceLogImportController
         ]);
 
         return [
-            'batch' => $batch ? $batch->only(['id', 'file_name', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count'])
+            'batch' =>             $batch ? $batch->only(['id', 'file_name', 'status', 'error_message', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count'])
                 + ['invalid_lines' => $batch->invalid_lines ?? []] : null,
             'groups' => $groups,
             'unassigned' => $unassigned,

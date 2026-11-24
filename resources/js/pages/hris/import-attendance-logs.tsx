@@ -2,7 +2,7 @@ import { useTableSearch } from '@/components/table-search';
 import PersonAvatar from '@/components/person-avatar';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type {
@@ -75,6 +75,16 @@ export default function ImportAttendanceLogs({
     preview: AttendanceImportPreview | null;
     timezone: string;
 }) {
+    useEffect(() => {
+        if (!batch || batch.status !== 'processing') {
+            return;
+        }
+        const interval = window.setInterval(() => {
+            router.reload({ only: ['batch', 'groups'] });
+        }, 2500);
+        return () => window.clearInterval(interval);
+    }, [batch?.id, batch?.status]);
+
     const search = useTableSearch(
         groups.data,
         ['Biometric ID', 'Employee', 'Punches', 'First punch', 'Last punch'],
@@ -256,13 +266,6 @@ export default function ImportAttendanceLogs({
                             </div>
                         ))}
                     </dl>
-                    {preview.unlinked_ids.length > 0 && (
-                        <p className="text-sm text-amber-800 dark:text-amber-300">
-                            Unlinked machine IDs:{' '}
-                            {preview.unlinked_ids.join(', ')}. These punches
-                            will still be imported.
-                        </p>
-                    )}
                     {preview.errors.length > 0 && (
                         <details open className="text-sm">
                             <summary className="cursor-pointer font-medium">
@@ -304,6 +307,16 @@ export default function ImportAttendanceLogs({
                     <p className="text-sm break-all text-muted-foreground">
                         {batch.file_name}
                     </p>
+                    {batch.status === 'processing' && (
+                        <p className="text-sm text-blue-700 dark:text-blue-300" role="status">
+                            Import is processing in the background.
+                        </p>
+                    )}
+                    {batch.status === 'failed' && (
+                        <p className="text-sm text-destructive" role="alert">
+                            Import failed{batch.error_message ? `: ${batch.error_message}` : '.'}
+                        </p>
+                    )}
                     <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                         {[
                             ['Punch lines read', batch.total_lines],
