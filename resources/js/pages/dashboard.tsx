@@ -1,3 +1,6 @@
+import DashboardAnnouncements, {
+    type DashboardAnnouncement,
+} from '@/components/dashboard-announcements';
 import GradientASCII from '@/components/GradientASCII';
 import TechText from '@/components/TechText';
 import AOS from 'aos';
@@ -86,6 +89,8 @@ type Props = {
     office: string | null;
     cards: DashboardMetric[];
     analytics: DashboardAnalytics;
+    announcements: DashboardAnnouncement[];
+    canManageAnnouncements: boolean;
 };
 const number = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 2 });
 const compact = new Intl.NumberFormat('en-PH', {
@@ -301,7 +306,14 @@ const chartColors = [
     'var(--dashboard-chart-6)',
 ];
 
-export default function Dashboard({ role, office, cards, analytics }: Props) {
+export default function Dashboard({
+    role,
+    office,
+    cards,
+    analytics,
+    announcements,
+    canManageAnnouncements,
+}: Props) {
     const { auth } = usePage().props;
 
     useEffect(() => {
@@ -465,6 +477,11 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                         </Button>
                     </div>
                 </header>
+
+                <DashboardAnnouncements
+                    announcements={announcements}
+                    canManage={canManageAnnouncements}
+                />
 
                 {cards.length ? (
                     <>
