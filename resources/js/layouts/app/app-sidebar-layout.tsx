@@ -15,7 +15,9 @@ export default function AppSidebarLayout({ children }: AppLayoutProps) {
                 className="public-surface dashboard-surface isolate min-w-0 overflow-x-clip bg-background text-foreground"
             >
                 <AppSidebarHeader />
-                {children}
+                <div className="@container/workspace min-w-0 flex-1">
+                    {children}
+                </div>
             </AppContent>
         </AppShell>
     );

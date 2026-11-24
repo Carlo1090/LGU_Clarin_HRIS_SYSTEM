@@ -122,7 +122,7 @@ export default function ImportEmployees({
     return (
         <>
             <Head title="Bulk import employees" />
-            <main className="workspace-page max-w-6xl">
+            <main className="workspace-page">
                 <WorkspaceHeader
                     title="Bulk import employees"
                     description="Import employee records and create employee sign-in accounts from the EMPLOYEES worksheet. This workflow does not add Plantilla positions."
@@ -302,7 +302,7 @@ export default function ImportEmployees({
                                     role="dialog"
                                     aria-modal="true"
                                     aria-labelledby="template-editor-title"
-                                    className="w-full max-w-2xl space-y-4 rounded-xl border bg-background p-6 shadow-xl"
+                                    className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl space-y-4 overflow-y-auto rounded-xl border bg-background p-4 shadow-xl sm:p-6"
                                 >
                                     <div>
                                         <h2

@@ -291,7 +291,7 @@ export default function MonthlyAttendanceReport({
     const filters = { month, sort, direction };
 
     return (
-        <main className="workspace-page max-w-7xl">
+        <main className="workspace-page">
             <Head title="Monthly Attendance Report" />
             <AttendanceWorkspaceHeader
                 active="report"

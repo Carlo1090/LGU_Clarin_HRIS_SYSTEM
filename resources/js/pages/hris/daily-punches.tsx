@@ -50,7 +50,7 @@ export default function DailyPunches({
     timezone,
 }: Props) {
     return (
-        <main className="mx-auto w-full max-w-[96rem] space-y-6 p-4 md:p-8">
+        <main className="workspace-page">
             <Head title="Daily Punches" />
             <AttendanceWorkspaceHeader active="daily" canManage={canManage} />
 
@@ -73,7 +73,7 @@ export default function DailyPunches({
                 <form
                     method="get"
                     action="/hris/attendance/daily-punches"
-                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
+                    className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-3"
                 >
                     <label className="grid gap-1 text-sm">
                         Start date

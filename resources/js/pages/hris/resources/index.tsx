@@ -385,7 +385,7 @@ function ResourceRecords({
     return (
         <>
             <Head title={title} />
-            <div className="workspace-page max-w-7xl">
+            <div className="workspace-page">
                 {isAttendance ? (
                     <AttendanceWorkspaceHeader
                         active="records"
@@ -487,12 +487,12 @@ function ResourceRecords({
                         )}
                         <form
                             onSubmit={submit}
-                            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                            className="grid gap-4 @min-[34rem]/workspace:grid-cols-2 @min-[56rem]/workspace:grid-cols-3"
                         >
                             {fields.map((field) => (
                                 <label
                                     key={field.name}
-                                    className={`space-y-1 text-sm ${field.type === 'textarea' ? 'sm:col-span-2 lg:col-span-3' : ''}`}
+                                    className={`space-y-1 text-sm ${field.type === 'textarea' ? '@min-[34rem]/workspace:col-span-2 @min-[56rem]/workspace:col-span-3' : ''}`}
                                 >
                                     <span>
                                         {field.label}
@@ -626,7 +626,7 @@ function ResourceRecords({
                                         )}
                                     </label>
                                 )}
-                            <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
+                            <div className="flex items-center gap-2 @min-[34rem]/workspace:col-span-2 @min-[56rem]/workspace:col-span-3">
                                 <Button
                                     type="submit"
                                     disabled={form.processing}

@@ -95,7 +95,7 @@ export default function AttendanceDirectory({
     ];
 
     return (
-        <div className="workspace-page max-w-7xl">
+        <div className="workspace-page">
             <Head title={title} />
             <AttendanceWorkspaceHeader
                 active="records"
