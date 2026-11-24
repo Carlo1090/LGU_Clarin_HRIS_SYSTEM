@@ -29,8 +29,6 @@ const slots = [
     { key: 'LUNCH_OUT', label: 'Lunch/Morning OUT' },
     { key: 'PM_IN', label: 'Afternoon IN' },
     { key: 'PM_OUT', label: 'Afternoon/Evening OUT' },
-    { key: 'OT_IN', label: 'OT IN' },
-    { key: 'OT_OUT', label: 'OT OUT' },
 ] as const;
 
 const exportHref = (filters: Props['filters']) => {
@@ -63,9 +61,8 @@ export default function DailyPunches({
                             Daily attendance punches
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Raw device punches are retained. Missing punches are
-                            review flags only, not absence or undertime. Device
-                            times are shown as recorded in {timezone}.
+                            Device times are shown as recorded in {timezone}.
+                            Slots are assigned using the effective work schedule.
                         </p>
                     </div>
                     <Button asChild variant="outline">
@@ -140,7 +137,7 @@ export default function DailyPunches({
                         >
                             <option value="">All punches</option>
                             <option value="missing">Missing punch</option>
-                            <option value="wrong_button">Wrong button</option>
+                            <option value="no_schedule">No schedule</option>
                             <option value="duplicate">Duplicate</option>
                             <option value="pin_verify">PIN verification</option>
                             <option value="unlinked">Unlinked ID</option>
@@ -164,7 +161,8 @@ export default function DailyPunches({
                                     'Employee',
                                     'Date',
                                     ...slots.map((slot) => slot.label),
-                                    'Flags / raw punches',
+                                    'Result',
+                                    'Flags and raw punches',
                                 ].map((label) => (
                                     <th
                                         key={label}
@@ -215,57 +213,22 @@ export default function DailyPunches({
                                                         : undefined
                                                 }
                                             >
-                                                {punches.length ? (
-                                                    <div className="grid gap-1">
-                                                        {punches.map(
-                                                            (punch) => (
-                                                                <span
-                                                                    key={
-                                                                        punch.id
-                                                                    }
-                                                                    className={
-                                                                        punch.is_duplicate
-                                                                            ? 'text-muted-foreground'
-                                                                            : undefined
-                                                                    }
-                                                                    title={
-                                                                        punch.is_duplicate
-                                                                            ? 'Duplicate punch'
-                                                                            : 'Primary slot punch'
-                                                                    }
-                                                                >
-                                                                    <strong
-                                                                        className={
-                                                                            punch.primary
-                                                                                ? 'font-semibold'
-                                                                                : 'font-normal'
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            punch.time
-                                                                        }
-                                                                    </strong>
-                                                                    {punch.is_duplicate
-                                                                        ? ' · duplicate'
-                                                                        : ''}
-                                                                </span>
-                                                            ),
-                                                        )}
-                                                    </div>
-                                                ) : missing ? (
-                                                    <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                                                        <span className="sr-only">
-                                                            Missing {key}
-                                                        </span>
-                                                    </span>
-                                                ) : (
-                                                    <span aria-label="No punch">
-                                                        —
-                                                    </span>
-                                                )}
+                                                {punches[0]?.time ?? (missing ? 'Missing' : '—')}
                                             </td>
                                         );
                                     })}
+                                    <td className="min-w-44 space-y-1 p-3 text-xs">
+                                        {row.status && (
+                                            <p className="font-semibold capitalize">{row.status.replaceAll('_', ' ')}</p>
+                                        )}
+                                        {row.schedule_id !== null && (
+                                            <>
+                                                <p>{row.schedule_source === 'department' ? 'Department' : 'Override'} schedule #{row.schedule_id}</p>
+                                                <p>Late {row.late_minutes_am} min AM / {row.late_minutes_pm} min PM</p>
+                                                <p>Undertime {row.undertime_minutes} min</p>
+                                            </>
+                                        )}
+                                    </td>
                                     <td className="min-w-60 p-3">
                                         <div className="mb-2 flex flex-wrap gap-1">
                                             {row.flag_labels.map((flag) => (
@@ -278,63 +241,26 @@ export default function DailyPunches({
                                             ))}
                                             {!row.flag_labels.length && '—'}
                                         </div>
-                                        <details className="text-xs">
-                                            <summary className="cursor-pointer font-medium underline">
-                                                View all punches (
-                                                {row.punches.length})
-                                            </summary>
-                                            <ol className="mt-2 grid gap-2">
-                                                {row.punches.map((punch) => (
-                                                    <li
-                                                        key={punch.id}
-                                                        className={
-                                                            punch.is_duplicate
-                                                                ? 'text-muted-foreground'
-                                                                : undefined
-                                                        }
-                                                    >
-                                                        {punch.punched_at} ·
-                                                        state{' '}
-                                                        {punch.punch_state ??
-                                                            'unknown'}{' '}
-                                                        · {punch.verify_label} ·
-                                                        device{' '}
-                                                        {punch.device_id ?? '—'}
-                                                        {punch.is_duplicate
-                                                            ? ' · duplicate'
-                                                            : ''}
-                                                        {Object.keys(
-                                                            punch.flags,
-                                                        ).length > 0 && (
-                                                            <span className="block">
-                                                                Flags:{' '}
-                                                                {Object.entries(
-                                                                    punch.flags,
-                                                                )
-                                                                    .map(
-                                                                        ([
-                                                                            name,
-                                                                            value,
-                                                                        ]) =>
-                                                                            typeof value ===
-                                                                            'boolean'
-                                                                                ? name
-                                                                                : `${name}: ${value}`,
-                                                                    )
-                                                                    .join(', ')}
-                                                            </span>
-                                                        )}
-                                                    </li>
-                                                ))}
-                                            </ol>
-                                        </details>
+                                        <ol className="grid gap-2 text-xs">
+                                            {row.punches.map((punch) => (
+                                                <li key={punch.id}>
+                                                    <span className="font-medium tabular-nums">{punch.punched_at}</span>
+                                                    <span className="ml-2">
+                                                        {slots.find(({ key }) => key === punch.derived_slot)?.label ?? (punch.is_duplicate ? 'Merged duplicate' : 'Unassigned')}
+                                                    </span>
+                                                    <span className="block text-muted-foreground">
+                                                        Device status {punch.punch_state ?? 'unknown'} · {punch.verify_label} · Device {punch.device_id ?? '—'}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ol>
                                     </td>
                                 </tr>
                             ))}
                             {!rows.data.length && (
                                 <tr>
                                     <td
-                                        colSpan={10}
+                                        colSpan={8}
                                         className="p-8 text-center text-muted-foreground"
                                     >
                                         No attendance punches found for this

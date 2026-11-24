@@ -45,7 +45,8 @@ RUN composer install \
 
 COPY . .
 
-RUN composer dump-autoload \
+RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php \
+    && composer dump-autoload \
     --no-dev \
     --classmap-authoritative \
     --no-interaction \
@@ -63,7 +64,9 @@ COPY --from=build /var/www/html/public/build ./public/build
 COPY --from=build /var/www/html/bootstrap/cache ./bootstrap/cache
 COPY docker/apache-site.conf /etc/apache2/sites-available/000-default.conf
 
-RUN sed -i 's/^Listen 80$/Listen 10000/' /etc/apache2/ports.conf \
+RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php \
+    && php artisan package:discover --ansi \
+    && sed -i 's/^Listen 80$/Listen 10000/' /etc/apache2/ports.conf \
     && a2enmod rewrite headers \
     && mkdir -p \
         storage/app/private \
@@ -76,4 +79,4 @@ RUN sed -i 's/^Listen 80$/Listen 10000/' /etc/apache2/ports.conf \
 
 EXPOSE 10000
 
-CMD ["apache2-foreground"]
+CMD ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=DemoEmployeeImportDirectorySeeder --force && php artisan queue:work database --sleep=1 --tries=3 --timeout=0 --memory=512 >> storage/logs/queue.log 2>&1 & exec apache2-foreground"]

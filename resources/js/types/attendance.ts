@@ -8,9 +8,15 @@ export type EmployeeBiometricLink = {
 export type ImportBatchSummary = {
     id: number;
     file_name: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    error_message?: string | null;
     total_lines: number;
     inserted_count: number;
     duplicate_count: number;
+    recompute_summary: {
+        employees_affected: number;
+        unlinked_machine_ids: number[];
+    } | null;
     invalid_count: number;
     invalid_lines: { line: number; reason: string }[];
 };
@@ -71,10 +77,16 @@ export type DailyPunchRow = {
     flags: {
         missing: boolean;
         missing_slots: string[];
-        wrong_button: boolean;
+        no_schedule: boolean;
         duplicate: boolean;
         pin_verify: boolean;
         unlinked: boolean;
     };
     flag_labels: string[];
+    status: 'complete' | 'incomplete' | 'absent' | 'no_schedule' | null;
+    late_minutes_am: number | null;
+    late_minutes_pm: number | null;
+    undertime_minutes: number | null;
+    schedule_source: 'department' | 'override' | null;
+    schedule_id: number | null;
 };

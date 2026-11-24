@@ -1,4 +1,6 @@
-﻿import { Head, Link, useForm } from '@inertiajs/react';
+import { useTableSearch } from '@/components/table-search';
+import WorkspaceHeader from '@/components/workspace-header';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import InputError from '@/components/input-error';
@@ -7,10 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index } from '@/routes/hris/resources';
 
+import PersonAvatar from '@/components/person-avatar';
+
 type PreviewRow = {
     row: number;
     employee_number: string;
     name: string;
+    avatar?: string | null;
     department: string;
     position: string;
     status: string;
@@ -26,6 +31,7 @@ type Credential = {
     reference_code: string;
     username: string;
     name: string;
+    avatar?: string | null;
     temporary_password: string;
 };
 type Result = {
@@ -52,6 +58,34 @@ export default function ImportEmployees({
     statusOptions?: string[];
     columns?: TemplateColumn[];
 }) {
+    const credentialSearch = useTableSearch(
+        credentials,
+        ['Employee number', 'Name', 'Username'],
+        (row) => [row.employee_number, row.name, row.username],
+        'Search created accounts',
+    );
+    const previewSearch = useTableSearch(
+        rows,
+        [
+            'Row',
+            'Employee number',
+            'Name',
+            'Department',
+            'Position',
+            'Employment status',
+            'Validation',
+        ],
+        (row) => [
+            row.row,
+            row.employee_number,
+            row.name,
+            row.department,
+            row.position,
+            row.status,
+            row.valid ? 'Ready' : row.errors.join(' '),
+        ],
+        'Search import preview',
+    );
     const [previewed, setPreviewed] = useState(Boolean(token));
     const [editTemplate, setEditTemplate] = useState(false);
     const upload = useForm<{ file: File | null }>({ file: null });
@@ -83,31 +117,26 @@ export default function ImportEmployees({
     return (
         <>
             <Head title="Bulk import employees" />
-            <main className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-8">
-                <header>
+            <main className="workspace-page max-w-6xl">
+                <WorkspaceHeader
+                    title="Bulk import employees"
+                    description="Import employee records and create employee sign-in accounts from the EMPLOYEES worksheet. This workflow does not add Plantilla positions."
+                >
                     <Button
                         asChild
                         variant="outline"
                         size="sm"
-                        className="mb-4"
+                        className="text-foreground"
                     >
                         <Link href={index('employees')}>
                             <ArrowLeft aria-hidden="true" />
                             Back to Employees
                         </Link>
                     </Button>
-                    <h1 className="text-2xl font-semibold">
-                        Bulk import employees
-                    </h1>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        Import employee records and create employee sign-in
-                        accounts from the EMPLOYEES worksheet. This workflow
-                        does not add Plantilla positions.
-                    </p>
-                </header>
+                </WorkspaceHeader>
 
                 {result ? (
-                    <section className="space-y-4 rounded-xl border p-5">
+                    <section className="workspace-panel space-y-4 p-5">
                         <h2 className="text-lg font-semibold">
                             Import complete
                         </h2>
@@ -130,6 +159,7 @@ export default function ImportEmployees({
                                     These passwords are not saved for later
                                     viewing.
                                 </p>
+                                {credentialSearch.toolbar}
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
                                         <thead>
@@ -150,36 +180,52 @@ export default function ImportEmployees({
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {credentials.map((credential) => (
-                                                <tr
-                                                    key={
-                                                        credential.employee_number
-                                                    }
-                                                    className="border-t"
-                                                >
-                                                    <td className="p-2">
-                                                        {
+                                            {credentialSearch.rows.map(
+                                                (credential) => (
+                                                    <tr
+                                                        key={
                                                             credential.employee_number
                                                         }
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {
-                                                            credential.reference_code
-                                                        }
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {credential.username}
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {credential.name}
-                                                    </td>
-                                                    <td className="p-2 font-mono">
-                                                        {
-                                                            credential.temporary_password
-                                                        }
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                        className="border-t"
+                                                    >
+                                                        <td className="p-2">
+                                                            {
+                                                                credential.employee_number
+                                                            }
+                                                        </td>
+                                                        <td className="p-2">
+                                                            {
+                                                                credential.reference_code
+                                                            }
+                                                        </td>
+                                                        <td className="p-2">
+                                                            {
+                                                                credential.username
+                                                            }
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <PersonAvatar
+                                                                    name={
+                                                                        credential.name
+                                                                    }
+                                                                    src={
+                                                                        credential.avatar
+                                                                    }
+                                                                />
+                                                                {
+                                                                    credential.name
+                                                                }
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-2 font-mono">
+                                                            {
+                                                                credential.temporary_password
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                ),
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -193,7 +239,7 @@ export default function ImportEmployees({
                     </section>
                 ) : (
                     <>
-                        <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
+                        <section className="workspace-panel flex flex-wrap items-center justify-between gap-4 p-4">
                             <div>
                                 <h2 className="font-medium">
                                     Employee import template
@@ -228,7 +274,7 @@ export default function ImportEmployees({
                                 </a>
                             </div>
                         </section>
-                        <section className="space-y-2 rounded-xl border p-4 text-sm">
+                        <section className="workspace-panel space-y-2 p-4 text-sm">
                             <h2 className="font-medium">
                                 Required spreadsheet columns
                             </h2>
@@ -448,7 +494,7 @@ export default function ImportEmployees({
                         )}
                         <form
                             onSubmit={preview}
-                            className="space-y-4 rounded-xl border p-4"
+                            className="workspace-panel space-y-4 p-4"
                         >
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2 md:col-span-2">
@@ -534,9 +580,10 @@ export default function ImportEmployees({
                                             change until you continue.
                                         </p>
                                     </div>
+                                    {previewSearch.toolbar}
                                     <div className="overflow-x-auto rounded-xl border">
                                         <table className="w-full text-left text-sm">
-                                            <thead className="bg-muted">
+                                            <thead className="workspace-table-head">
                                                 <tr>
                                                     {[
                                                         'Excel row',
@@ -561,62 +608,78 @@ export default function ImportEmployees({
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {rows.map((row) => (
-                                                    <tr
-                                                        key={row.row}
-                                                        className="border-t align-top"
-                                                    >
-                                                        <td className="p-3">
-                                                            {row.row}
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {
-                                                                row.employee_number
-                                                            }
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {row.name}
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {row.department}
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {row.position}
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {row.status}
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {row.profile_action}
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {row.account_action}
-                                                        </td>
-                                                        <td className="p-3 font-mono">
-                                                            {row.username}
-                                                        </td>
-                                                        <td className="p-3 font-mono">
-                                                            {row.temporary_password ??
-                                                                (row.valid
-                                                                    ? 'Account already exists'
-                                                                    : '—')}
-                                                        </td>
-                                                        <td className="p-3">
-                                                            {row.valid
-                                                                ? 'Ready'
-                                                                : row.errors.join(
-                                                                      ' ',
-                                                                  )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                {previewSearch.rows.map(
+                                                    (row) => (
+                                                        <tr
+                                                            key={row.row}
+                                                            className="border-t align-top"
+                                                        >
+                                                            <td className="p-3">
+                                                                {row.row}
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {
+                                                                    row.employee_number
+                                                                }
+                                                            </td>
+                                                            <td className="p-3">
+                                                                <span className="inline-flex items-center gap-2">
+                                                                    <PersonAvatar
+                                                                        name={
+                                                                            row.name
+                                                                        }
+                                                                        src={
+                                                                            row.avatar
+                                                                        }
+                                                                    />
+                                                                    {row.name}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {row.department}
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {row.position}
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {row.status}
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {
+                                                                    row.profile_action
+                                                                }
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {
+                                                                    row.account_action
+                                                                }
+                                                            </td>
+                                                            <td className="p-3 font-mono">
+                                                                {row.username}
+                                                            </td>
+                                                            <td className="p-3 font-mono">
+                                                                {row.temporary_password ??
+                                                                    (row.valid
+                                                                        ? 'Account already exists'
+                                                                        : '—')}
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {row.valid
+                                                                    ? 'Ready'
+                                                                    : row.errors.join(
+                                                                          ' ',
+                                                                      )}
+                                                            </td>
+                                                        </tr>
+                                                    ),
+                                                )}
                                             </tbody>
                                         </table>
                                     </div>
                                 </section>
                                 <form
                                     onSubmit={commit}
-                                    className="flex flex-wrap items-end gap-3 rounded-xl border p-4"
+                                    className="workspace-panel flex flex-wrap items-end gap-3 p-4"
                                 >
                                     <input
                                         type="hidden"

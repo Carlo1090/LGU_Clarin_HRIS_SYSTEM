@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Attendance\Contracts\EmployeeDirectory;
+use App\Attendance\Services\PunchClassifier;
+use App\Attendance\Support\HrisEmployeeDirectory;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -17,7 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(EmployeeDirectory::class, HrisEmployeeDirectory::class);
+        $this->app->bind(PunchClassifier::class, fn () => new PunchClassifier(
+            duplicateWindowSeconds: config('attendance.duplicate_window_seconds'),
+            amInHoursBefore: config('attendance.classifier.am_in_hours_before'),
+            pmOutHoursAfter: config('attendance.classifier.pm_out_hours_after'),
+        ));
     }
 
     /**
@@ -50,6 +58,7 @@ class AppServiceProvider extends ServiceProvider
         ];
 
         Gate::define('view-hris-resource', fn (User $user, string $resource): bool => in_array($resource, $access[$user->role?->name] ?? [], true) || in_array('*', $access[$user->role?->name] ?? [], true));
+        Gate::define('manage-attendance-schedules', fn (User $user): bool => in_array($user->role?->name, ['HR Officer', 'HRMO Head', 'Administrator'], true));
         Gate::define('manage-hris-resource', fn (User $user, string $resource): bool => ! in_array($resource, ['roles', 'departments'], true)
             && (in_array($resource, $manage[$user->role?->name] ?? [], true) || in_array('*', $manage[$user->role?->name] ?? [], true)));
     }

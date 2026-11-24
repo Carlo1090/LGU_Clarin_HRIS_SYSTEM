@@ -1,5 +1,6 @@
 <?php
 
+use App\Attendance\Models\DepartmentSchedule;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
@@ -17,24 +18,12 @@ beforeEach(function () {
     $this->withoutVite();
 });
 
-test('attendance logs preview raw values, reject malformed rows, and skip only repeated punches on re-upload', function () {
+test('attendance logs import directly on selection, reject malformed rows, and skip repeated punches on re-upload', function () {
     $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
     $url = '/hris/attendance/logs';
     $file = "     15\t2026-10-19 12:00:00\t1\t2\t1\t0\r\n\r\n15\t2026-10-19 07:10:00\t1\t0\t1\t0\r\n7\t2026-10-18 17:00:00\t0\t1\t2\t3\r\n15\t2026-02-30 07:00:00\t1\t0\t1\t0\r\nx\t2026-10-19 07:00:00\t1\t0\t1\t0\r\n";
-    $this->actingAs($hr)->withHeader('X-Inertia', 'true')->post($url, [
+    $this->actingAs($hr)->post($url, [
         'file' => UploadedFile::fake()->createWithContent('attlog.dat', $file),
-    ])->assertOk()->assertJsonPath('component', 'hris/import-attendance-logs')
-        ->assertJsonPath('props.preview.total_rows', 5)
-        ->assertJsonPath('props.preview.distinct_machine_ids', 2)
-        ->assertJsonPath('props.preview.unlinked_ids', [7, 15])
-        ->assertJsonPath('props.preview.would_skip', 0)
-        ->assertJsonPath('props.preview.invalid_count', 2);
-    $this->withoutHeader('X-Inertia');
-    $this->assertDatabaseCount('attendance_imports', 0);
-
-    $this->post($url, [
-        'file' => UploadedFile::fake()->createWithContent('attlog.dat', $file),
-        'confirm' => true,
     ])->assertSessionHasNoErrors()->assertRedirect();
     $batch = AttendanceImport::query()->sole();
     expect($batch->total_lines)->toBe(5)
@@ -53,6 +42,8 @@ test('attendance logs preview raw values, reject malformed rows, and skip only r
         'confirm' => true,
     ])->assertSessionHasNoErrors()->assertRedirect();
     $this->assertDatabaseHas('attendance_imports', ['file_name' => 'renamed.dat', 'inserted_count' => 0, 'duplicate_count' => 3]);
+    expect(AttendanceImport::query()->where('file_name', 'renamed.dat')->firstOrFail()->recompute_summary)
+        ->toBe(['employees_affected' => 0, 'unlinked_machine_ids' => [15, 7]]);
     $this->assertDatabaseCount('attendance_punches', 3);
 
     $this->post($url, [
@@ -73,7 +64,90 @@ test('attendance logs preview raw values, reject malformed rows, and skip only r
         ->where('punches.data.2.punched_at', '2026-10-20 17:00:00'));
 });
 
-test('attendance imports cannot be deleted and every accepted punch stays stored', function () {
+test('an overnight out punch imported separately recomputes the shift start date', function () {
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+    $employee = Employee::factory()->create(['biometric_id' => 15]);
+    $schedule = DepartmentSchedule::query()->create([
+        'department_id' => $employee->department_id,
+        'am_in' => '20:00:00',
+        'am_out' => '23:00:00',
+        'pm_in' => '00:00:00',
+        'pm_out' => '04:00:00',
+        'crosses_midnight' => true,
+        'effective_from' => '2026-11-24',
+    ]);
+    $url = '/hris/attendance/logs';
+    $firstFile = "15\t2026-11-24 20:00:00\t1\t3\t1\t0\n15\t2026-11-24 23:00:00\t1\t0\t1\t0\n15\t2026-11-25 00:00:00\t1\t1\t1\t0\n";
+    $this->actingAs($hr)->post($url, [
+        'file' => UploadedFile::fake()->createWithContent('night-start.dat', $firstFile),
+    ])->assertSessionHasNoErrors()->assertRedirect();
+    $this->assertDatabaseHas('attendance_daily', ['employee_id' => $employee->id, 'status' => 'incomplete']);
+
+    $this->post($url, [
+        'file' => UploadedFile::fake()->createWithContent('night-end.dat', "15\t2026-11-25 04:00:00\t1\t2\t1\t0\n"),
+    ])->assertSessionHasNoErrors()->assertRedirect();
+    $this->assertDatabaseHas('attendance_daily', [
+        'employee_id' => $employee->id, 'work_date' => '2026-11-24', 'status' => 'complete',
+    ]);
+    $this->artisan('attendance:recompute', [
+        '--employee' => $employee->id,
+        '--from' => '2026-11-24',
+        '--to' => '2026-11-24',
+    ])->assertSuccessful();
+
+    $this->assertDatabaseCount('attendance_daily', 1);
+    $this->assertDatabaseHas('attendance_daily', [
+        'employee_id' => $employee->id,
+        'work_date' => '2026-11-24',
+        'status' => 'complete',
+        'pm_out_at' => '2026-11-25 04:00:00',
+        'schedule_id' => $schedule->id,
+    ]);
+    $this->assertDatabaseHas('attendance_punches', [
+        'machine_id' => 15, 'punched_at' => '2026-11-25 04:00:00', 'raw_status' => 2, 'derived_slot' => null,
+    ]);
+    $this->get('/hris/attendance/daily-punches?start_date=2026-11-24&end_date=2026-11-24')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('rows.data', 1)
+            ->where('rows.data.0.punches.3.punched_at', '2026-11-25 04:00:00')
+            ->where('rows.data.0.punches.3.derived_slot', 'PM_OUT'));
+    $this->get('/hris/attendance/daily-punches?start_date=2026-11-25&end_date=2026-11-25')
+        ->assertInertia(fn (Assert $page) => $page->has('rows.data', 0));
+    expect(AttendanceImport::query()->where('file_name', 'night-end.dat')->firstOrFail()->recompute_summary)
+        ->toBe(['employees_affected' => 1, 'unlinked_machine_ids' => []]);
+});
+
+test('attendance log list can filter assigned biometric IDs', function () {
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+    $employee = Employee::factory()->create(['biometric_id' => 15]);
+    $batch = AttendanceImport::query()->create([
+        'file_name' => 'assigned-test.dat',
+        'uploaded_by' => $hr->id,
+        'status' => 'completed',
+    ]);
+    foreach ([[15, '2026-10-19 08:00:00'], [16, '2026-10-19 09:00:00']] as [$id, $punchedAt]) {
+        AttendancePunch::query()->create([
+            'attendance_import_id' => $batch->id,
+            'import_batch_id' => $batch->id,
+            'biometric_id' => $id,
+            'machine_user_id' => $id,
+            'punched_at' => $punchedAt,
+            'created_at' => now(),
+        ]);
+    }
+
+    $this->actingAs($hr)
+        ->get('/hris/attendance/logs?assigned=1')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('hris/import-attendance-logs')
+            ->where('assigned', true)
+            ->has('groups.data', 1)
+            ->where('groups.data.0.biometric_id', 15)
+            ->where('groups.data.0.employee_number', $employee->employee_number));
+});
+
+test('attendance imports can be deleted by HR and retain manual attendance records', function () {
     $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
     $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create();
     $employee = Employee::factory()->create(['date_hired' => '2020-01-01', 'biometric_id' => 15, 'biometric_locked' => true]);
@@ -89,10 +163,10 @@ test('attendance imports cannot be deleted and every accepted punch stays stored
     expect($employee->refresh()->biometric_status)->toBe('verified');
 
     $deleteUrl = $url.'/'.$batch->id;
-    $this->actingAs($head)->delete($deleteUrl)->assertNotFound();
-    $this->actingAs($hr)->delete($deleteUrl)->assertNotFound();
-    $this->assertDatabaseHas('attendance_imports', ['id' => $batch->id]);
-    $this->assertDatabaseHas('attendance_punches', ['attendance_import_id' => $batch->id]);
+    $this->actingAs($head)->delete($deleteUrl)->assertForbidden();
+    $this->actingAs($hr)->delete($deleteUrl)->assertRedirect($url)->assertSessionHasNoErrors();
+    $this->assertDatabaseMissing('attendance_imports', ['id' => $batch->id]);
+    $this->assertDatabaseMissing('attendance_punches', ['attendance_import_id' => $batch->id]);
     $this->assertDatabaseHas('attendance_punches', ['biometric_id' => 16, 'punched_at' => '2026-10-20 08:00:00']);
     $this->assertDatabaseHas('attendance_records', ['id' => $manual->id]);
     expect($employee->refresh()->biometric_status)->toBe('verified')

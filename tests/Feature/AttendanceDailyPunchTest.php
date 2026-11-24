@@ -1,5 +1,6 @@
 <?php
 
+use App\Attendance\Models\DepartmentSchedule;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\Department;
@@ -16,9 +17,14 @@ beforeEach(function () {
     $this->withoutVite();
 });
 
-test('daily punches show all slots, wrong buttons, duplicate terminals, pin review, and unlinked machines', function () {
+test('daily punches use schedules and show all raw punches including duplicates and unlinked machines', function () {
     $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
     $department = Department::factory()->create();
+    $schedule = DepartmentSchedule::query()->create([
+        'department_id' => $department->id,
+        'am_in' => '08:00', 'am_out' => '12:00', 'pm_in' => '13:00', 'pm_out' => '17:00',
+        'effective_from' => '2026-10-01',
+    ]);
     foreach ([15, 16, 17, 18] as $id) {
         Employee::factory()->create([
             'department_id' => $department->id,
@@ -29,7 +35,7 @@ test('daily punches show all slots, wrong buttons, duplicate terminals, pin revi
 
     $file = implode("\r\n", [
         "15\t2026-10-19 08:00:00\t1\t0\t1\t0",
-        "15\t2026-10-19 08:00:00\t2\t0\t1\t0",
+        "15\t2026-10-19 08:00:01\t2\t0\t1\t0",
         "15\t2026-10-19 12:00:00\t1\t2\t1\t0",
         "15\t2026-10-19 13:00:00\t1\t3\t1\t0",
         "15\t2026-10-19 17:00:00\t1\t1\t1\t0",
@@ -53,7 +59,7 @@ test('daily punches show all slots, wrong buttons, duplicate terminals, pin revi
     $this->assertDatabaseCount('attendance_punches', 15);
     $this->assertDatabaseHas('attendance_punches', [
         'machine_user_id' => 15,
-        'punched_at' => '2026-10-19 08:00:00',
+        'punched_at' => '2026-10-19 08:00:01',
         'device_id' => 2,
     ]);
 
@@ -63,18 +69,21 @@ test('daily punches show all slots, wrong buttons, duplicate terminals, pin revi
         ->has('rows.data', 5)
         ->where('rows.data.0.employee_name', fn ($name) => is_string($name))
         ->where('rows.data.0.slots.AM_IN.0.time', '08:00:00')
-        ->where('rows.data.0.slots.AM_IN.1.time', '08:00:00')
+        ->where('rows.data.0.status', 'complete')
+        ->where('rows.data.0.schedule_id', $schedule->id)
+        ->where('rows.data.0.punches.1.punched_at', '2026-10-19 08:00:01')
+        ->where('rows.data.0.punches.1.is_duplicate', true)
         ->where('rows.data.1.flags.missing_slots', ['PM_IN'])
         ->where('rows.data.1.slots.PM_IN', [])
-        ->where('rows.data.2.flags.wrong_button', true)
         ->where('rows.data.2.flags.missing', false)
-        ->where('rows.data.2.punches.2.flags.suggested_slot', 'PM_IN')
+        ->where('rows.data.2.punches.2.punch_state', 0)
+        ->where('rows.data.2.punches.2.derived_slot', 'PM_IN')
         ->where('rows.data.2.flags.pin_verify', true)
         ->where('rows.data.3.punches.1.is_duplicate', true)
         ->where('rows.data.4.flags.unlinked', true)
         ->where('rows.data.4.employee_name', null));
 
-    $this->get('/hris/attendance/daily-punches?start_date=2026-10-19&end_date=2026-10-19&flags_only=wrong_button')
+    $this->get('/hris/attendance/daily-punches?start_date=2026-10-19&end_date=2026-10-19&flags_only=pin_verify')
         ->assertInertia(fn ($page) => $page
             ->has('rows.data', 1)
             ->where('rows.data.0.machine_user_id', 17));

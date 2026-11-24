@@ -589,7 +589,7 @@ export default function Welcome() {
                                             alt=""
                                             width={1164}
                                             height={1351}
-                                            className="aspect-[3/2] object-contain object-right scale-125"
+                                            className="aspect-[3/2] scale-125 object-contain object-right"
                                             loading="lazy"
                                             decoding="async"
                                             draggable={false}

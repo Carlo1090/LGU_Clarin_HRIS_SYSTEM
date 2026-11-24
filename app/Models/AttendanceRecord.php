@@ -15,7 +15,7 @@ class AttendanceRecord extends Model
 
     protected $table = 'attendance_records';
 
-    protected $fillable = ['employee_id', 'attendance_date', 'time_in', 'time_out', 'total_hours', 'status', 'source', 'overtime_hours'];
+    protected $fillable = ['employee_id', 'attendance_date', 'time_in', 'am_out', 'pm_in', 'time_out', 'total_hours', 'status', 'source', 'overtime_hours'];
 
     /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
