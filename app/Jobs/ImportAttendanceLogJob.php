@@ -43,6 +43,12 @@ class ImportAttendanceLogJob implements ShouldQueue
                 true,
             );
             $parser->importIntoBatch($batch, $file, $actor);
+        } catch (Throwable $exception) {
+            $batch->update([
+                'status' => 'failed',
+                'error_message' => Str::limit($exception->getMessage(), 1000, ''),
+            ]);
+            throw $exception;
         } finally {
             Storage::disk('local')->delete($this->storedPath);
         }

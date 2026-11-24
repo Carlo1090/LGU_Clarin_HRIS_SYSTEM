@@ -79,4 +79,4 @@ RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php \
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=DemoEmployeeImportDirectorySeeder --force && php artisan queue:work --sleep=1 --tries=3 --timeout=0 >> storage/logs/queue.log 2>&1 & exec apache2-foreground"]
+CMD ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=DemoEmployeeImportDirectorySeeder --force && php artisan queue:work database --sleep=1 --tries=3 --timeout=0 --memory=512 >> storage/logs/queue.log 2>&1 & exec apache2-foreground"]

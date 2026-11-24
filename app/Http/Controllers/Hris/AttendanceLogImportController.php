@@ -110,6 +110,13 @@ class AttendanceLogImportController
         $unassigned = isset($filters['unassigned']);
         $assigned = isset($filters['assigned']);
         $month = $filters['month'] ?? null;
+        AttendanceImport::query()
+            ->where('status', 'processing')
+            ->where('updated_at', '<', now()->subHour())
+            ->update([
+                'status' => 'failed',
+                'error_message' => 'Import processing stopped unexpectedly. Please retry the file.',
+            ]);
         $batches = AttendanceImport::query();
         $batch = isset($filters['batch']) ? $batches->findOrFail($filters['batch']) : $batches->latest('id')->first();
 
