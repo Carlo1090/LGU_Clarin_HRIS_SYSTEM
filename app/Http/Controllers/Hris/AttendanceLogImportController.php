@@ -28,15 +28,8 @@ class AttendanceLogImportController
         return Inertia::render('hris/import-attendance-logs', $this->pageData($request));
     }
 
-    public function store(ImportAttendanceLogRequest $request, AttendanceLogParser $parser): Response|RedirectResponse
+    public function store(ImportAttendanceLogRequest $request): Response|RedirectResponse
     {
-        if (! $request->boolean('confirm')) {
-            return Inertia::render('hris/import-attendance-logs', $this->pageData(
-                $request,
-                $parser->preview($request->file('file')),
-            ));
-        }
-
         $file = $request->file('file');
         $hash = hash_file('sha256', $file->getRealPath());
         if ($hash === false) {

@@ -2,11 +2,10 @@ import { useTableSearch } from '@/components/table-search';
 import PersonAvatar from '@/components/person-avatar';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type {
-    AttendanceImportPreview,
     BiometricPunchGroup,
     ImportBatchSummary,
 } from '@/types/attendance';
@@ -52,8 +51,6 @@ export default function ImportAttendanceLogs({
     month,
     selectedId,
     punches,
-    preview,
-    timezone,
 }: {
     batch: ImportBatchSummary | null;
     groups: Page<BiometricPunchGroup>;
@@ -72,8 +69,6 @@ export default function ImportAttendanceLogs({
         is_duplicate: boolean;
         flags: Record<string, boolean | string>;
     }> | null;
-    preview: AttendanceImportPreview | null;
-    timezone: string;
 }) {
     useEffect(() => {
         if (!batch || batch.status !== 'processing') {
@@ -99,31 +94,20 @@ export default function ImportAttendanceLogs({
         ],
     );
     const inputRef = useRef<HTMLInputElement>(null);
-    const [previewReady, setPreviewReady] = useState(false);
-    const form = useForm<{ file: File | null; confirm: boolean }>({
+    const form = useForm<{ file: File | null }>({
         file: null,
-        confirm: false,
     });
     const monthFilter = month ? { month } : {};
 
-    function previewUpload(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setPreviewReady(false);
-        form.setData('confirm', false);
-        form.post(logsUrl, { onSuccess: () => setPreviewReady(true) });
-    }
-
-    function confirmImport() {
-        form.setData('confirm', true);
+    function importSelectedFile(file: File) {
+        form.transform(() => ({ file, confirm: true }));
         form.post(logsUrl, {
             onSuccess: () => {
-                setPreviewReady(false);
                 form.reset();
                 if (inputRef.current) {
                     inputRef.current.value = '';
                 }
             },
-            onFinish: () => form.setData('confirm', false),
         });
     }
 
@@ -152,10 +136,7 @@ export default function ImportAttendanceLogs({
                     <Link href="/hris/employees">Link IDs on Employees</Link>
                 </Button>
             </div>
-            <form
-                onSubmit={previewUpload}
-                className="workspace-panel space-y-4 p-5"
-            >
+            <div className="workspace-panel space-y-4 p-5">
                 <div className="max-w-xl space-y-2">
                     <label
                         htmlFor="attendance-log"
@@ -171,12 +152,11 @@ export default function ImportAttendanceLogs({
                         required
                         disabled={form.processing}
                         onChange={(event) => {
-                            form.setData(
-                                'file',
-                                event.target.files?.[0] ?? null,
-                            );
-                            setPreviewReady(false);
+                            const file = event.target.files?.[0];
                             form.clearErrors('file');
+                            if (file) {
+                                importSelectedFile(file);
+                            }
                         }}
                     />
                     {form.errors.file && (
@@ -186,12 +166,6 @@ export default function ImportAttendanceLogs({
                     )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                    <Button
-                        type="submit"
-                        disabled={!form.data.file || form.processing}
-                    >
-                        Preview import
-                    </Button>
                     {form.processing && (
                         <p
                             role="status"
@@ -203,85 +177,7 @@ export default function ImportAttendanceLogs({
                         </p>
                     )}
                 </div>
-            </form>
-
-            {preview && previewReady && (
-                <section
-                    className="space-y-4 rounded-xl border bg-card p-5"
-                    aria-labelledby="preview-heading"
-                >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h2
-                                id="preview-heading"
-                                className="text-lg font-semibold"
-                            >
-                                Import preview
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Device timestamps are stored as local
-                                {` ${timezone}`} time without adjustment.
-                            </p>
-                        </div>
-                        <Button
-                            type="button"
-                            disabled={
-                                !form.data.file ||
-                                !previewReady ||
-                                form.processing ||
-                                preview.total_rows === 0
-                            }
-                            onClick={confirmImport}
-                        >
-                            {form.processing
-                                ? 'Importing…'
-                                : 'Confirm and import'}
-                        </Button>
-                    </div>
-                    <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
-                        {[
-                            ['Rows read', preview.total_rows],
-                            [
-                                'Date range',
-                                preview.date_range.from
-                                    ? `${preview.date_range.from.slice(0, 10)} – ${preview.date_range.to?.slice(0, 10)}`
-                                    : '—',
-                            ],
-                            [
-                                'Distinct machine IDs',
-                                preview.distinct_machine_ids,
-                            ],
-                            ['Unlinked IDs', preview.unlinked_ids.length],
-                            ['Already imported / repeated', preview.would_skip],
-                            ['Malformed rows', preview.invalid_count],
-                        ].map(([label, value]) => (
-                            <div
-                                key={label}
-                                className="rounded-lg bg-muted p-3"
-                            >
-                                <dt>{label}</dt>
-                                <dd className="mt-1 text-lg font-semibold tabular-nums">
-                                    {value}
-                                </dd>
-                            </div>
-                        ))}
-                    </dl>
-                    {preview.errors.length > 0 && (
-                        <details open className="text-sm">
-                            <summary className="cursor-pointer font-medium">
-                                Malformed rows ({preview.invalid_count})
-                            </summary>
-                            <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto">
-                                {preview.errors.map(({ line, reason }) => (
-                                    <li key={line}>
-                                        Line {line} — {reason}
-                                    </li>
-                                ))}
-                            </ul>
-                        </details>
-                    )}
-                </section>
-            )}
+            </div>
 
             {batch && (
                 <section

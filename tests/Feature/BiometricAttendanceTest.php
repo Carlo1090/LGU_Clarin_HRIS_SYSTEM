@@ -17,24 +17,12 @@ beforeEach(function () {
     $this->withoutVite();
 });
 
-test('attendance logs preview raw values, reject malformed rows, and skip only repeated punches on re-upload', function () {
+test('attendance logs import directly on selection, reject malformed rows, and skip repeated punches on re-upload', function () {
     $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
     $url = '/hris/attendance/logs';
     $file = "     15\t2026-10-19 12:00:00\t1\t2\t1\t0\r\n\r\n15\t2026-10-19 07:10:00\t1\t0\t1\t0\r\n7\t2026-10-18 17:00:00\t0\t1\t2\t3\r\n15\t2026-02-30 07:00:00\t1\t0\t1\t0\r\nx\t2026-10-19 07:00:00\t1\t0\t1\t0\r\n";
-    $this->actingAs($hr)->withHeader('X-Inertia', 'true')->post($url, [
+    $this->actingAs($hr)->post($url, [
         'file' => UploadedFile::fake()->createWithContent('attlog.dat', $file),
-    ])->assertOk()->assertJsonPath('component', 'hris/import-attendance-logs')
-        ->assertJsonPath('props.preview.total_rows', 5)
-        ->assertJsonPath('props.preview.distinct_machine_ids', 2)
-        ->assertJsonPath('props.preview.unlinked_ids', [7, 15])
-        ->assertJsonPath('props.preview.would_skip', 0)
-        ->assertJsonPath('props.preview.invalid_count', 2);
-    $this->withoutHeader('X-Inertia');
-    $this->assertDatabaseCount('attendance_imports', 0);
-
-    $this->post($url, [
-        'file' => UploadedFile::fake()->createWithContent('attlog.dat', $file),
-        'confirm' => true,
     ])->assertSessionHasNoErrors()->assertRedirect();
     $batch = AttendanceImport::query()->sole();
     expect($batch->total_lines)->toBe(5)
