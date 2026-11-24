@@ -70,6 +70,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->belongsTo(Employee::class);
     }
 
+    /** @return HasMany<EmployeeActivationCode, $this> */
+    public function activationCodes(): HasMany
+    {
+        return $this->hasMany(EmployeeActivationCode::class);
+    }
+
     /** @return HasMany<AttendanceImport, $this> */
     public function attendanceImports(): HasMany
     {

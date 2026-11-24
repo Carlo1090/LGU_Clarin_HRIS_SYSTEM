@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Attendance\Models\BiometricLink;
+use App\Attendance\Models\DepartmentAssignment;
 use Database\Factories\EmployeeFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -57,6 +59,18 @@ class Employee extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /** @return HasMany<BiometricLink, $this> */
+    public function biometricLinks(): HasMany
+    {
+        return $this->hasMany(BiometricLink::class);
+    }
+
+    /** @return HasMany<DepartmentAssignment, $this> */
+    public function departmentAssignments(): HasMany
+    {
+        return $this->hasMany(DepartmentAssignment::class);
     }
 
     /** @return BelongsTo<Position, $this> */
