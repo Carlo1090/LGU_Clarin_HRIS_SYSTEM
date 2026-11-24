@@ -21,8 +21,10 @@ class AttendancePunch extends Model
         'biometric_id',
         'machine_user_id',
         'punched_at',
+        'machine_id',
         'device_id',
         'punch_state',
+        'raw_status',
         'verify_mode',
         'work_code',
         'raw_3',
@@ -39,8 +41,10 @@ class AttendancePunch extends Model
     {
         return [
             'machine_user_id' => 'integer',
+            'machine_id' => 'integer',
             'device_id' => 'integer',
             'punch_state' => 'integer',
+            'raw_status' => 'integer',
             'verify_mode' => 'integer',
             'work_code' => 'integer',
             'is_duplicate' => 'boolean',

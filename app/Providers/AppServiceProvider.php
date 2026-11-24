@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Attendance\Contracts\EmployeeDirectory;
+use App\Attendance\Support\HrisEmployeeDirectory;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -17,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(EmployeeDirectory::class, HrisEmployeeDirectory::class);
     }
 
     /**
