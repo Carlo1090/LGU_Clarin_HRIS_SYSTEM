@@ -630,7 +630,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                 <div className="relative">
                                     <ChartContainer
                                         config={activityConfig}
-                                        className="aspect-auto h-[230px] min-h-[230px] w-full"
+                                        className="aspect-auto h-[14.375rem] min-h-[14.375rem] w-full"
                                     >
                                         <AreaChart
                                             accessibilityLayer
@@ -883,7 +883,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                                 <div className="relative">
                                     <ChartContainer
                                         config={barsConfig}
-                                        className="aspect-auto h-[185px] min-h-[185px] w-full"
+                                        className="aspect-auto h-[11.5625rem] min-h-[11.5625rem] w-full"
                                     >
                                         <BarChart
                                             accessibilityLayer
@@ -985,7 +985,7 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                             >
                                 <ChartContainer
                                     config={distributionConfig}
-                                    className="mx-auto aspect-auto h-[180px] min-h-[180px] w-full max-w-[240px]"
+                                    className="mx-auto aspect-auto h-[11.25rem] min-h-[11.25rem] w-full max-w-[15.0rem]"
                                 >
                                     <PieChart accessibilityLayer>
                                         {distributionTotal > 0 && (

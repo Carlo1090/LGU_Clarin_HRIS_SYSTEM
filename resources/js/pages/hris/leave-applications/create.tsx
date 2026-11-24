@@ -86,7 +86,7 @@ export default function CreateLeaveApplication({
     return (
         <>
             <Head title="Create employee leave form" />
-            <main className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-8">
+            <main className="workspace-leave-form mx-auto w-full max-w-6xl space-y-6 p-4 md:p-8">
                 <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
                     <div>
                         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">

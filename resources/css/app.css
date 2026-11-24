@@ -151,8 +151,8 @@
 }
 
 /* Scale rem-based cards, gutters and type together on wide public viewports. */
-@media (min-width: 90rem) {
-    html:has(:is(.welcome-page, .login-page)) {
+@media screen and (min-width: 90rem) {
+    html:has(:is(.welcome-page, .login-page, .dashboard-shell)) {
         font-size: max(100%, 0.85vw);
     }
 

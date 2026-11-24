@@ -140,3 +140,16 @@
         color: #142014;
     }
 }
+
+/* Measure workspace content against the space left by the sidebar. */
+@media screen and (min-width: 90rem) {
+    .dashboard-surface :is(.dashboard-page, .workspace-page, .workspace-leave-form) {
+        width: 88%;
+        max-width: none;
+        margin-inline: auto;
+    }
+
+    .dashboard-surface .workspace-invite {
+        max-width: 36rem;
+    }
+}

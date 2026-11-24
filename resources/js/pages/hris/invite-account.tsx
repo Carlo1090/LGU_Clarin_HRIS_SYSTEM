@@ -23,7 +23,7 @@ export default function InviteAccount({ roles }: { roles: string[] }) {
     return (
         <>
             <Head title="Invite an employee" />
-            <main className="workspace-page max-w-xl">
+            <main className="workspace-page workspace-invite max-w-xl">
                 <WorkspaceHeader
                     title="Invite an employee"
                     description="Use an existing employee record. The employee will set a password, verify their email, and enroll in two-factor authentication."
