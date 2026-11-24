@@ -2,6 +2,17 @@
     --welcome-width: clamp(72rem, calc(36rem + 40vw), 100rem);
 }
 
+/* Scale rem-based cards, gutters and type together on wide landing viewports. */
+@media (min-width: 90rem) {
+    html:has(.welcome-page) {
+        font-size: max(100%, 0.85vw);
+    }
+
+    .welcome-page {
+        --welcome-width: 88%;
+    }
+}
+
 /* Landing page treatments for the shared React Bits components. */
 .public-surface .landing-reveal.scroll-reveal {
     margin: 0;

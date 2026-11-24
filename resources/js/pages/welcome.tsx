@@ -170,7 +170,7 @@ export default function Welcome() {
 
                             {/* Decorative cards behind the hero image */}
                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                <div className="relative h-[340px] w-full max-w-[400px]">
+                                <div className="relative h-[21.25rem] w-full max-w-[25rem]">
                                     {/* Top-Left Blank Card */}
                                     <div className="absolute top-2 left-4 z-0 h-28 w-40 rounded-2xl border border-border/90 bg-card shadow-md" />
 
@@ -191,7 +191,7 @@ export default function Welcome() {
                                     alt="Three LGU Clarin officials in municipal uniforms"
                                     width={1293}
                                     height={1217}
-                                    className="max-h-[800px] 2xl:max-h-[min(46rem,75svh)] w-auto max-w-full object-contain drop-shadow-2xl"
+                                    className="max-h-[50rem] 2xl:max-h-[min(46rem,75svh)] w-auto max-w-full object-contain drop-shadow-2xl"
                                 />
                             </div>
                         </div>
