@@ -176,7 +176,7 @@ class PunchClassifier
      * @param array{am_in:string, am_out:string, pm_in:string, pm_out:string, crosses_midnight?:bool} $schedule
      * @return array<string,Carbon>
      */
-    private function boundaries(string $workDate, array $schedule): array
+    public function boundaries(string $workDate, array $schedule): array
     {
         $base = Carbon::parse($workDate.' 00:00:00');
         $crosses = (bool) ($schedule['crosses_midnight'] ?? false);

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Attendance\Contracts\EmployeeDirectory;
+use App\Attendance\Services\PunchClassifier;
 use App\Attendance\Support\HrisEmployeeDirectory;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -20,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(EmployeeDirectory::class, HrisEmployeeDirectory::class);
+        $this->app->bind(PunchClassifier::class, fn () => new PunchClassifier(
+            duplicateWindowSeconds: config('attendance.duplicate_window_seconds'),
+            amInHoursBefore: config('attendance.classifier.am_in_hours_before'),
+            pmOutHoursAfter: config('attendance.classifier.pm_out_hours_after'),
+        ));
     }
 
     /**

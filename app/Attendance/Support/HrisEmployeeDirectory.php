@@ -7,6 +7,17 @@ use App\Models\Employee;
 
 class HrisEmployeeDirectory implements EmployeeDirectory
 {
+    public function list(?array $machineIds = null): array
+    {
+        return Employee::query()
+            ->when($machineIds !== null, fn ($query) => $query->whereIn('biometric_id', $machineIds))
+            ->get(['id', 'biometric_id'])
+            ->map(fn (Employee $employee): array => [
+                'id' => (int) $employee->id,
+                'biometric_id' => $employee->biometric_id === null ? null : (int) $employee->biometric_id,
+            ])->all();
+    }
+
     public function find(int $employeeId): ?array
     {
         $employee = Employee::query()

@@ -9,6 +9,9 @@ interface EmployeeDirectory
      */
     public function find(int $employeeId): ?array;
 
+    /** @return list<array{id: int, biometric_id: int|null}> */
+    public function list(?array $machineIds = null): array;
+
     /**
      * @return array{id: int, name: string}|null
      */

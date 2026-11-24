@@ -163,7 +163,7 @@ class AttendanceLogImportController
         ]);
 
         return [
-            'batch' =>             $batch ? $batch->only(['id', 'file_name', 'status', 'error_message', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count'])
+            'batch' => $batch ? $batch->only(['id', 'file_name', 'status', 'error_message', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count', 'recompute_summary'])
                 + ['invalid_lines' => $batch->invalid_lines ?? []] : null,
             'groups' => $groups,
             'unassigned' => $unassigned,

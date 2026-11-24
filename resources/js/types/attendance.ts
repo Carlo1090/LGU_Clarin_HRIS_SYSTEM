@@ -13,6 +13,10 @@ export type ImportBatchSummary = {
     total_lines: number;
     inserted_count: number;
     duplicate_count: number;
+    recompute_summary: {
+        employees_affected: number;
+        unlinked_machine_ids: number[];
+    } | null;
     invalid_count: number;
     invalid_lines: { line: number; reason: string }[];
 };

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Attendance\Services\AttendanceRecomputer;
 use App\Models\AttendanceImport;
 use App\Models\User;
 use App\Services\AttendanceLogParser;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -28,7 +30,7 @@ class ImportAttendanceLogJob implements ShouldQueue
         public string $originalName,
     ) {}
 
-    public function handle(AttendanceLogParser $parser): void
+    public function handle(AttendanceLogParser $parser, AttendanceRecomputer $recomputer): void
     {
         $batch = AttendanceImport::query()->findOrFail($this->batchId);
         $actor = User::query()->findOrFail($this->actorId);
@@ -42,16 +44,23 @@ class ImportAttendanceLogJob implements ShouldQueue
                 null,
                 true,
             );
-            $parser->importIntoBatch($batch, $file, $actor);
+            DB::transaction(function () use ($batch, $file, $actor, $parser, $recomputer): void {
+                $rows = $parser->importIntoBatch($batch, $file, $actor);
+                $summary = $recomputer->recomputeImport($rows);
+                $batch->update(['recompute_summary' => [
+                    'employees_affected' => count($summary['employee_ids']),
+                    'unlinked_machine_ids' => $summary['unlinked_machine_ids'],
+                ]]);
+            });
         } catch (Throwable $exception) {
             $batch->update([
                 'status' => 'failed',
                 'error_message' => Str::limit($exception->getMessage(), 1000, ''),
             ]);
             throw $exception;
-        } finally {
-            Storage::disk('local')->delete($this->storedPath);
         }
+
+        Storage::disk('local')->delete($this->storedPath);
     }
 
     public function failed(Throwable $exception): void

@@ -1,5 +1,6 @@
 <?php
 
+use App\Attendance\Models\DepartmentSchedule;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
@@ -41,6 +42,8 @@ test('attendance logs import directly on selection, reject malformed rows, and s
         'confirm' => true,
     ])->assertSessionHasNoErrors()->assertRedirect();
     $this->assertDatabaseHas('attendance_imports', ['file_name' => 'renamed.dat', 'inserted_count' => 0, 'duplicate_count' => 3]);
+    expect(AttendanceImport::query()->where('file_name', 'renamed.dat')->firstOrFail()->recompute_summary)
+        ->toBe(['employees_affected' => 0, 'unlinked_machine_ids' => [15, 7]]);
     $this->assertDatabaseCount('attendance_punches', 3);
 
     $this->post($url, [
@@ -59,6 +62,52 @@ test('attendance logs import directly on selection, reject malformed rows, and s
         ->where('punches.data.0.punched_at', '2026-10-19 07:10:00')
         ->where('punches.data.1.punched_at', '2026-10-19 12:00:00')
         ->where('punches.data.2.punched_at', '2026-10-20 17:00:00'));
+});
+
+test('an overnight out punch imported separately recomputes the shift start date', function () {
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+    $employee = Employee::factory()->create(['biometric_id' => 15]);
+    $schedule = DepartmentSchedule::query()->create([
+        'department_id' => $employee->department_id,
+        'am_in' => '20:00:00',
+        'am_out' => '23:00:00',
+        'pm_in' => '00:00:00',
+        'pm_out' => '04:00:00',
+        'crosses_midnight' => true,
+        'effective_from' => '2026-11-24',
+    ]);
+    $url = '/hris/attendance/logs';
+    $firstFile = "15\t2026-11-24 20:00:00\t1\t3\t1\t0\n15\t2026-11-24 23:00:00\t1\t0\t1\t0\n15\t2026-11-25 00:00:00\t1\t1\t1\t0\n";
+    $this->actingAs($hr)->post($url, [
+        'file' => UploadedFile::fake()->createWithContent('night-start.dat', $firstFile),
+    ])->assertSessionHasNoErrors()->assertRedirect();
+    $this->assertDatabaseHas('attendance_daily', ['employee_id' => $employee->id, 'status' => 'incomplete']);
+
+    $this->post($url, [
+        'file' => UploadedFile::fake()->createWithContent('night-end.dat', "15\t2026-11-25 04:00:00\t1\t2\t1\t0\n"),
+    ])->assertSessionHasNoErrors()->assertRedirect();
+    $this->assertDatabaseHas('attendance_daily', [
+        'employee_id' => $employee->id, 'work_date' => '2026-11-24', 'status' => 'complete',
+    ]);
+    $this->artisan('attendance:recompute', [
+        '--employee' => $employee->id,
+        '--from' => '2026-11-24',
+        '--to' => '2026-11-24',
+    ])->assertSuccessful();
+
+    $this->assertDatabaseCount('attendance_daily', 1);
+    $this->assertDatabaseHas('attendance_daily', [
+        'employee_id' => $employee->id,
+        'work_date' => '2026-11-24',
+        'status' => 'complete',
+        'pm_out_at' => '2026-11-25 04:00:00',
+        'schedule_id' => $schedule->id,
+    ]);
+    $this->assertDatabaseHas('attendance_punches', [
+        'machine_id' => 15, 'punched_at' => '2026-11-25 04:00:00', 'raw_status' => 2,
+    ]);
+    expect(AttendanceImport::query()->where('file_name', 'night-end.dat')->firstOrFail()->recompute_summary)
+        ->toBe(['employees_affected' => 1, 'unlinked_machine_ids' => []]);
 });
 
 test('attendance log list can filter assigned biometric IDs', function () {

@@ -108,7 +108,8 @@ class AttendanceLogParser
         }, attempts: 3);
     }
 
-    public function importIntoBatch(AttendanceImport $batch, UploadedFile $file, User $actor): void
+    /** @return list<array{machine_user_id:int,punched_at:string}> */
+    public function importIntoBatch(AttendanceImport $batch, UploadedFile $file, User $actor): array
     {
         $parsed = $this->parseFile($file);
         $stamp = now(config('attendance.timezone', 'Asia/Manila'));
@@ -142,6 +143,8 @@ class AttendanceLogParser
             'model_id' => $batch->id,
             'metadata' => json_encode($counts, JSON_THROW_ON_ERROR),
         ]);
+
+        return $parsed['rows'];
     }
 
     /**
@@ -264,6 +267,8 @@ class AttendanceLogParser
 
         return $row + [
             'biometric_id' => $row['machine_user_id'],
+            'machine_id' => $row['machine_user_id'],
+            'raw_status' => $row['punch_state'],
             'attendance_import_id' => $batchId,
             'import_batch_id' => $batchId,
             'raw_3' => $row['device_id'],

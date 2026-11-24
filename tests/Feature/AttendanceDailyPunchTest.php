@@ -29,7 +29,7 @@ test('daily punches show all slots, wrong buttons, duplicate terminals, pin revi
 
     $file = implode("\r\n", [
         "15\t2026-10-19 08:00:00\t1\t0\t1\t0",
-        "15\t2026-10-19 08:00:00\t2\t0\t1\t0",
+        "15\t2026-10-19 08:00:01\t2\t0\t1\t0",
         "15\t2026-10-19 12:00:00\t1\t2\t1\t0",
         "15\t2026-10-19 13:00:00\t1\t3\t1\t0",
         "15\t2026-10-19 17:00:00\t1\t1\t1\t0",
@@ -53,7 +53,7 @@ test('daily punches show all slots, wrong buttons, duplicate terminals, pin revi
     $this->assertDatabaseCount('attendance_punches', 15);
     $this->assertDatabaseHas('attendance_punches', [
         'machine_user_id' => 15,
-        'punched_at' => '2026-10-19 08:00:00',
+        'punched_at' => '2026-10-19 08:00:01',
         'device_id' => 2,
     ]);
 
@@ -63,7 +63,7 @@ test('daily punches show all slots, wrong buttons, duplicate terminals, pin revi
         ->has('rows.data', 5)
         ->where('rows.data.0.employee_name', fn ($name) => is_string($name))
         ->where('rows.data.0.slots.AM_IN.0.time', '08:00:00')
-        ->where('rows.data.0.slots.AM_IN.1.time', '08:00:00')
+        ->where('rows.data.0.slots.AM_IN.1.time', '08:00:01')
         ->where('rows.data.1.flags.missing_slots', ['PM_IN'])
         ->where('rows.data.1.slots.PM_IN', [])
         ->where('rows.data.2.flags.wrong_button', true)

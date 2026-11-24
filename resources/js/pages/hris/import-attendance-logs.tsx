@@ -246,6 +246,20 @@ export default function ImportAttendanceLogs({
                             </div>
                         ))}
                     </dl>
+                    {batch.recompute_summary && (
+                        <div className="space-y-1 text-sm">
+                            <p>
+                                Employees affected{' '}
+                                {batch.recompute_summary.employees_affected}
+                            </p>
+                            <p>
+                                Unlinked machine IDs{' '}
+                                {batch.recompute_summary.unlinked_machine_ids.join(
+                                    ', ',
+                                ) || 'None'}
+                            </p>
+                        </div>
+                    )}
                     {batch.invalid_lines.length > 0 && (
                         <details className="text-sm">
                             <summary className="cursor-pointer font-medium">
