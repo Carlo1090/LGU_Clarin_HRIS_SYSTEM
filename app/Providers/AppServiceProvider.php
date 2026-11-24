@@ -58,6 +58,7 @@ class AppServiceProvider extends ServiceProvider
         ];
 
         Gate::define('view-hris-resource', fn (User $user, string $resource): bool => in_array($resource, $access[$user->role?->name] ?? [], true) || in_array('*', $access[$user->role?->name] ?? [], true));
+        Gate::define('manage-attendance-schedules', fn (User $user): bool => in_array($user->role?->name, ['HR Officer', 'HRMO Head', 'Administrator'], true));
         Gate::define('manage-hris-resource', fn (User $user, string $resource): bool => ! in_array($resource, ['roles', 'departments'], true)
             && (in_array($resource, $manage[$user->role?->name] ?? [], true) || in_array('*', $manage[$user->role?->name] ?? [], true)));
     }

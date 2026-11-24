@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Attendance\Contracts\EmployeeDirectory;
+use App\Attendance\Services\AttendanceRecomputer;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\AuditLog;
@@ -17,7 +19,8 @@ class AttendanceLogParser
 {
     public function __construct(
         private BiometricLinkVerifier $verifier,
-        private AttendancePunchDeriver $deriver,
+        private AttendanceRecomputer $attendance,
+        private EmployeeDirectory $employees,
     ) {}
 
     /**
@@ -66,52 +69,24 @@ class AttendanceLogParser
             throw ValidationException::withMessages(['file' => 'The log file could not be read.']);
         }
 
-        $parsed = $this->parseFile($file);
-
-        return DB::transaction(function () use ($file, $actor, $hash, $parsed): AttendanceImport {
-            $stamp = now(config('attendance.timezone', 'Asia/Manila'));
+        return DB::transaction(function () use ($file, $actor, $hash): AttendanceImport {
             $batch = AttendanceImport::query()->create([
                 'file_name' => Str::limit($file->getClientOriginalName(), 255, ''),
                 'file_sha256' => $hash,
                 'uploaded_by' => $actor->id,
-                'imported_at' => $stamp,
-                'status' => 'completed',
+                'status' => 'processing',
             ]);
-
-            $inserted = $duplicate = 0;
-            foreach (array_chunk($parsed['rows'], 500) as $chunk) {
-                $rows = array_map(fn (array $row): array => $this->storageRow($row, $batch->id, $stamp), $chunk);
-                $written = AttendancePunch::query()->insertOrIgnore($rows);
-                $inserted += $written;
-                $duplicate += count($rows) - $written;
-                $this->deriver->refreshRows($chunk);
-            }
-
-            $counts = [
-                'total_lines' => $parsed['total_rows'],
-                'inserted_count' => $inserted,
-                'duplicate_count' => $duplicate,
-                'invalid_count' => count($parsed['errors']),
-            ];
-            $batch->update($counts + ['invalid_lines' => array_slice($parsed['errors'], 0, 1000)]);
-            $this->verifier->verifyPending($actor);
-
-            AuditLog::query()->create([
-                'user_id' => $actor->id,
-                'action' => 'attendance.logs_imported',
-                'model_type' => AttendanceImport::class,
-                'model_id' => $batch->id,
-                'metadata' => json_encode($counts, JSON_THROW_ON_ERROR),
-            ]);
+            $this->importIntoBatch($batch, $file, $actor);
 
             return $batch;
         }, attempts: 3);
     }
 
-    /** @return list<array{machine_user_id:int,punched_at:string}> */
-    public function importIntoBatch(AttendanceImport $batch, UploadedFile $file, User $actor): array
+    public function importIntoBatch(AttendanceImport $batch, UploadedFile $file, User $actor): void
     {
         $parsed = $this->parseFile($file);
+        // Serialize imports and schedule changes that affect the same employees.
+        $this->employees->list(array_unique(array_column($parsed['rows'], 'machine_user_id')), forUpdate: true);
         $stamp = now(config('attendance.timezone', 'Asia/Manila'));
         $inserted = $duplicate = 0;
 
@@ -121,7 +96,6 @@ class AttendanceLogParser
             $inserted += $written;
             $duplicate += count($rows) - $written;
         }
-        $this->deriver->refreshRows($parsed['rows']);
 
         $counts = [
             'total_lines' => $parsed['total_rows'],
@@ -129,12 +103,18 @@ class AttendanceLogParser
             'duplicate_count' => $duplicate,
             'invalid_count' => count($parsed['errors']),
         ];
+        $this->verifier->verifyPending($actor);
+        $summary = $this->attendance->recomputeImport($parsed['rows']);
         $batch->update($counts + [
+            'recompute_summary' => [
+                'employees_affected' => count($summary['employee_ids']),
+                'unlinked_machine_ids' => $summary['unlinked_machine_ids'],
+            ],
             'status' => 'completed',
+            'error_message' => null,
             'imported_at' => $stamp,
             'invalid_lines' => array_slice($parsed['errors'], 0, 1000),
         ]);
-        $this->verifier->verifyPending($actor);
 
         AuditLog::query()->create([
             'user_id' => $actor->id,
@@ -143,8 +123,6 @@ class AttendanceLogParser
             'model_id' => $batch->id,
             'metadata' => json_encode($counts, JSON_THROW_ON_ERROR),
         ]);
-
-        return $parsed['rows'];
     }
 
     /**
@@ -251,20 +229,6 @@ class AttendanceLogParser
      */
     private function storageRow(array $row, int $batchId, \DateTimeInterface $createdAt): array
     {
-        $flags = [];
-        $slot = AttendancePunchDeriver::slotForState($row['punch_state']);
-        $expected = $this->deriver->expectedSlot($row['punched_at']);
-        if ($slot === null) {
-            $flags = ['unknown_punch_state' => true];
-        }
-        if ($expected !== null && $slot !== $expected) {
-            $flags['suspected_wrong_button'] = true;
-            $flags['suggested_slot'] = $expected;
-        }
-        if ($row['verify_mode'] === 0) {
-            $flags['pin_verify'] = true;
-        }
-
         return $row + [
             'biometric_id' => $row['machine_user_id'],
             'machine_id' => $row['machine_user_id'],
@@ -275,9 +239,6 @@ class AttendanceLogParser
             'raw_4' => $row['punch_state'],
             'raw_5' => $row['verify_mode'],
             'raw_6' => $row['work_code'],
-            'derived_slot' => $slot,
-            'is_duplicate' => false,
-            'flags' => $this->encodeJson($flags),
             'created_at' => $createdAt->format('Y-m-d H:i:s'),
         ];
     }
@@ -297,9 +258,9 @@ class AttendanceLogParser
                 ->whereBetween('punched_at', [
                     min(array_column($rows, 'punched_at')),
                     max(array_column($rows, 'punched_at')),
-                ])->get(['machine_user_id', 'punched_at', 'device_id']);
+                ])->get(['machine_user_id', 'punched_at']);
             foreach ($matches as $match) {
-                $known[$match->machine_user_id.'|'.$match->punched_at.'|'.$match->device_id] = true;
+                $known[$match->machine_user_id.'|'.$match->punched_at] = true;
             }
         }
 
@@ -316,15 +277,9 @@ class AttendanceLogParser
         return $skipped;
     }
 
-    /** @param array{machine_user_id: int, punched_at: string, device_id: int} $row */
+    /** @param array{machine_user_id: int, punched_at: string} $row */
     private function uniqueKey(array $row): string
     {
-        return $row['machine_user_id'].'|'.$row['punched_at'].'|'.$row['device_id'];
-    }
-
-    /** @param array<string, bool|string> $value */
-    private function encodeJson(array $value): string
-    {
-        return json_encode($value, JSON_THROW_ON_ERROR);
+        return $row['machine_user_id'].'|'.$row['punched_at'];
     }
 }

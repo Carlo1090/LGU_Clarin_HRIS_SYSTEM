@@ -3,14 +3,17 @@
 namespace App\Attendance\Support;
 
 use App\Attendance\Contracts\EmployeeDirectory;
+use App\Models\Department;
 use App\Models\Employee;
 
 class HrisEmployeeDirectory implements EmployeeDirectory
 {
-    public function list(?array $machineIds = null): array
+    public function list(?array $machineIds = null, ?int $departmentId = null, bool $forUpdate = false): array
     {
         return Employee::query()
-            ->when($machineIds !== null, fn ($query) => $query->whereIn('biometric_id', $machineIds))
+            ->when($machineIds !== null, fn ($query) => $query->whereIntegerInRaw('biometric_id', $machineIds))
+            ->when($departmentId !== null, fn ($query) => $query->where('department_id', $departmentId))
+            ->when($forUpdate, fn ($query) => $query->orderBy('id')->lockForUpdate())
             ->get(['id', 'biometric_id'])
             ->map(fn (Employee $employee): array => [
                 'id' => (int) $employee->id,
@@ -18,9 +21,15 @@ class HrisEmployeeDirectory implements EmployeeDirectory
             ])->all();
     }
 
-    public function find(int $employeeId): ?array
+    public function departmentExists(int $departmentId): bool
+    {
+        return Department::query()->whereKey($departmentId)->exists();
+    }
+
+    public function find(int $employeeId, bool $forUpdate = false): ?array
     {
         $employee = Employee::query()
+            ->when($forUpdate, fn ($query) => $query->lockForUpdate())
             ->select(['id', 'department_id', 'biometric_id'])
             ->find($employeeId);
 

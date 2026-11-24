@@ -23,6 +23,7 @@ import RecordPagination, {
     type RecordPageLink,
 } from '@/components/record-pagination';
 import { Button } from '@/components/ui/button';
+import WorkScheduleDialog from '@/components/work-schedule-dialog';
 
 type Props = {
     resource: string;
@@ -36,6 +37,7 @@ type Props = {
     attendanceDirectory?: false;
     attendanceMonth?: string;
     canManageAttendance?: boolean;
+    canManageSchedules?: boolean;
     canLinkBiometricIds?: boolean;
     assignBiometricId?: number | null;
     statusSummary?: { status: string; total: number }[];
@@ -90,6 +92,7 @@ function ResourceRecords({
     officeDirectory = false,
     attendanceMonth,
     canManageAttendance = false,
+    canManageSchedules = false,
     canLinkBiometricIds = false,
     assignBiometricId = null,
     statusSummary = [],
@@ -100,7 +103,7 @@ function ResourceRecords({
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
     const isAttendance = resource === 'attendance';
-    const hasActions = canManage || Boolean(leaveReviewStage) || isAttendance;
+    const hasActions = canManage || canManageSchedules || Boolean(leaveReviewStage) || isAttendance;
 
     function reviewLeave(id: number, decision: 'advance' | 'reject') {
         if (
@@ -243,6 +246,13 @@ function ResourceRecords({
     function rowActions(row: HrisRow) {
         return (
             <>
+                {canManageSchedules && typeof row.id === 'number' && (
+                    <WorkScheduleDialog
+                        id={row.id}
+                        name={String(row.name ?? [row.first_name, row.last_name].filter(Boolean).join(' '))}
+                        override={resource === 'employees'}
+                    />
+                )}
                 {leaveReviewStage &&
                     typeof row.id === 'number' &&
                     row.status === leaveReviewStage[0] && (
@@ -672,7 +682,7 @@ function ResourceRecords({
                         <ResourceDirectory
                             layout={directory}
                             rows={records.data}
-                            fields={fields}
+                            fields={resource === 'employees' ? [...fields, { name: 'work_schedule', label: 'Schedule', type: 'text' }] : fields}
                             canLinkBiometricIds={canLinkBiometricIds}
                             renderValue={displayValue}
                             renderActions={hasActions ? rowActions : undefined}

@@ -1,4 +1,5 @@
 import PersonAvatar from '@/components/person-avatar';
+import { Badge } from '@/components/ui/badge';
 import {
     Table,
     TableHeader,
@@ -60,6 +61,7 @@ export const directoryLayouts: Record<string, DirectoryLayout | undefined> = {
             'department_id',
             'position_id',
             'employment_status',
+            'work_schedule',
         ],
     },
     'leave-applications': {
@@ -79,7 +81,7 @@ export const directoryLayouts: Record<string, DirectoryLayout | undefined> = {
         title: 'Office directory',
         nameLabel: 'Department',
         nameFields: ['name'],
-        summaryFields: ['code', 'parent_department_id', 'description'],
+        summaryFields: ['code', 'parent_department_id', 'description', 'work_schedule'],
     },
     positions: {
         title: 'Position directory',
@@ -150,6 +152,11 @@ export function DirectoryOverview({
                 label: 'With a parent office',
                 count: childOffices,
                 icon: GitBranch,
+            },
+            {
+                label: 'Without schedule',
+                count: rows.filter((row) => !row.work_schedule).length,
+                icon: CalendarDays,
             },
         ];
     } else if (resource === 'leave-applications') {
@@ -291,7 +298,9 @@ export function ResourceDirectory({
                                             : undefined
                                     }
                                 >
-                                    {renderValue(field, row[field.name])}
+                                    {field.name === 'work_schedule' && !row.work_schedule ? (
+                                        <Badge variant="secondary">No schedule</Badge>
+                                    ) : renderValue(field, row[field.name])}
                                 </TableCell>
                             ))}
                             {detailFields.length > 0 && (

@@ -104,8 +104,15 @@ test('an overnight out punch imported separately recomputes the shift start date
         'schedule_id' => $schedule->id,
     ]);
     $this->assertDatabaseHas('attendance_punches', [
-        'machine_id' => 15, 'punched_at' => '2026-11-25 04:00:00', 'raw_status' => 2,
+        'machine_id' => 15, 'punched_at' => '2026-11-25 04:00:00', 'raw_status' => 2, 'derived_slot' => null,
     ]);
+    $this->get('/hris/attendance/daily-punches?start_date=2026-11-24&end_date=2026-11-24')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('rows.data', 1)
+            ->where('rows.data.0.punches.3.punched_at', '2026-11-25 04:00:00')
+            ->where('rows.data.0.punches.3.derived_slot', 'PM_OUT'));
+    $this->get('/hris/attendance/daily-punches?start_date=2026-11-25&end_date=2026-11-25')
+        ->assertInertia(fn (Assert $page) => $page->has('rows.data', 0));
     expect(AttendanceImport::query()->where('file_name', 'night-end.dat')->firstOrFail()->recompute_summary)
         ->toBe(['employees_affected' => 1, 'unlinked_machine_ids' => []]);
 });

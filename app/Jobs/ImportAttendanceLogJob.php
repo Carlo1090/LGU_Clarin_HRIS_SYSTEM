@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Attendance\Services\AttendanceRecomputer;
 use App\Models\AttendanceImport;
 use App\Models\User;
 use App\Services\AttendanceLogParser;
@@ -30,7 +29,7 @@ class ImportAttendanceLogJob implements ShouldQueue
         public string $originalName,
     ) {}
 
-    public function handle(AttendanceLogParser $parser, AttendanceRecomputer $recomputer): void
+    public function handle(AttendanceLogParser $parser): void
     {
         $batch = AttendanceImport::query()->findOrFail($this->batchId);
         $actor = User::query()->findOrFail($this->actorId);
@@ -44,14 +43,7 @@ class ImportAttendanceLogJob implements ShouldQueue
                 null,
                 true,
             );
-            DB::transaction(function () use ($batch, $file, $actor, $parser, $recomputer): void {
-                $rows = $parser->importIntoBatch($batch, $file, $actor);
-                $summary = $recomputer->recomputeImport($rows);
-                $batch->update(['recompute_summary' => [
-                    'employees_affected' => count($summary['employee_ids']),
-                    'unlinked_machine_ids' => $summary['unlinked_machine_ids'],
-                ]]);
-            });
+            DB::transaction(fn () => $parser->importIntoBatch(clone $batch, $file, $actor), attempts: 3);
         } catch (Throwable $exception) {
             $batch->update([
                 'status' => 'failed',

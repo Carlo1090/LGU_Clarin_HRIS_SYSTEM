@@ -110,7 +110,7 @@ class PunchClassifier
             $punchedAt = (string) $punch['punched_at'];
             foreach ($windows as $slot => [$start, $end]) {
                 $time = Carbon::parse($punchedAt);
-                if ($time->gte($start) && $time->lt($end)) {
+                if ($time->gte($start) && ($slot === 'pm_out' ? $time->lte($end) : $time->lt($end))) {
                     $merged[$index] = [
                         'punched_at' => $punchedAt,
                         'slot' => $slot,

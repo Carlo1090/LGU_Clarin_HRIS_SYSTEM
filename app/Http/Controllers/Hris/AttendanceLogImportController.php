@@ -8,7 +8,6 @@ use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\AuditLog;
 use App\Models\Employee;
-use App\Services\AttendanceLogParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
@@ -174,7 +173,7 @@ class AttendanceLogImportController
             'timezone' => config('attendance.timezone', 'Asia/Manila'),
             'punches' => $id === null ? null : $punchQuery->where('machine_user_id', $id)
                 ->orderBy('punched_at')->simplePaginate(50, [
-                    'id', 'punched_at', 'device_id', 'punch_state', 'verify_mode', 'work_code', 'derived_slot', 'is_duplicate', 'flags',
+                    'id', 'punched_at', 'device_id', 'punch_state', 'raw_status', 'verify_mode', 'work_code',
                 ], 'punch_page')->withQueryString(),
         ];
     }

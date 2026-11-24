@@ -103,7 +103,12 @@ class HrisResourceTest extends TestCase
         $employee = Employee::factory()->create();
         $employee->forceFill(['biometric_id' => 15])->save();
         $batch = AttendanceImport::query()->create(['file_name' => 'test.dat', 'status' => 'completed']);
-        foreach (['19 07:50:00', '19 12:03:00', '19 12:50:00', '19 17:02:00', '20 07:54:00', '22 07:55:00'] as $device => $punch) {
+        \App\Attendance\Models\DepartmentSchedule::query()->create([
+            'department_id' => $employee->department_id,
+            'am_in' => '08:00', 'am_out' => '12:00', 'pm_in' => '13:00', 'pm_out' => '17:00',
+            'effective_from' => '2026-10-01',
+        ]);
+        foreach (['19 07:50:00', '19 07:51:00', '19 12:03:00', '19 12:50:00', '19 17:02:00', '20 07:54:00', '22 07:55:00'] as $device => $punch) {
             AttendancePunch::query()->insert([
                 'attendance_import_id' => $batch->id, 'import_batch_id' => $batch->id,
                 'biometric_id' => 15, 'machine_user_id' => 15, 'device_id' => $device,
@@ -124,8 +129,8 @@ class HrisResourceTest extends TestCase
 
         $this->actingAs($hr)->get('/hris/attendance?month=2026-10')
             ->assertInertia(fn ($page) => $page
-                ->where('records.data.0.attendance_complete_days', 2)
-                ->where('records.data.0.attendance_review_days', 2));
+                ->where('records.data.0.attendance_complete_days', 3)
+                ->where('records.data.0.attendance_review_days', 1));
         $this->get('/hris/attendance?month=2026-11')
             ->assertInertia(fn ($page) => $page
                 ->where('records.data.0.attendance_complete_days', 0)

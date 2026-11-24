@@ -125,6 +125,30 @@ class AttendanceScheduleSchemaTest extends TestCase
         }
     }
 
+    public function test_migration_preserves_existing_punches_recorded_by_multiple_terminals(): void
+    {
+        $migration = require database_path('migrations/2026_11_24_000004_create_attendance_schedule_and_daily_tables.php');
+        $migration->down();
+        $batch = AttendanceImport::query()->create(['file_name' => 'legacy.dat', 'status' => 'completed']);
+        foreach ([1, 2] as $device) {
+            AttendancePunch::query()->create([
+                'attendance_import_id' => $batch->id,
+                'biometric_id' => 15,
+                'machine_user_id' => 15,
+                'punched_at' => '2026-11-24 08:00:00',
+                'device_id' => $device,
+                'punch_state' => $device,
+                'created_at' => now(),
+            ]);
+        }
+        $migration->up();
+        (require database_path('migrations/2026_11_24_000005_finalize_attendance_schedule_indexes.php'))->up();
+
+        $this->assertSame([15, null], AttendancePunch::query()->orderBy('id')->pluck('machine_id')->all());
+        $this->assertSame([15, 15], AttendancePunch::query()->orderBy('id')->pluck('machine_user_id')->all());
+        $this->assertSame([1, 2], AttendancePunch::query()->orderBy('id')->pluck('raw_status')->all());
+    }
+
     public function test_attendance_module_employee_directory_binding_uses_hris_directory(): void
     {
         $department = Department::factory()->create(['name' => 'Office of Testing']);

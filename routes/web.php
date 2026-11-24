@@ -43,6 +43,8 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
     Route::post('hris/employees/import', [EmployeeImportController::class, 'store'])->name('hris.employees.import.store');
 
     Route::prefix('hris')->name('hris.')->group(function () {
+        require app_path('Attendance/routes.php');
+
         Route::get('portal/{page}', PortalController::class)
             ->whereIn('page', ['my-profile', 'my-attendance', 'my-leave-credits', 'my-leave-requests', 'my-payslips', 'staffing', 'plantilla-summary'])
             ->name('portal');

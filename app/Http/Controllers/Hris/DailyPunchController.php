@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Hris;
 
+use App\Attendance\Models\AttendanceDaily;
+use App\Attendance\Services\AttendanceRecomputer;
 use App\Models\AttendancePunch;
 use App\Models\Department;
 use App\Models\Employee;
-use App\Services\AttendancePunchDeriver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
@@ -31,13 +32,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *     department_name: string|null,
  *     slots: array{AM_IN: list<SlotPunch>, LUNCH_OUT: list<SlotPunch>, PM_IN: list<SlotPunch>, PM_OUT: list<SlotPunch>, OT_IN: list<SlotPunch>, OT_OUT: list<SlotPunch>},
  *     punches: list<RawPunch>,
- *     flags: array{missing: bool, missing_slots: list<string>, wrong_button: bool, duplicate: bool, pin_verify: bool, unlinked: bool},
+ *     flags: array{missing: bool, missing_slots: list<string>, no_schedule: bool, duplicate: bool, pin_verify: bool, unlinked: bool},
  *     flag_labels: list<string>
  * }
  */
 class DailyPunchController
 {
-    private const SLOT_NAMES = ['AM_IN', 'LUNCH_OUT', 'PM_IN', 'PM_OUT', 'OT_IN', 'OT_OUT'];
+    private const SLOT_NAMES = ['am_in' => 'AM_IN', 'am_out' => 'LUNCH_OUT', 'pm_in' => 'PM_IN', 'pm_out' => 'PM_OUT'];
 
     public function index(Request $request): Response
     {
@@ -54,9 +55,9 @@ class DailyPunchController
         return $parts[count($parts) - 1];
     }
 
-    private function linkedEmployee(AttendancePunch $punch): ?Employee
+    private function linkedEmployee(?AttendancePunch $punch): ?Employee
     {
-        $employee = $punch->getRelationValue('employee');
+        $employee = $punch?->getRelationValue('employee');
 
         return $employee instanceof Employee ? $employee : null;
     }
@@ -94,125 +95,129 @@ class DailyPunchController
             'end_date' => ['sometimes', 'required', 'date_format:Y-m-d', 'regex:/^[1-9][0-9]{3}-/'],
             'employee' => ['sometimes', 'integer', 'min:1', 'exists:employees,id'],
             'department' => ['sometimes', 'integer', 'min:1', 'exists:departments,id'],
-            'flags_only' => ['sometimes', 'in:missing,wrong_button,duplicate,pin_verify,unlinked'],
+            'flags_only' => ['sometimes', 'in:missing,no_schedule,duplicate,pin_verify,unlinked'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ]);
         if (isset($input['start_date'], $input['end_date']) && $input['start_date'] > $input['end_date']) {
             throw ValidationException::withMessages(['end_date' => 'End date must be on or after the start date.']);
         }
 
-        $latest = AttendancePunch::query()->max('punched_at');
-        $fallbackDate = $latest === null ? now(config('attendance.timezone', 'Asia/Manila'))->toDateString() : substr($latest, 0, 10);
-        $startDate = isset($input['start_date']) ? (string) $input['start_date'] : $fallbackDate;
-        $endDate = isset($input['end_date']) ? (string) $input['end_date'] : $fallbackDate;
+        $attendance = app(AttendanceRecomputer::class);
         $headDepartment = $user->role?->name === 'Department Head' ? $user->employee?->department_id : null;
         abort_if($user->role?->name === 'Department Head' && $headDepartment === null, 403);
 
         $query = AttendancePunch::query()
             ->with(['employee.department'])
-            ->whereBetween('punched_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->when(isset($input['employee']), fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->whereKey($input['employee'])))
             ->when(isset($input['department']), fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->where('department_id', $input['department'])))
             ->when($headDepartment !== null, fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->where('department_id', $headDepartment)))
             ->orderBy('machine_user_id')->orderBy('punched_at')->orderBy('id');
-        $punches = $query->get();
-        $groups = $punches->groupBy(fn (AttendancePunch $punch): string => $punch->machine_user_id.'|'.substr($punch->punched_at, 0, 10));
-        $calendar = $this->calendarContext($groups);
-        $deriver = app(AttendancePunchDeriver::class);
-        $rows = $groups->map(function (Collection $dayPunches, string $key) use ($calendar, $deriver): array {
-            [$machineUserId, $date] = explode('|', $key, 2);
-            $first = $dayPunches->first();
-            $employee = $this->linkedEmployee($first);
-            $slots = [
-                'AM_IN' => [],
-                'LUNCH_OUT' => [],
-                'PM_IN' => [],
-                'PM_OUT' => [],
-                'OT_IN' => [],
-                'OT_OUT' => [],
-            ];
-            $allPunches = [];
-            $wrongPmIn = false;
-            $flags = [
-                'missing' => false,
-                'wrong_button' => false,
-                'duplicate' => false,
-                'pin_verify' => false,
-                'unlinked' => $employee === null,
-            ];
 
-            foreach ($dayPunches as $punch) {
-                $state = $punch->punch_state ?? $punch->raw_4;
-                $verifyMode = $punch->verify_mode ?? $punch->raw_5;
-                $slot = $punch->derived_slot ?? AttendancePunchDeriver::slotForState($state);
-                $punchFlags = $deriver->flagsFor($state, $verifyMode, $punch->punched_at);
-                $expected = $deriver->expectedSlot($punch->punched_at);
-                if ($expected === 'PM_IN' && $slot !== 'PM_IN') {
-                    $wrongPmIn = true;
+        $windows = [];
+        $workDateFor = function (AttendancePunch $punch) use ($attendance, &$windows): string {
+            $employee = $this->linkedEmployee($punch);
+            if ($employee === null) {
+                return substr($punch->punched_at, 0, 10);
+            }
+
+            $windows[$employee->id] ??= [];
+
+            return $attendance->workDateFor($employee->id, $punch->punched_at, $windows[$employee->id]);
+        };
+        $fallbackDate = now(config('attendance.timezone'))->toDateString();
+        if (! isset($input['start_date'], $input['end_date'])) {
+            $latest = (clone $query)->reorder('punched_at', 'desc')->first();
+            $fallbackDate = $latest === null ? $fallbackDate : $workDateFor($latest);
+        }
+        $startDate = (string) ($input['start_date'] ?? $input['end_date'] ?? $fallbackDate);
+        $endDate = (string) ($input['end_date'] ?? $input['start_date'] ?? $fallbackDate);
+
+        $groups = $query->whereBetween('punched_at', [
+            Date::parse($startDate)->subDays($attendance->earlyDays())->startOfDay(),
+            Date::parse($endDate)->addDays($attendance->lateDays())->endOfDay(),
+        ])->get()
+            ->groupBy(fn (AttendancePunch $punch): string => $punch->machine_user_id.'|'.$workDateFor($punch))
+            ->filter(fn ($group, string $key): bool => $this->dateFromGroupKey($key) >= $startDate && $this->dateFromGroupKey($key) <= $endDate);
+        $calendar = $this->calendarContext($groups);
+        $absent = AttendanceDaily::query()
+            ->where('status', 'absent')
+            ->whereBetween('work_date', [$startDate, $endDate])
+            ->whereIn('employee_id', Employee::query()->select('id')
+                ->when(isset($input['employee']), fn ($query) => $query->whereKey($input['employee']))
+                ->when(isset($input['department']), fn ($query) => $query->where('department_id', $input['department']))
+                ->when($headDepartment !== null, fn ($query) => $query->where('department_id', $headDepartment)))
+            ->get(['employee_id', 'work_date']);
+        $employeesById = Employee::query()->with('department:id,name')->whereKey($absent->pluck('employee_id')->all())->get()->keyBy('id');
+        $absentEmployees = [];
+        foreach ($absent as $entry) {
+            $employee = $employeesById->get($entry->employee_id);
+            if ($employee === null) {
+                continue;
+            }
+            $key = ($employee->biometric_id ?? 'employee-'.$employee->id).'|'.$entry->work_date->toDateString();
+            if (! $groups->has($key)) {
+                $groups->put($key, collect());
+                $absentEmployees[$key] = $employee;
+            }
+        }
+
+        $rows = $groups->map(function (Collection $dayPunches, string $key) use ($calendar, $attendance, $absentEmployees): array {
+            [$machineUserId, $date] = explode('|', $key, 2);
+            $employee = $absentEmployees[$key] ?? $this->linkedEmployee($dayPunches->first());
+            $day = $employee === null ? null : $attendance->employeeDay($employee->id, $date);
+            $slots = array_fill_keys(self::SLOT_NAMES, []);
+            $missing = [];
+            foreach (self::SLOT_NAMES as $field => $slot) {
+                if ($day['flags']['missing_'.$field] ?? false) {
+                    $missing[] = $slot;
                 }
-                $wrong = (bool) ($punchFlags['suspected_wrong_button'] ?? false);
-                $duplicate = (bool) $punch->is_duplicate;
-                $pin = $verifyMode === 0;
-                $flags['wrong_button'] = $flags['wrong_button'] || $wrong;
-                $flags['duplicate'] = $flags['duplicate'] || $duplicate;
-                $flags['pin_verify'] = $flags['pin_verify'] || $pin;
-                if (isset($slots[$slot])) {
+            }
+
+            $assigned = collect($day['punches'] ?? [])->keyBy('id');
+            $allPunches = [];
+            foreach ($dayPunches as $punch) {
+                $assignment = $assigned->get($punch->id);
+                $field = $assignment['slot'] ?? null;
+                $slot = self::SLOT_NAMES[$field] ?? null;
+                $duplicate = $assignment['merged_duplicate'] ?? false;
+                if ($slot !== null && $punch->punched_at === $day['slots'][$field]) {
                     $slots[$slot][] = [
                         'id' => $punch->id,
-                        'time' => substr($punch->punched_at, 11),
-                        'is_duplicate' => $duplicate,
-                        'primary' => false,
+                        'time' => substr($punch->punched_at, 0, 10) === $date ? substr($punch->punched_at, 11) : $punch->punched_at,
+                        'is_duplicate' => false,
+                        'primary' => true,
                         'slot' => $slot,
                     ];
                 }
+                $verifyMode = $punch->verify_mode ?? $punch->raw_5;
                 $allPunches[] = [
                     'id' => $punch->id,
                     'punched_at' => $punch->punched_at,
-                    'punch_state' => $state,
+                    'punch_state' => $punch->raw_status ?? $punch->punch_state ?? $punch->raw_4,
                     'verify_mode' => $verifyMode,
                     'verify_label' => $verifyMode === 1 ? 'Fingerprint' : ($verifyMode === 0 ? 'PIN' : 'Mode '.$verifyMode),
                     'device_id' => $punch->device_id ?? $punch->raw_3,
                     'work_code' => $punch->work_code ?? $punch->raw_6,
                     'derived_slot' => $slot,
                     'is_duplicate' => $duplicate,
-                    'flags' => $punchFlags,
+                    'flags' => $duplicate ? ['duplicate_merged' => true] : [],
                 ];
             }
 
-            $flags['missing_slots'] = [];
-            foreach (['AM_IN', 'LUNCH_OUT', 'PM_IN', 'PM_OUT'] as $required) {
-                if ($slots[$required] === [] && ! ($required === 'PM_IN' && $wrongPmIn)) {
-                    $flags['missing_slots'][] = $required;
-                }
-            }
-            $flags['missing'] = $flags['missing_slots'] !== [];
-
-            $keyedFlags = [];
-            foreach ($flags['missing_slots'] as $missingSlot) {
-                $keyedFlags[] = 'Missing '.$missingSlot;
-            }
-            foreach ([
-                'wrong_button' => 'Suspected wrong button',
-                'duplicate' => 'Duplicate punch',
-                'pin_verify' => 'PIN verification',
-                'unlinked' => 'Unlinked machine ID',
-            ] as $flag => $label) {
-                if ($flags[$flag]) {
-                    $keyedFlags[] = $label;
-                }
-            }
-            $calendarFlags = [
-                ...($calendar[0][$date] ?? []),
-                ...($employee === null ? [] : ($calendar[$employee->id][$date] ?? [])),
+            $flags = [
+                'missing' => $missing !== [],
+                'missing_slots' => $missing,
+                'no_schedule' => ($day['status'] ?? null) === 'no_schedule',
+                'duplicate' => (bool) ($day['flags']['duplicate_merged'] ?? false),
+                'pin_verify' => in_array(0, array_column($allPunches, 'verify_mode'), true),
+                'unlinked' => $employee === null,
             ];
-            $keyedFlags = [...$keyedFlags, ...$calendarFlags];
-            foreach ($slots as $slot => &$slotPunches) {
-                foreach ($slotPunches as $index => &$slotPunch) {
-                    $slotPunch['primary'] = $index === 0;
+            $labels = array_map(fn (string $slot): string => 'Missing '.$slot, $missing);
+            foreach (['no_schedule' => 'No schedule', 'duplicate' => 'Duplicate merged', 'pin_verify' => 'PIN verification', 'unlinked' => 'Unlinked machine ID'] as $flag => $label) {
+                if ($flags[$flag]) {
+                    $labels[] = $label;
                 }
-                unset($slotPunch);
             }
-            unset($slotPunches);
 
             return [
                 'key' => $machineUserId.'-'.$date,
@@ -225,7 +230,13 @@ class DailyPunchController
                 'slots' => $slots,
                 'punches' => $allPunches,
                 'flags' => $flags,
-                'flag_labels' => $keyedFlags,
+                'flag_labels' => [...$labels, ...($calendar[0][$date] ?? []), ...($calendar[$employee?->id][$date] ?? [])],
+                'status' => $day['status'] ?? null,
+                'late_minutes_am' => $day['late_minutes_am'] ?? null,
+                'late_minutes_pm' => $day['late_minutes_pm'] ?? null,
+                'undertime_minutes' => $day['undertime_minutes'] ?? null,
+                'schedule_source' => $day['schedule_source'] ?? null,
+                'schedule_id' => $day['schedule_id'] ?? null,
             ];
         })->values();
 
@@ -392,7 +403,7 @@ class DailyPunchController
      */
     private function workbook(array $rows): string
     {
-        $daily = [['Employee', 'Employee Number', 'Department', 'Date', 'Morning IN', 'Lunch/Morning OUT', 'Afternoon IN', 'Afternoon/Evening OUT', 'OT IN', 'OT OUT', 'Flags']];
+        $daily = [['Employee', 'Employee Number', 'Department', 'Date', 'Morning IN', 'Lunch/Morning OUT', 'Afternoon IN', 'Afternoon/Evening OUT', 'AM late (min)', 'PM late (min)', 'Undertime (min)', 'Status', 'Schedule', 'Flags']];
         $raw = [['Employee', 'Employee Number', 'Machine User ID', 'Date and Time', 'Punch State', 'Verify Mode', 'Device ID', 'Work Code', 'Derived Slot', 'Duplicate', 'Flags']];
 
         foreach ($rows as $row) {
@@ -409,8 +420,11 @@ class DailyPunchController
                 $slotValues['LUNCH_OUT'],
                 $slotValues['PM_IN'],
                 $slotValues['PM_OUT'],
-                $slotValues['OT_IN'],
-                $slotValues['OT_OUT'],
+                (string) ($row['late_minutes_am'] ?? ''),
+                (string) ($row['late_minutes_pm'] ?? ''),
+                (string) ($row['undertime_minutes'] ?? ''),
+                $row['status'] ?? '',
+                $row['schedule_id'] === null ? '' : $row['schedule_source'].' #'.$row['schedule_id'],
                 implode('; ', $row['flag_labels']),
             ];
             foreach ($row['punches'] as $punch) {

@@ -28,22 +28,11 @@ class AttendanceRecomputer
         $workDates = [];
 
         foreach ($employees as $employee) {
-            $punchQuery = $this->punchesFor($employee['biometric_id']);
-            if ($from !== null) {
-                $punchQuery->where('punched_at', '>=', Carbon::parse($from)->subDays($this->earlyDays())->startOfDay());
-            }
-            if ($to !== null) {
-                $punchQuery->where('punched_at', '<', Carbon::parse($to)->addDays($this->lateDays() + 1)->startOfDay());
-            }
-
-            $windows = [];
-            $dates = [];
-            foreach ($punchQuery->distinct()->pluck('punched_at') as $timestamp) {
-                $date = $this->workDateFor($employee['id'], (string) $timestamp, $windows);
-                if (($from === null || $date >= $from) && ($to === null || $date <= $to)) {
-                    $dates[$date] = $date;
-                }
-            }
+            $dates = AttendanceDaily::query()->where('employee_id', $employee['id'])
+                ->when($from !== null, fn ($query) => $query->where('work_date', '>=', $from))
+                ->when($to !== null, fn ($query) => $query->where('work_date', '<=', $to))
+                ->pluck('work_date')->map(fn ($date) => $date->toDateString())->all();
+            $dates = [...$dates, ...$this->recordedWorkDates($employee['id'], $employee['biometric_id'], $from, $to)];
 
             if ($from !== null && $to !== null) {
                 $current = Carbon::parse($from)->startOfDay();
@@ -99,6 +88,16 @@ class AttendanceRecomputer
 
     public function recomputeEmployeeDay(int $employeeId, string $workDate): AttendanceDaily
     {
+        $day = $this->employeeDay($employeeId, $workDate);
+
+        return AttendanceDaily::query()->updateOrCreate(
+            ['employee_id' => $employeeId, 'work_date' => $workDate],
+            collect($day)->except(['punches', 'slots'])->all(),
+        );
+    }
+
+    public function employeeDay(int $employeeId, string $workDate): array
+    {
         $employee = $this->employees->find($employeeId)
             ?? throw (new ModelNotFoundException)->setModel('Employee', [$employeeId]);
         $schedule = $this->resolver->resolve($employeeId, $workDate);
@@ -114,34 +113,47 @@ class AttendanceRecomputer
             ])
             ->orderBy('punched_at')
             ->orderBy('id')
-            ->get(['punched_at'])
+            ->get(['id', 'punched_at', 'machine_id', 'machine_user_id', 'device_id', 'punch_state', 'raw_status', 'verify_mode', 'work_code', 'raw_3', 'raw_4', 'raw_5', 'raw_6'])
             ->filter(function (AttendancePunch $punch) use ($employeeId, $workDate, &$windows): bool {
                 return $this->workDateFor($employeeId, (string) $punch->punched_at, $windows) === $workDate;
             })
-            ->map(fn (AttendancePunch $punch): array => ['punched_at' => (string) $punch->punched_at])
-            ->values()
-            ->all();
+            ->values();
 
         $preCheck = $this->precheckEmployeeDay($employeeId, $workDate);
-        $result = $this->classifier->classify($rawPunches, $schedule, $workDate);
-        $flags = array_merge($result['flags'], $preCheck);
+        $result = $this->classifier->classify($rawPunches->toArray(), $schedule, $workDate);
+        $assignments = collect($result['punches'])->keyBy('punched_at');
+        $result['flags'] = array_merge($result['flags'], $preCheck);
+        $result['punches'] = $rawPunches->map(function (AttendancePunch $punch) use ($assignments): array {
+            $assignment = $assignments->pull($punch->punched_at);
 
-        return AttendanceDaily::query()->updateOrCreate(
-            ['employee_id' => $employeeId, 'work_date' => $workDate],
-            [
-                'am_in_at' => $result['am_in_at'],
-                'am_out_at' => $result['am_out_at'],
-                'pm_in_at' => $result['pm_in_at'],
-                'pm_out_at' => $result['pm_out_at'],
-                'late_minutes_am' => $result['late_minutes_am'],
-                'late_minutes_pm' => $result['late_minutes_pm'],
-                'undertime_minutes' => $result['undertime_minutes'],
-                'status' => $result['status'],
-                'flags' => $flags,
-                'schedule_source' => $schedule['schedule_source'] ?? 'department',
-                'schedule_id' => $schedule['schedule_id'] ?? null,
-            ],
-        );
+            return $punch->toArray() + [
+                'slot' => $assignment['slot'] ?? null,
+                'merged_duplicate' => $assignment === null,
+            ];
+        })->all();
+
+        return $result + [
+            'schedule_source' => $schedule['schedule_source'] ?? null,
+            'schedule_id' => $schedule['schedule_id'] ?? null,
+        ];
+    }
+
+    /** @return list<string> */
+    public function recordedWorkDates(int $employeeId, ?int $machineId, ?string $from, ?string $to): array
+    {
+        $punchQuery = $this->punchesFor($machineId)
+            ->when($from !== null, fn ($query) => $query->where('punched_at', '>=', Carbon::parse($from)->subDays($this->earlyDays())->startOfDay()))
+            ->when($to !== null, fn ($query) => $query->where('punched_at', '<', Carbon::parse($to)->addDays($this->lateDays() + 1)->startOfDay()));
+        $windows = [];
+        $dates = [];
+        foreach ($punchQuery->distinct()->pluck('punched_at') as $timestamp) {
+            $date = $this->workDateFor($employeeId, (string) $timestamp, $windows);
+            if (($from === null || $date >= $from) && ($to === null || $date <= $to)) {
+                $dates[$date] = $date;
+            }
+        }
+
+        return array_values($dates);
     }
 
     private function punchesFor(?int $machineId): Builder
@@ -157,7 +169,7 @@ class AttendanceRecomputer
         });
     }
 
-    private function workDateFor(int $employeeId, string $timestamp, array &$windows): string
+    public function workDateFor(int $employeeId, string $timestamp, array &$windows): string
     {
         $punch = Carbon::parse($timestamp);
         $workDate = $punch->toDateString();
@@ -190,12 +202,12 @@ class AttendanceRecomputer
         return $workDate;
     }
 
-    private function earlyDays(): int
+    public function earlyDays(): int
     {
         return (int) ceil(max(0, config('attendance.classifier.am_in_hours_before')) / 24);
     }
 
-    private function lateDays(): int
+    public function lateDays(): int
     {
         return 1 + (int) ceil(max(0, config('attendance.classifier.pm_out_hours_after')) / 24);
     }

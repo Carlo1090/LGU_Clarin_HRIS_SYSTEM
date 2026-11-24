@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -38,10 +37,6 @@ return new class extends Migration
                     $table->smallInteger('raw_status')->nullable()->after('punch_state');
                 });
             }
-            DB::table('attendance_punches')->update([
-                'machine_id' => DB::raw('machine_user_id'),
-                'raw_status' => DB::raw('punch_state'),
-            ]);
             if (! Schema::hasIndex('attendance_punches', 'attendance_punches_machine_time_unique')) {
                 Schema::table('attendance_punches', function (Blueprint $table) {
                     $table->unique(

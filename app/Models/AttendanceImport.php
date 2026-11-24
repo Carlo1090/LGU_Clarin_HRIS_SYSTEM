@@ -9,7 +9,7 @@ class AttendanceImport extends Model
 {
     protected $table = 'attendance_imports';
 
-    protected $fillable = ['file_name', 'upload_batch', 'uploaded_by', 'status', 'imported_at', 'file_sha256', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count', 'clock_offset_seconds', 'invalid_lines', 'recompute_summary'];
+    protected $fillable = ['file_name', 'upload_batch', 'uploaded_by', 'status', 'error_message', 'imported_at', 'file_sha256', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count', 'clock_offset_seconds', 'invalid_lines', 'recompute_summary'];
 
     protected function casts(): array
     {

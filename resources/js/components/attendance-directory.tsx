@@ -1,6 +1,6 @@
 import { DirectorySearch } from '@/components/table-search';
 import { WorkspaceMetrics } from '@/components/workspace-metrics';
-import { Form, Head, usePage } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     CalendarCheck2,
     CalendarClock,
@@ -33,6 +33,7 @@ export type AttendanceDirectoryProps = {
     title: string;
     attendanceMonth: string;
     canManageAttendance: boolean;
+    unlinkedMachineIds: number;
     records: {
         data: EmployeeAttendance[];
         from: number | null;
@@ -70,6 +71,7 @@ export default function AttendanceDirectory({
     title,
     attendanceMonth,
     canManageAttendance,
+    unlinkedMachineIds,
     records,
 }: AttendanceDirectoryProps) {
     const search = new URL(usePage().url, 'http://localhost').searchParams;
@@ -88,7 +90,7 @@ export default function AttendanceDirectory({
         },
         ...(['complete', 'review', 'empty'] as const).map((key) => ({
             ...statuses[key],
-            count: totals[key],
+            count: totals[key] + (key === 'review' ? unlinkedMachineIds : 0),
         })),
     ];
 
@@ -115,6 +117,14 @@ export default function AttendanceDirectory({
                         <p className="mt-1 text-sm text-muted-foreground">
                             Log status for the employees on this page.
                         </p>
+                        {unlinkedMachineIds > 0 && (
+                            <Link
+                                className="text-sm underline"
+                                href={`/hris/attendance/logs?month=${attendanceMonth}&unassigned=1`}
+                            >
+                                {unlinkedMachineIds} unlinked machine {unlinkedMachineIds === 1 ? 'ID' : 'IDs'} this month
+                            </Link>
+                        )}
                     </div>
                     <Form
                         key={attendanceMonth}

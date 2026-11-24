@@ -65,9 +65,7 @@ export default function ImportAttendanceLogs({
         punch_state: number | null;
         verify_mode: number | null;
         work_code: number | null;
-        derived_slot: string | null;
-        is_duplicate: boolean;
-        flags: Record<string, boolean | string>;
+        raw_status: number | null;
     }> | null;
 }) {
     useEffect(() => {
@@ -293,7 +291,7 @@ export default function ImportAttendanceLogs({
                             {punches.data.map((punch) => (
                                 <li key={punch.id}>
                                     {punch.punched_at} · state{' '}
-                                    {punch.punch_state ?? 'unknown'} · verify{' '}
+                                    {punch.raw_status ?? punch.punch_state ?? 'unknown'} · verify{' '}
                                     {punch.verify_mode === 1
                                         ? 'fingerprint'
                                         : punch.verify_mode === 0
@@ -301,19 +299,6 @@ export default function ImportAttendanceLogs({
                                           : (punch.verify_mode ??
                                             'unknown')}{' '}
                                     · device {punch.device_id ?? '—'}
-                                    {punch.is_duplicate ? ' · duplicate' : ''}
-                                    {Object.keys(punch.flags).length > 0 && (
-                                        <span className="block">
-                                            Flags:{' '}
-                                            {Object.entries(punch.flags)
-                                                .map(([name, value]) =>
-                                                    typeof value === 'boolean'
-                                                        ? name
-                                                        : `${name}: ${value}`,
-                                                )
-                                                .join(', ')}
-                                        </span>
-                                    )}
                                 </li>
                             ))}
                         </ol>
