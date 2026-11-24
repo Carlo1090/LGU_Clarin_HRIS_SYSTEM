@@ -1283,7 +1283,7 @@ export default function Welcome() {
                                     <TechText
                                         text="CLARIN"
                                         fontWeight={900}
-                                        fontSize={180}
+                                        fitContainer
                                         letterSpacing={-0.06}
                                         color="#142014"
                                         accentColor="#1C4722"
