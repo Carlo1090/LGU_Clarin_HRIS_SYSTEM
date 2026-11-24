@@ -15,6 +15,10 @@ void createInertiaApp({
             case name === 'welcome':
             case name === 'hris/daily-time-record':
                 return null;
+            // Password confirmation opens inside the same portal shell
+            // instead of the separate full-page auth screen.
+            case name === 'auth/confirm-password':
+                return [AppLayout, SettingsLayout];
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):

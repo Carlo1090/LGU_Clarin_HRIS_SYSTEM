@@ -24,6 +24,50 @@ class HrisResourceTest extends TestCase
         $this->withoutVite();
     }
 
+    public function test_employee_directory_search_finds_photos_across_pages_and_obeys_department_scope(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $department = Department::factory()->create();
+        Employee::factory()->count(21)->create(['department_id' => $department->id, 'last_name' => 'Adams']);
+        $account = User::factory()->create();
+        $account->forceFill(['avatar' => '/profile-photos/example.png'])->save();
+        $target = Employee::factory()->create(['department_id' => $department->id, 'user_id' => $account->id, 'first_name' => 'Quentin', 'last_name' => 'Zuniga']);
+        $outsider = Employee::factory()->create(['first_name' => 'Quentin', 'last_name' => 'Zuniga']);
+        $this->actingAs($hr)->get('/hris/employees?column=employee_number&q='.$target->employee_number)
+            ->assertInertia(fn ($page) => $page->has('records.data', 1)
+                ->where('records.data.0.id', $target->id)->where('records.data.0.avatar', '/profile-photos/example.png'));
+
+        $target->update(['user_id' => null]);
+        $account->forceFill(['employee_id' => $target->id])->save();
+        $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create(['employee_id' => $target->id]);
+        $this->actingAs($head)->get('/hris/employees?q=Quentin%20Zuniga')
+            ->assertInertia(fn ($page) => $page->has('records.data', 1)->where('records.data.0.id', $target->id)->where('records.data.0.avatar', '/profile-photos/example.png'));
+        $this->get('/hris/employees?column=employee_number&q='.$outsider->employee_number)
+            ->assertInertia(fn ($page) => $page->has('records.data', 0));
+    }
+
+    public function test_assign_biometric_id_filter_shows_only_unlinked_employees(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $department = Department::factory()->create();
+        $unlinked = Employee::factory()->create([
+            'department_id' => $department->id,
+            'biometric_id' => null,
+        ]);
+        $linked = Employee::factory()->create([
+            'department_id' => $department->id,
+            'biometric_id' => 123,
+        ]);
+
+        $this->actingAs($hr)
+            ->get('/hris/employees?assign_biometric_id=123')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('assignBiometricId', 123)
+                ->has('records.data', 1)
+                ->where('records.data.0.id', $unlinked->id));
+    }
+
     public function test_attendance_lists_employees_once_with_dtr_links_and_respects_department_scope(): void
     {
         $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
@@ -59,7 +103,12 @@ class HrisResourceTest extends TestCase
         $employee = Employee::factory()->create();
         $employee->forceFill(['biometric_id' => 15])->save();
         $batch = AttendanceImport::query()->create(['file_name' => 'test.dat', 'status' => 'completed']);
-        foreach (['19 07:50:00', '19 12:03:00', '19 12:50:00', '19 17:02:00', '20 07:54:00', '22 07:55:00'] as $device => $punch) {
+        \App\Attendance\Models\DepartmentSchedule::query()->create([
+            'department_id' => $employee->department_id,
+            'am_in' => '08:00', 'am_out' => '12:00', 'pm_in' => '13:00', 'pm_out' => '17:00',
+            'effective_from' => '2026-10-01',
+        ]);
+        foreach (['19 07:50:00', '19 07:51:00', '19 12:03:00', '19 12:50:00', '19 17:02:00', '20 07:54:00', '22 07:55:00'] as $device => $punch) {
             AttendancePunch::query()->insert([
                 'attendance_import_id' => $batch->id, 'import_batch_id' => $batch->id,
                 'biometric_id' => 15, 'machine_user_id' => 15, 'device_id' => $device,
@@ -80,12 +129,49 @@ class HrisResourceTest extends TestCase
 
         $this->actingAs($hr)->get('/hris/attendance?month=2026-10')
             ->assertInertia(fn ($page) => $page
-                ->where('records.data.0.attendance_complete_days', 2)
-                ->where('records.data.0.attendance_review_days', 2));
+                ->where('records.data.0.attendance_complete_days', 3)
+                ->where('records.data.0.attendance_review_days', 1));
         $this->get('/hris/attendance?month=2026-11')
             ->assertInertia(fn ($page) => $page
                 ->where('records.data.0.attendance_complete_days', 0)
                 ->where('records.data.0.attendance_review_days', 1));
+    }
+
+    public function test_hr_can_confirm_reviewed_dtr_punches_as_four_slots(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $employee = Employee::factory()->create();
+        $batch = AttendanceImport::query()->create(['file_name' => 'test.dat', 'status' => 'completed']);
+        foreach ([['07:50:00', 0], ['12:03:00', 2], ['12:58:00', 3], ['17:02:00', 1]] as [$time, $state]) {
+            AttendancePunch::query()->create([
+                'attendance_import_id' => $batch->id,
+                'import_batch_id' => $batch->id,
+                'biometric_id' => 15,
+                'machine_user_id' => 15,
+                'device_id' => 1,
+                'punched_at' => '2026-10-19 '.$time,
+                'punch_state' => $state,
+                'created_at' => now(),
+            ]);
+        }
+        $employee->forceFill(['biometric_id' => 15])->save();
+
+        $this->actingAs($hr)
+            ->put("/hris/attendance/dtr/{$employee->id}/review", [
+                'attendance_date' => '2026-10-19',
+                'am_in' => '07:50',
+                'am_out' => '12:03',
+                'pm_in' => '12:58',
+                'pm_out' => '17:02',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('attendance_records', [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-10-19',
+            'status' => 'present',
+            'source' => 'manual-review',
+        ]);
     }
 
     public function test_attendance_entries_can_still_be_managed_from_the_entries_view(): void

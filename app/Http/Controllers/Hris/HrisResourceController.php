@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers\Hris;
 
+use App\Attendance\Models\AttendanceDaily;
+use App\Attendance\Models\DepartmentSchedule;
+use App\Attendance\Services\AttendanceRecomputer;
+use App\Attendance\Services\ScheduleResolver;
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Models\Applicant;
@@ -358,13 +362,36 @@ class HrisResourceController extends Controller
     {
         Gate::authorize('view-hris-resource', $resource);
         $config = $this->resourceConfig($resource);
+        $search = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'column' => ['nullable', 'string', 'max:64'],
+            'assign_biometric_id' => ['nullable', 'integer', 'between:1,4294967295'],
+        ]);
+        $term = trim($search['q'] ?? '');
+        $column = $search['column'] ?? '';
+        $assignBiometricId = isset($search['assign_biometric_id']) ? (int) $search['assign_biometric_id'] : null;
         if ($resource === 'plantilla-items') {
-            $records = PlantillaItem::query()->with(['department', 'employee'])->orderBy('item_number')->orderBy('id')->paginate(20)->through(
-                fn (PlantillaItem $record) => ['id' => $record->id, 'department_code' => $record->department_code ?? $record->department?->code,
-                    'department_name' => $record->department_name ?? $record->department?->name,
-                    'employee_number' => $record->employee?->employee_number]
-                    + collect(self::PLANTILLA_FIELDS)->mapWithKeys(fn (array $field) => [$field['name'] => $this->plantillaValue($record, $field['name'])])->all(),
-            );
+            $records = PlantillaItem::query()->with(['department', 'employee' => fn ($query) => $query->addSelect(['avatar' => Employee::accountAvatarQuery()])])
+                ->when($term !== '', function ($query) use ($term, $column) {
+                    $query->where(function ($match) use ($term, $column) {
+                        foreach (['position' => 'position_title', 'item' => 'item_number', 'department' => 'department_name', 'grade' => 'salary_grade'] as $key => $attribute) {
+                            if ($column === '' || $column === $key) {
+                                $match->orWhereLike($attribute, '%'.$term.'%');
+                            }
+                        }
+                        if ($column === '' || $column === 'department') {
+                            $match->orWhereHas('department', fn ($office) => $office->whereLike('name', '%'.$term.'%')->orWhereLike('code', '%'.$term.'%'));
+                        }
+                        if ($column === '' || $column === 'employee') {
+                            $match->orWhereHas('employee', fn ($person) => $person->whereLike('employee_number', '%'.$term.'%')->orWhereLike('first_name', '%'.$term.'%')->orWhereLike('last_name', '%'.$term.'%'));
+                        }
+                    });
+                })->orderBy('item_number')->orderBy('id')->paginate(20)->withQueryString()->through(
+                    fn (PlantillaItem $record) => ['id' => $record->id, 'department_code' => $record->department_code ?? $record->department?->code,
+                        'department_name' => $record->department_name ?? $record->department?->name,
+                        'employee_number' => $record->employee?->employee_number, 'avatar' => $record->employee?->avatar]
+                        + collect(self::PLANTILLA_FIELDS)->mapWithKeys(fn (array $field) => [$field['name'] => $this->plantillaValue($record, $field['name'])])->all(),
+                );
 
             return Inertia::render('hris/plantilla-items', [
                 'title' => $config['title'],
@@ -384,6 +411,14 @@ class HrisResourceController extends Controller
             $startDate = $month.'-01';
             $endDate = Date::parse($startDate)->endOfMonth()->toDateString();
             $records = Employee::query()
+                ->when($term !== '', fn ($query) => $query->where(function ($match) use ($column, $term) {
+                    if ($column === '' || $column === 'employee') {
+                        $match->orWhereLike('first_name', '%'.$term.'%')->orWhereLike('last_name', '%'.$term.'%')->orWhereLike('employee_number', '%'.$term.'%');
+                    }
+                    if ($column === '' || $column === 'department') {
+                        $match->orWhereHas('department', fn ($office) => $office->whereLike('name', '%'.$term.'%'));
+                    }
+                }))
                 ->when($departmentHead, fn ($query) => $departmentId
                     ? $query->where('department_id', $departmentId)
                     : $query->whereRaw('1 = 0'))
@@ -393,26 +428,30 @@ class HrisResourceController extends Controller
                         ->latest('id')->select(['id', 'employee_id', 'attendance_date', 'time_in', 'time_out', 'status']),
                 ])
                 ->orderBy('last_name')->orderBy('first_name')->orderBy('id')
-                ->paginate(20, ['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id', 'biometric_id'])
+                ->select(['id', 'employee_number', 'first_name', 'last_name', 'suffix', 'department_id', 'biometric_id'])
+                ->addSelect(['avatar' => Employee::accountAvatarQuery()])->paginate(20)
                 ->withQueryString();
-            $punchDays = AttendancePunch::query()
-                ->whereIn('biometric_id', $records->getCollection()->pluck('biometric_id')->filter())
+            $attendance = app(AttendanceRecomputer::class);
+            $daily = AttendanceDaily::query()->whereIn('employee_id', $records->getCollection()->modelKeys())
+                ->whereBetween('work_date', [$startDate, $endDate])->get(['employee_id', 'work_date', 'status'])
+                ->groupBy('employee_id');
+            $unlinkedMachineIds = $departmentHead ? 0 : AttendancePunch::query()->unassigned()
                 ->whereBetween('punched_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
-                ->selectRaw('biometric_id, DATE(punched_at) as attendance_day, COUNT(*) as punch_count')
-                ->groupBy('biometric_id')->groupByRaw('DATE(punched_at)')
-                ->get()->groupBy('biometric_id');
+                ->distinct()->count('machine_user_id');
             $records->through(fn (Employee $employee) => [
                 'id' => $employee->id,
                 'name' => trim("{$employee->last_name}, {$employee->first_name} {$employee->suffix}"),
                 'employee_number' => $employee->employee_number,
                 'department' => $employee->department?->name,
+                'avatar' => $employee->avatar,
                 'dtr_url' => route('hris.attendance.dtr', ['employee' => $employee, 'month' => $month], false),
-            ] + $this->attendanceLogSummary($employee, $punchDays->get($employee->biometric_id, collect())));
+            ] + $this->attendanceLogSummary($employee, $daily->get($employee->id, collect()), $attendance, $startDate, $endDate));
 
             return Inertia::render('hris/resources/index', [
                 'resource' => $resource,
                 'title' => $config['title'],
                 'attendanceDirectory' => true,
+                'unlinkedMachineIds' => $unlinkedMachineIds,
                 'attendanceMonth' => $month,
                 'canManageAttendance' => $canManageAttendance,
                 'canManage' => false,
@@ -429,24 +468,47 @@ class HrisResourceController extends Controller
         $fields = $this->fieldsWithOptions($config['fields'], $departmentHead ? ($departmentId ?? 0) : null);
         $model = $config['model'];
         $query = $model::query();
+        if ($resource === 'employees' && $assignBiometricId !== null) {
+            $query->whereNull('biometric_id');
+        }
 
         if ($resource === 'departments') {
+            $today = now(config('attendance.timezone'))->toDateString();
+            $schedules = DepartmentSchedule::query()->where('effective_from', '<=', $today)
+                ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $today))
+                ->latest('effective_from')->latest('id')->get()->unique('department_id')->keyBy('department_id');
             $records = Department::query()->orderBy('name')->get()->map(fn (Department $department) => [
                 'id' => $department->id, 'name' => $department->name, 'code' => $department->code,
                 'parent_department_id' => $department->parent_department_id, 'description' => $department->description,
                 'canManage' => in_array($department->code, array_keys(Department::PLANTILLA_OFFICES), true),
+                'work_schedule' => $schedules->has($department->id) ? $this->scheduleHours($schedules->get($department->id)) : null,
             ]);
             $codes = $records->pluck('code');
             $records = $records->concat(collect(Department::PLANTILLA_OFFICES)
                 ->reject(fn ($name, $code) => $codes->contains($code))
-                ->map(fn ($name, $code) => ['id' => $code, 'name' => $name, 'code' => $code, 'parent_department_id' => null, 'description' => null, 'canManage' => false])
+                ->map(fn ($name, $code) => ['id' => $code, 'name' => $name, 'code' => $code, 'parent_department_id' => null, 'description' => null, 'canManage' => false, 'work_schedule' => null])
                 ->values())->values();
+
+            $officeNames = $records->pluck('name', 'id');
+            $fields = array_map(fn ($field) => $field['name'] === 'parent_department_id'
+                ? array_merge($field, ['options' => $officeNames->map(fn ($label, $value) => compact('label', 'value'))->values()])
+                : $field, $config['fields']);
+            if ($term !== '') {
+                $records = $records->filter(function ($row) use ($column, $term, $officeNames) {
+                    $row['parent_department_id'] = $officeNames->get($row['parent_department_id']);
+                    $values = $column === '' ? collect($row)->except('canManage') : collect($row)->only($column);
+
+                    return $values->contains(fn ($value) => Str::contains((string) $value, $term, ignoreCase: true));
+                })->values();
+            }
 
             return Inertia::render('hris/resources/index', [
                 'resource' => $resource, 'title' => $config['title'],
-                'canManage' => false, 'fields' => $config['fields'],
+                'canManage' => false,
+                'canManageSchedules' => Gate::allows('manage-attendance-schedules'),
                 'records' => ['data' => $records, 'links' => []], 'editing' => null,
                 'officeDirectory' => true,
+                'fields' => [...$fields, ['name' => 'work_schedule', 'label' => 'Work schedule', 'type' => 'text']],
             ]);
         }
 
@@ -466,7 +528,32 @@ class HrisResourceController extends Controller
                 ->map(fn ($status) => ['status' => $status->employment_status, 'total' => $status->total])->values()
             : [];
 
+        if ($term !== '') {
+            $terms = $column === '' ? preg_split('/\s+/u', $term) : [$term];
+            foreach ($terms as $word) {
+                $query->where(function ($match) use ($fields, $column, $word) {
+                    foreach ($fields as $field) {
+                        $name = $field['name'];
+                        if ($column !== '' && $column !== $name) {
+                            continue;
+                        }
+                        $match->orWhereLike($name, '%'.$word.'%');
+                        if (isset($field['options']) && is_iterable($field['options'])) {
+                            $values = collect($field['options'])->filter(fn ($option) => Str::contains((string) $option['label'], $word, ignoreCase: true))->pluck('value');
+                            $match->orWhereIn($name, $values);
+                        } elseif ($field['type'] === 'checkbox' && in_array(strtolower($word), ['yes', 'no'], true)) {
+                            $match->orWhere($name, strtolower($word) === 'yes');
+                        }
+                    }
+                    if ($column === '' || $column === 'id') {
+                        $match->orWhereLike('id', '%'.$word.'%');
+                    }
+                });
+            }
+        }
+
         if ($resource === 'employees') {
+            $query->with('department:id,name');
             $query->orderByRaw("CASE LOWER(employment_status) WHEN 'active' THEN 1 WHEN 'on leave' THEN 2 WHEN 'inactive' THEN 3 WHEN 'terminated' THEN 4 ELSE 5 END")
                 ->orderBy('employment_status')->orderBy('last_name')->orderBy('first_name');
         }
@@ -479,6 +566,23 @@ class HrisResourceController extends Controller
 
         $records = ($resource === 'employees' ? $query : $query->latest('id'))->paginate(20)->withQueryString();
 
+        $employeeIds = $resource === 'employees'
+            ? $records->getCollection()->modelKeys()
+            : $records->getCollection()->pluck('employee_id')->filter();
+        $avatars = Employee::query()->whereKey($employeeIds)->select('employees.id')->addSelect(['avatar' => Employee::accountAvatarQuery()])->pluck('avatar', 'id');
+        $accountFields = array_column(array_filter($fields, fn ($field) => $field['account'] ?? false), 'name');
+        $accountIds = collect($accountFields)->flatMap(fn ($field) => $records->getCollection()->pluck($field))->filter()->unique();
+        $accountAvatars = $accountIds->isEmpty() ? collect() : User::query()->whereKey($accountIds)->pluck('avatar', 'id');
+        $scheduleLabels = $resource === 'employees' ? $records->getCollection()->mapWithKeys(function (Employee $employee): array {
+            $schedule = app(ScheduleResolver::class)->resolve($employee->id, now(config('attendance.timezone'))->toDateString());
+
+            return [$employee->id => match ($schedule['schedule_source'] ?? null) {
+                'override' => 'Override',
+                'department' => 'From '.$employee->department?->name,
+                default => null,
+            }];
+        }) : collect();
+
         return Inertia::render('hris/resources/index', [
             'resource' => $resource,
             'title' => $config['title'],
@@ -487,16 +591,28 @@ class HrisResourceController extends Controller
             'canCreateLeaveOnBehalf' => $resource === 'leave-applications' && $request->user()->role?->name === 'HRMO Head',
             'canImport' => $resource === 'employees' && $request->user()->role?->name === 'HRMO Head',
             'canManageAttendance' => $canManageAttendance,
+            'canManageSchedules' => $resource === 'employees' && Gate::allows('manage-attendance-schedules'),
             'canLinkBiometricIds' => $canLinkBiometricIds,
             'statusSummary' => $statusSummary,
             'createdAccountCredentials' => $resource === 'employees' ? $request->session()->get('createdAccountCredentials') : null,
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
+            'assignBiometricId' => $resource === 'employees' ? $assignBiometricId : null,
             'fields' => $fields,
-            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey()]
+            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->employee_id)]
+                + collect($accountFields)->mapWithKeys(fn ($field) => [$field.'_avatar' => $accountAvatars->get($record->getAttribute($field))])->all()
                 + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
                 + ($canEditEmployeeEmail && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
+                + ($resource === 'employees' ? ['work_schedule' => $scheduleLabels->get($record->getKey())] : [])
                 + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
             'editing' => $request->integer('edit') ?: null,
+        ]);
+    }
+
+    private function scheduleHours(DepartmentSchedule $schedule): string
+    {
+        return implode(' / ', [
+            substr($schedule->am_in, 0, 5).'-'.substr($schedule->am_out, 0, 5),
+            substr($schedule->pm_in, 0, 5).'-'.substr($schedule->pm_out, 0, 5),
         ]);
     }
 
@@ -720,10 +836,10 @@ class HrisResourceController extends Controller
     }
 
     /**
-     * @param  Collection<int, AttendancePunch>  $punchDays
+     * @param  Collection<int, AttendanceDaily>  $daily
      * @return array{attendance_complete_days: int, attendance_review_days: int}
      */
-    private function attendanceLogSummary(Employee $employee, Collection $punchDays): array
+    private function attendanceLogSummary(Employee $employee, Collection $daily, AttendanceRecomputer $attendance, string $from, string $to): array
     {
         $complete = $review = 0;
         $manualDays = $employee->attendanceRecords->unique('attendance_date')->keyBy('attendance_date');
@@ -732,19 +848,26 @@ class HrisResourceController extends Controller
             if (in_array($status, ['leave', 'on_leave', 'holiday', 'rest_day', 'day_off'], true)) {
                 continue;
             }
-            if ($status === 'present' && $entry->time_in && $entry->time_out) {
+            if ($entry->time_in && $entry->time_out) {
                 $complete++;
             } else {
                 $review++;
             }
         }
-        foreach ($punchDays as $day) {
-            if ($manualDays->has($day->getAttribute('attendance_day'))) {
+
+        $stored = $daily->keyBy(fn (AttendanceDaily $day): string => $day->work_date->toDateString());
+        $workDates = array_unique([
+            ...$attendance->recordedWorkDates($employee->id, $employee->biometric_id, $from, $to),
+            ...$stored->where('status', 'absent')->keys()->all(),
+        ]);
+        foreach ($workDates as $date) {
+            if ($manualDays->has($date)) {
                 continue;
             }
-            if ((int) $day->getAttribute('punch_count') === AttendancePunch::DTR_PUNCH_COUNT) {
+            $status = $stored->get($date)?->status ?? $attendance->employeeDay($employee->id, $date)['status'];
+            if ($status === 'complete') {
                 $complete++;
-            } else {
+            } elseif (in_array($status, ['incomplete', 'absent', 'no_schedule'], true)) {
                 $review++;
             }
         }
@@ -910,7 +1033,7 @@ class HrisResourceController extends Controller
             'departments' => Department::query()->orderBy('name')->pluck('name', 'id'),
             'positions' => Position::query()->orderBy('title')->pluck('title', 'id'),
             'employees' => Employee::query()->when($departmentId !== null, fn ($query) => $query->where('department_id', $departmentId))->orderBy('employee_number')->get()->mapWithKeys(fn (Employee $employee) => [
-                $employee->id => $employee->employee_number.' — '.$employee->first_name.' '.$employee->last_name,
+                $employee->id => $employee->employee_number.' â€” '.$employee->first_name.' '.$employee->last_name,
             ]),
             'leave-types' => LeaveType::query()->orderBy('name')->pluck('name', 'id'),
             'payroll-periods' => PayrollPeriod::query()->orderByDesc('start_date')->pluck('code', 'id'),
@@ -923,6 +1046,9 @@ class HrisResourceController extends Controller
 
         return array_map(function (array $field) use ($optionQueries): array {
             if (isset($field['options'])) {
+                if ($field['options'] === 'users') {
+                    $field['account'] = true;
+                }
                 $field['options'] = $optionQueries[$field['options']]->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values();
             }
 

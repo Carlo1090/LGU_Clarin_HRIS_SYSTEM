@@ -1,29 +1,29 @@
-import { Form, Head, Link, router, useForm } from '@inertiajs/react';
-import { FileUp, Plus } from 'lucide-react';
+import { DirectorySearch } from '@/components/table-search';
+import TableAction from '@/components/table-action';
+import PersonAvatar from '@/components/person-avatar';
+import {
+    DirectoryOverview,
+    ResourceDirectory,
+    directoryLayouts,
+    type Field,
+    type HrisValue,
+    type HrisRow,
+} from '@/components/resource-directory';
+import WorkspaceHeader from '@/components/workspace-header';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Check, FileUp, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import BiometricIdField from '@/components/biometric-id-field';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormPreviewDialog from '@/components/leave-form-preview-dialog';
-import { Badge } from '@/components/ui/badge';
+import AttendanceDirectory, {
+    type AttendanceDirectoryProps,
+} from '@/components/attendance-directory';
+import RecordPagination, {
+    type RecordPageLink,
+} from '@/components/record-pagination';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-
-type Field = {
-    name: string;
-    label: string;
-    type: string;
-    required?: boolean;
-    options?: { value: string | number; label: string }[];
-};
-
-type HrisValue = string | number | boolean | null | undefined;
-
-type HrisRow = {
-    id: number | string;
-    canManage?: boolean;
-    [key: string]: HrisValue;
-};
+import WorkScheduleDialog from '@/components/work-schedule-dialog';
 
 type Props = {
     resource: string;
@@ -34,10 +34,12 @@ type Props = {
     canCreateLeaveOnBehalf?: boolean;
     canImport?: boolean;
     officeDirectory?: boolean;
-    attendanceDirectory?: boolean;
+    attendanceDirectory?: false;
     attendanceMonth?: string;
     canManageAttendance?: boolean;
+    canManageSchedules?: boolean;
     canLinkBiometricIds?: boolean;
+    assignBiometricId?: number | null;
     statusSummary?: { status: string; total: number }[];
     createdAccountCredentials?: {
         employee_number: string;
@@ -50,7 +52,7 @@ type Props = {
     accountSetupEmailSent?: boolean | null;
     records: {
         data: HrisRow[];
-        links: { url: string | null; label: string; active: boolean }[];
+        links: RecordPageLink[];
     };
 };
 
@@ -60,6 +62,7 @@ const moduleDescriptions: Record<string, string> = {
         'Review municipal offices and maintain department information.',
     attendance: 'Review and maintain employee time and attendance records.',
     'leave-applications': 'Review employee leave requests and their status.',
+    positions: 'Review position assignments, salary grades, and active posts.',
     vacancies: 'Track open positions and recruitment deadlines.',
 };
 
@@ -68,57 +71,98 @@ type FormData = Record<string, string | number | boolean | null>;
 const emptyValue = (field: Field): string | number | boolean | null =>
     field.type === 'checkbox' ? false : '';
 
-function AttendanceBadge({
-    complete,
-    review,
-}: {
-    complete: number;
-    review: number;
-}) {
-    return (
-        <div className="space-y-1">
-            {review > 0 ? (
-                <Badge className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                    Needs review
-                </Badge>
-            ) : complete > 0 ? (
-                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-                    Complete logs
-                </Badge>
-            ) : (
-                <Badge variant="secondary">No work logs</Badge>
-            )}
-            {complete + review > 0 && (
-                <p className="text-xs text-muted-foreground tabular-nums">
-                    {complete} complete · {review} to review
-                </p>
-            )}
-        </div>
-    );
+/* ---------- Employee form field overrides ---------- */
+
+const SUFFIX_OPTIONS = ['Jr.', 'Sr.', 'I', 'II', 'III', 'IV', 'V'].map(
+    (value) => ({ value, label: value }),
+);
+
+const SEX_OPTIONS = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
+];
+
+// Converts older values such as "M" / "F" so they match the dropdown.
+const normalizeSex = (value: HrisValue): HrisValue => {
+    if (typeof value !== 'string') return value;
+
+    const key = value.trim().toLowerCase();
+
+    if (key === 'm' || key === 'male') return 'Male';
+    if (key === 'f' || key === 'female') return 'Female';
+
+    return value;
+};
+
+const isSexField = (name: string) => name === 'gender' || name === 'sex';
+
+const applyEmployeeFieldOverrides = (field: Field): Field => {
+    if (field.name === 'middle_name') {
+        return { ...field, label: 'Middle name (optional)', required: false };
+    }
+
+    if (field.name === 'suffix') {
+        return {
+            ...field,
+            label: 'Suffix (optional)',
+            type: 'select',
+            required: false,
+            options: SUFFIX_OPTIONS,
+        };
+    }
+
+    if (isSexField(field.name)) {
+        return {
+            ...field,
+            label: 'Sex',
+            type: 'select',
+            options: SEX_OPTIONS,
+        };
+    }
+
+    return field;
+};
+
+export default function HrisResourceIndex(
+    props: Props | AttendanceDirectoryProps,
+) {
+    if (props.attendanceDirectory) {
+        return <AttendanceDirectory {...props} />;
+    }
+
+    return <ResourceRecords {...props} />;
 }
 
-export default function HrisResourceIndex({
+function ResourceRecords({
     resource,
     title,
-    fields,
+    fields: serverFields,
     canManage,
     leaveReviewStage,
     canCreateLeaveOnBehalf = false,
     canImport = false,
     officeDirectory = false,
-    attendanceDirectory = false,
     attendanceMonth,
     canManageAttendance = false,
+    canManageSchedules = false,
     canLinkBiometricIds = false,
+    assignBiometricId = null,
     statusSummary = [],
     createdAccountCredentials = null,
     accountSetupEmailSent = null,
     records,
 }: Props) {
+    const fields = useMemo(
+        () =>
+            resource === 'employees'
+                ? serverFields.map(applyEmployeeFieldOverrides)
+                : serverFields,
+        [resource, serverFields],
+    );
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
     const isAttendance = resource === 'attendance';
-    const hasActions = canManage || Boolean(leaveReviewStage) || isAttendance;
+    const hasActions = canManage || canManageSchedules || Boolean(leaveReviewStage) || isAttendance;
 
     function reviewLeave(id: number, decision: 'advance' | 'reject') {
         if (
@@ -196,17 +240,25 @@ export default function HrisResourceIndex({
         setAccountEmail(
             'account_email' in row ? String(row.account_email ?? '') : null,
         );
-        document
-            .getElementById('record-editor')
-            ?.scrollIntoView({ block: 'start' });
+        const editor = document.getElementById('record-editor');
+        if (editor instanceof HTMLDetailsElement) editor.open = true;
+        editor?.scrollIntoView({ block: 'start' });
         form.setData(
             Object.fromEntries(
-                fields.map((field) => [
-                    field.name,
-                    row[field.name] === null || row[field.name] === undefined
-                        ? emptyValue(field)
-                        : row[field.name],
-                ]),
+                fields.map((field) => {
+                    const raw = row[field.name];
+
+                    if (raw === null || raw === undefined) {
+                        return [field.name, emptyValue(field)];
+                    }
+
+                    return [
+                        field.name,
+                        resource === 'employees' && isSexField(field.name)
+                            ? normalizeSex(raw)
+                            : raw,
+                    ];
+                }),
             ),
         );
     };
@@ -229,8 +281,11 @@ export default function HrisResourceIndex({
         if (resource === 'leave-applications' && field.name === 'status') {
             return String(value).replaceAll('_', ' ');
         }
+        if (resource === 'employees' && isSexField(field.name)) {
+            return normalizeSex(value);
+        }
         if (field.type === 'checkbox') return value ? 'Yes' : 'No';
-        if (field.options)
+        if (Array.isArray(field.options))
             return (
                 field.options.find(
                     (option) => String(option.value) === String(value),
@@ -258,10 +313,79 @@ export default function HrisResourceIndex({
         return value;
     };
 
+    function rowActions(row: HrisRow) {
+        return (
+            <>
+                {canManageSchedules && typeof row.id === 'number' && (
+                    <WorkScheduleDialog
+                        id={row.id}
+                        name={String(row.name ?? [row.first_name, row.last_name].filter(Boolean).join(' '))}
+                        override={resource === 'employees'}
+                    />
+                )}
+                {leaveReviewStage &&
+                    typeof row.id === 'number' &&
+                    row.status === leaveReviewStage[0] && (
+                        <>
+                            <TableAction
+                                icon={Check}
+                                label={leaveReviewStage[2]}
+                                disabled={reviewing}
+                                onClick={() =>
+                                    reviewLeave(Number(row.id), 'advance')
+                                }
+                            />
+                            <TableAction
+                                icon={X}
+                                label={'Reject leave request'}
+                                className="text-destructive"
+                                disabled={reviewing}
+                                onClick={() =>
+                                    reviewLeave(Number(row.id), 'reject')
+                                }
+                            />
+                        </>
+                    )}
+                {isAttendance && (
+                    <span className="mr-2">
+                        <DailyTimeRecordDialog
+                            url={
+                                typeof row.dtr_url === 'string'
+                                    ? row.dtr_url
+                                    : `/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`
+                            }
+                        />
+                    </span>
+                )}
+                {canManage && row.canManage !== false && (
+                    <>
+                        <TableAction
+                            icon={Pencil}
+                            label={`Edit record ${row.id}`}
+                            type="button"
+                            onClick={() => edit(row)}
+                            className="mr-2 rounded-full"
+                        />
+                        <TableAction
+                            icon={Trash2}
+                            label={`Delete record ${row.id}`}
+                            type="button"
+                            onClick={() => remove(row)}
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        />
+                    </>
+                )}
+            </>
+        );
+    }
+
+    const directory = directoryLayouts[resource];
+    const Editor = directory ? 'details' : 'section';
+    const EditorHeading = directory ? 'summary' : 'h2';
     return (
         <>
             <Head title={title} />
-            <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+            <div className="workspace-page max-w-7xl">
                 {isAttendance ? (
                     <AttendanceWorkspaceHeader
                         active="records"
@@ -269,113 +393,66 @@ export default function HrisResourceIndex({
                         canManage={canManageAttendance}
                     />
                 ) : (
-                    <header className="relative isolate overflow-hidden rounded-3xl bg-[#142d1c] px-6 py-8 text-white sm:px-9">
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute -top-24 -right-10 -z-10 size-72 rounded-full border border-[#a6eb20]/30"
-                        />
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute -top-14 right-0 -z-10 size-52 rounded-full bg-[#a6eb20]/10"
-                        />
-                        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-                            <div>
-                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                    {title}
-                                </h1>
-                                <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                                    {moduleDescriptions[resource] ??
-                                        'Manage HRIS records and their linked data.'}
-                                </p>
-                            </div>
-                            {resource === 'employees' && canImport && (
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
-                                >
-                                    <Link href="/hris/employees/import">
-                                        <FileUp aria-hidden="true" />
-                                        Bulk Import Employees
-                                    </Link>
-                                </Button>
-                            )}
-                            {resource === 'leave-applications' && (
-                                <div className="flex flex-wrap items-center gap-3">
-                                    {canCreateLeaveOnBehalf && (
-                                        <Button
-                                            asChild
-                                            size="lg"
-                                            className="bg-[#a6eb20] font-semibold text-[#142d1c] hover:bg-[#b9f34e] focus-visible:ring-white/70"
-                                        >
-                                            <Link href="/hris/leave-applications/create">
-                                                <Plus aria-hidden="true" />
-                                                Create leave form
-                                            </Link>
-                                        </Button>
-                                    )}
-                                    <LeaveFormPreviewDialog />
-                                </div>
-                            )}
-                        </div>
-                    </header>
-                )}
-
-                {attendanceMonth && (
-                    <Form
-                        key={attendanceMonth}
-                        action="/hris/attendance"
-                        method="get"
-                        className="flex flex-wrap items-end gap-3"
+                    <WorkspaceHeader
+                        title={title}
+                        description={
+                            moduleDescriptions[resource] ??
+                            'Manage HRIS records and their linked data.'
+                        }
                     >
-                        <label className="space-y-1 text-sm font-medium">
-                            <span>Attendance month</span>
-                            <Input
-                                name="month"
-                                type="month"
-                                defaultValue={attendanceMonth}
-                                required
-                            />
-                        </label>
-                        <Button type="submit" variant="outline">
-                            Show month
-                        </Button>
-                        <p className="basis-full text-sm text-muted-foreground">
-                            Badges summarize recorded workdays for this month.
-                        </p>
-                    </Form>
-                )}
-
-                {resource === 'employees' && statusSummary.length > 0 && (
-                    <section
-                        aria-label="Employees by status"
-                        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-                    >
-                        {statusSummary.map(({ status, total }) => (
-                            <div key={status} className="rounded-lg border p-4">
-                                <p className="text-sm text-muted-foreground capitalize">
-                                    {status.replaceAll('_', ' ')}
-                                </p>
-                                <p className="mt-1 text-2xl font-semibold">
-                                    {total}
-                                </p>
+                        {resource === 'employees' && canImport && (
+                            <Button asChild className="dashboard-action">
+                                <Link href="/hris/employees/import">
+                                    <FileUp aria-hidden="true" />
+                                    Bulk Import Employees
+                                </Link>
+                            </Button>
+                        )}
+                        {resource === 'leave-applications' && (
+                            <div className="flex flex-wrap items-center gap-3">
+                                {canCreateLeaveOnBehalf && (
+                                    <Button
+                                        asChild
+                                        className="dashboard-action"
+                                    >
+                                        <Link href="/hris/leave-applications/create">
+                                            <Plus aria-hidden="true" />
+                                            Create leave form
+                                        </Link>
+                                    </Button>
+                                )}
+                                <LeaveFormPreviewDialog />
                             </div>
-                        ))}
-                    </section>
+                        )}
+                    </WorkspaceHeader>
                 )}
 
+                {directory && (
+                    <DirectoryOverview
+                        resource={resource}
+                        title={title}
+                        rows={records.data}
+                        statusSummary={statusSummary}
+                    />
+                )}
                 {canManage && (
-                    <section
+                    <Editor
                         id="record-editor"
-                        className="scroll-mt-20 rounded-2xl border bg-card p-5 sm:p-6"
+                        className="workspace-panel scroll-mt-20 p-5 sm:p-6 [&_summary+*]:mt-4"
                     >
-                        <h2 className="mb-4 text-lg font-medium">
+                        <EditorHeading
+                            className={
+                                directory
+                                    ? 'cursor-pointer text-lg font-semibold'
+                                    : 'mb-4 text-lg font-medium'
+                            }
+                        >
                             {editingId
                                 ? 'Edit record'
                                 : resource === 'employees'
                                   ? 'Create employee account'
                                   : 'Add record'}
-                        </h2>
+                        </EditorHeading>
                         {resource === 'employees' && (
                             <div className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                                 <p>
@@ -565,7 +642,7 @@ export default function HrisResourceIndex({
                                 )}
                             </div>
                         </form>
-                    </section>
+                    </Editor>
                 )}
 
                 {resource === 'employees' && createdAccountCredentials && (
@@ -630,6 +707,23 @@ export default function HrisResourceIndex({
                     </p>
                 )}
 
+                {assignBiometricId !== null && (
+                    <section className="workspace-panel flex flex-wrap items-center justify-between gap-3 border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
+                        <div>
+                            <p className="font-medium">
+                                Assign imported Biometric ID {assignBiometricId}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                                Choose an employee below, enter this ID in the
+                                Biometric ID column, then select Save.
+                            </p>
+                        </div>
+                        <Button asChild size="sm" variant="outline">
+                            <Link href="/hris/employees">Clear assignment filter</Link>
+                        </Button>
+                    </section>
+                )}
+
                 {reviewError && (
                     <p role="alert" className="text-sm text-destructive">
                         {reviewError}
@@ -637,286 +731,126 @@ export default function HrisResourceIndex({
                 )}
                 <section
                     aria-labelledby="records-heading"
-                    className="overflow-hidden rounded-2xl border bg-card"
+                    className="workspace-panel overflow-hidden"
                 >
                     <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
                         <h2
                             id="records-heading"
                             className="text-lg font-semibold tracking-tight"
                         >
-                            {attendanceDirectory ? 'Employees' : 'Records'}
+                            {directory?.title ?? 'Records'}
                         </h2>
                         <span className="text-sm text-muted-foreground">
                             {records.data.length} on this page
                         </span>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-muted text-muted-foreground">
-                                <tr>
-                                    {canLinkBiometricIds && (
-                                        <th
-                                            scope="col"
-                                            className="px-3 py-3 font-medium"
-                                        >
-                                            Biometric ID
-                                        </th>
-                                    )}
-                                    {!attendanceDirectory && (
+                    <DirectorySearch
+                        columns={[{ name: 'id', label: 'ID' }, ...fields]}
+                        label={`Search ${title.toLowerCase()}`}
+                    />
+                    {directory ? (
+                        <ResourceDirectory
+                            layout={directory}
+                            rows={records.data}
+                            fields={resource === 'employees' ? [...fields, { name: 'work_schedule', label: 'Schedule', type: 'text' }] : fields}
+                            canLinkBiometricIds={canLinkBiometricIds}
+                            renderValue={displayValue}
+                            renderActions={hasActions ? rowActions : undefined}
+                        />
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="workspace-table-head">
+                                    <tr>
                                         <th className="px-3 py-3 font-medium">
                                             ID
                                         </th>
-                                    )}
-                                    {fields.map((field) => (
-                                        <th
-                                            key={field.name}
-                                            className="px-3 py-3 font-medium"
+                                        {fields.map((field) => (
+                                            <th
+                                                key={field.name}
+                                                className="px-3 py-3 font-medium"
+                                            >
+                                                {field.label}
+                                            </th>
+                                        ))}
+                                        {hasActions && (
+                                            <th className="px-3 py-3 font-medium">
+                                                Actions
+                                            </th>
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {records.data.map((row) => (
+                                        <tr
+                                            key={row.id}
+                                            className="border-t transition-colors hover:bg-muted/60"
                                         >
-                                            {field.label}
-                                        </th>
-                                    ))}
-                                    {hasActions && (
-                                        <th className="px-3 py-3 font-medium">
-                                            {attendanceDirectory
-                                                ? 'DTR'
-                                                : 'Actions'}
-                                        </th>
-                                    )}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {records.data.map((row) => (
-                                    <tr
-                                        key={row.id}
-                                        className="border-t transition-colors hover:bg-muted/60"
-                                    >
-                                        {canLinkBiometricIds &&
-                                            typeof row.id === 'number' && (
-                                                <td className="px-3 py-3">
-                                                    <BiometricIdField
-                                                        key={`${row.id}-${row.biometric_id ?? ''}-${row.biometric_locked === true}`}
-                                                        employeeId={row.id}
-                                                        employeeNumber={String(
-                                                            row.employee_number,
-                                                        )}
-                                                        link={{
-                                                            id:
-                                                                typeof row.biometric_id ===
-                                                                'number'
-                                                                    ? row.biometric_id
-                                                                    : null,
-                                                            locked:
-                                                                row.biometric_locked ===
-                                                                true,
-                                                            status:
-                                                                row.biometric_status ===
-                                                                'verified'
-                                                                    ? 'verified'
-                                                                    : 'pending',
-                                                            note:
-                                                                typeof row.biometric_note ===
-                                                                'string'
-                                                                    ? row.biometric_note
-                                                                    : null,
-                                                        }}
-                                                    />
-                                                </td>
-                                            )}
-                                        {!attendanceDirectory && (
                                             <td className="px-3 py-3">
                                                 {row.id}
                                             </td>
-                                        )}
-                                        {fields.map((field) => (
-                                            <td
-                                                key={field.name}
-                                                className="max-w-64 truncate px-3 py-3"
-                                            >
-                                                {field.name ===
-                                                'attendance_summary' ? (
-                                                    <AttendanceBadge
-                                                        complete={Number(
-                                                            row.attendance_complete_days ??
-                                                                0,
-                                                        )}
-                                                        review={Number(
-                                                            row.attendance_review_days ??
-                                                                0,
-                                                        )}
-                                                    />
-                                                ) : resource === 'employees' &&
-                                                  field.name ===
-                                                      'employment_status' ? (
-                                                    <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize">
-                                                        {displayValue(
-                                                            field,
-                                                            row[field.name],
-                                                        )}
-                                                    </span>
-                                                ) : (
-                                                    displayValue(
+                                            {fields.map((field) => (
+                                                <td
+                                                    key={field.name}
+                                                    className="max-w-64 truncate px-3 py-3"
+                                                >
+                                                    {(field.name ===
+                                                        'employee_id' ||
+                                                        field.account) &&
+                                                        row[field.name] !=
+                                                            null && (
+                                                            <PersonAvatar
+                                                                name={String(
+                                                                    displayValue(
+                                                                        field,
+                                                                        row[
+                                                                            field
+                                                                                .name
+                                                                        ],
+                                                                    ),
+                                                                )}
+                                                                src={String(
+                                                                    (field.account
+                                                                        ? row[
+                                                                              `${field.name}_avatar`
+                                                                          ]
+                                                                        : row.avatar) ??
+                                                                        '',
+                                                                )}
+                                                            />
+                                                        )}{' '}
+                                                    {displayValue(
                                                         field,
                                                         row[field.name],
-                                                    )
-                                                )}
-                                            </td>
-                                        ))}
-                                        {leaveReviewStage && (
-                                            <td className="px-3 py-3 whitespace-nowrap">
-                                                {typeof row.id === 'number' &&
-                                                    row.status ===
-                                                        leaveReviewStage[0] && (
-                                                        <>
-                                                            <button
-                                                                type="button"
-                                                                disabled={
-                                                                    reviewing
-                                                                }
-                                                                onClick={() =>
-                                                                    reviewLeave(
-                                                                        Number(
-                                                                            row.id,
-                                                                        ),
-                                                                        'advance',
-                                                                    )
-                                                                }
-                                                                className="mr-2 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground disabled:opacity-50"
-                                                            >
-                                                                {
-                                                                    leaveReviewStage[2]
-                                                                }
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                disabled={
-                                                                    reviewing
-                                                                }
-                                                                onClick={() =>
-                                                                    reviewLeave(
-                                                                        Number(
-                                                                            row.id,
-                                                                        ),
-                                                                        'reject',
-                                                                    )
-                                                                }
-                                                                className="rounded-full px-3 py-1 font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                                                            >
-                                                                Reject
-                                                            </button>
-                                                        </>
                                                     )}
+                                                </td>
+                                            ))}
+                                            {hasActions && (
+                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                    {rowActions(row)}
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                    {records.data.length === 0 && (
+                                        <tr>
+                                            <td
+                                                colSpan={
+                                                    fields.length +
+                                                    1 +
+                                                    Number(hasActions)
+                                                }
+                                                className="px-3 py-8 text-center text-muted-foreground"
+                                            >
+                                                No records found.
                                             </td>
-                                        )}
-                                        {hasActions && !leaveReviewStage && (
-                                            <td className="px-3 py-3 whitespace-nowrap">
-                                                {isAttendance && (
-                                                    <span className="mr-2">
-                                                        <DailyTimeRecordDialog
-                                                            url={
-                                                                typeof row.dtr_url ===
-                                                                'string'
-                                                                    ? row.dtr_url
-                                                                    : `/hris/attendance/dtr/${row.employee_id}?month=${String(row.attendance_date).slice(0, 7)}`
-                                                            }
-                                                        />
-                                                    </span>
-                                                )}
-                                                {canManage &&
-                                                    row.canManage !== false && (
-                                                        <>
-                                                            <Button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    edit(row)
-                                                                }
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="mr-2 rounded-full"
-                                                            >
-                                                                Edit
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    remove(row)
-                                                                }
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                            >
-                                                                Delete
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                                {records.data.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={
-                                                fields.length +
-                                                Number(!attendanceDirectory) +
-                                                Number(canLinkBiometricIds) +
-                                                Number(hasActions)
-                                            }
-                                            className="px-3 py-8 text-center text-muted-foreground"
-                                        >
-                                            {attendanceDirectory
-                                                ? 'No employees found.'
-                                                : 'No records found.'}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {records.links.length > 0 && (
-                        <nav
-                            aria-label="Record pages"
-                            className="flex flex-wrap gap-2 border-t p-3"
-                        >
-                            {records.links.map((link, index) => {
-                                const label = link.label
-                                    .replace(/&laquo;|&raquo;/g, '')
-                                    .trim();
-                                const variant = link.active
-                                    ? 'default'
-                                    : 'outline';
-                                const key = `${link.label}-${index}`;
-
-                                return link.url ? (
-                                    <Button
-                                        key={key}
-                                        asChild
-                                        variant={variant}
-                                        size="sm"
-                                    >
-                                        <Link
-                                            href={link.url}
-                                            preserveScroll
-                                            aria-current={
-                                                link.active ? 'page' : undefined
-                                            }
-                                        >
-                                            {label}
-                                        </Link>
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        key={key}
-                                        type="button"
-                                        variant={variant}
-                                        size="sm"
-                                        disabled
-                                    >
-                                        {label}
-                                    </Button>
-                                );
-                            })}
-                        </nav>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
+                    <RecordPagination links={records.links} />
                 </section>
             </div>
         </>

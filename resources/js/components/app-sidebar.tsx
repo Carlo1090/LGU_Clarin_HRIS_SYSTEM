@@ -2,11 +2,9 @@ import { Link, usePage } from '@inertiajs/react';
 import { LayoutGrid } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -38,7 +36,11 @@ export function AppSidebar() {
     ];
 
     return (
-        <Sidebar collapsible="icon" variant="inset" className="portal-sidebar">
+        <Sidebar
+            collapsible="icon"
+            variant="inset"
+            className="portal-sidebar dashboard-sidebar"
+        >
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -57,10 +59,6 @@ export function AppSidebar() {
                     label={isHrmoWorkspace ? 'HRMO workspace' : undefined}
                 />
             </SidebarContent>
-
-            <SidebarFooter>
-                <NavUser />
-            </SidebarFooter>
         </Sidebar>
     );
 }

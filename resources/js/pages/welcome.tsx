@@ -191,7 +191,7 @@ export default function Welcome() {
                                     alt="Three LGU Clarin officials in municipal uniforms"
                                     width={1293}
                                     height={1217}
-                                    className="max-h-[600px] w-auto max-w-full object-contain drop-shadow-2xl"
+                                    className="max-h-[800px] w-auto max-w-full object-contain drop-shadow-2xl"
                                 />
                             </div>
                         </div>
@@ -585,10 +585,11 @@ export default function Welcome() {
                                         data-aos-delay="200"
                                     >
                                         <img
-                                            src="/images/clarin-uniform-portrait.png"
+                                            src="/images/clarin_female_uni.png"
                                             alt=""
-                                            width={1536}
-                                            height={1024}
+                                            width={1164}
+                                            height={1351}
+                                            className="aspect-[3/2] scale-125 object-contain object-right"
                                             loading="lazy"
                                             decoding="async"
                                             draggable={false}

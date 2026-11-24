@@ -122,6 +122,7 @@ class MonthlyAttendanceReportController
 
         $summary = DB::table('employees')->leftJoinSub($totals, 'totals', 'totals.employee_id', '=', 'employees.id')
             ->select(['employees.id', 'employees.employee_number', 'employees.first_name', 'employees.last_name'])
+            ->addSelect(['avatar' => Employee::accountAvatarQuery()])
             ->selectRaw('COALESCE(totals.days_attended, 0) AS days_attended, COALESCE(totals.late_arrivals, 0) AS late_arrivals, COALESCE(totals.undetermined_days, 0) AS undetermined_days')
             ->when($sort === 'late_arrivals', fn (Builder $query) => $query
                 ->orderByRaw('CASE WHEN totals.days_attended = totals.undetermined_days THEN 1 ELSE 0 END'))
@@ -132,6 +133,7 @@ class MonthlyAttendanceReportController
         return $summary->setCollection($summary->getCollection()->map(fn (stdClass $row) => [
             'id' => $row->id,
             'employee_number' => $row->employee_number,
+            'avatar' => $row->avatar,
             'name' => "{$row->last_name}, {$row->first_name}",
             'days_attended' => (int) $row->days_attended,
             'late_arrivals' => (int) $row->late_arrivals,

@@ -1,3 +1,4 @@
+import WorkspaceHeader from '@/components/workspace-header';
 import { Head, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
@@ -22,20 +23,14 @@ export default function InviteAccount({ roles }: { roles: string[] }) {
     return (
         <>
             <Head title="Invite an employee" />
-            <main className="mx-auto w-full max-w-xl space-y-6 p-6">
-                <header>
-                    <h1 className="text-2xl font-semibold">
-                        Invite an employee
-                    </h1>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        Use an existing employee record. The employee will set a
-                        password, verify their email, and enroll in two-factor
-                        authentication.
-                    </p>
-                </header>
+            <main className="workspace-page max-w-xl">
+                <WorkspaceHeader
+                    title="Invite an employee"
+                    description="Use an existing employee record. The employee will set a password, verify their email, and enroll in two-factor authentication."
+                />
                 <form
                     onSubmit={submit}
-                    className="space-y-4 rounded-xl border bg-card p-5"
+                    className="workspace-panel space-y-4 p-5"
                 >
                     <div className="space-y-2">
                         <Label htmlFor="employee_number">Employee number</Label>

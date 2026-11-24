@@ -7,7 +7,7 @@ export default function DailyTimeRecord(data: DailyTimeRecordData) {
     const { errors } = usePage().props;
 
     return (
-        <main className="mx-auto max-w-3xl p-4 sm:p-8 print:max-w-none print:p-0">
+        <main className="workspace-dtr mx-auto max-w-3xl p-4 sm:p-8 print:max-w-none print:p-0">
             <Head
                 title={
                     data.demo

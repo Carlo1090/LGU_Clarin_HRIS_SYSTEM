@@ -14,6 +14,7 @@ use App\Http\Controllers\Hris\LeaveApplicationController;
 use App\Http\Controllers\Hris\LeaveReviewController;
 use App\Http\Controllers\Hris\MonthlyAttendanceReportController;
 use App\Http\Controllers\Hris\PortalController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Middleware\EnsureHrisAccountReady;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,8 @@ Route::middleware(['guest', 'throttle:10,1'])->group(function () {
 
 Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::get('hris/my-profile', [HrisResourceController::class, 'myProfile'])->name('hris.my-profile');
     Route::get('hris/plantilla-items/template', [HrisResourceController::class, 'downloadPlantillaWorkbook'])->name('hris.plantilla.template');
 
@@ -40,6 +43,8 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
     Route::post('hris/employees/import', [EmployeeImportController::class, 'store'])->name('hris.employees.import.store');
 
     Route::prefix('hris')->name('hris.')->group(function () {
+        require app_path('Attendance/routes.php');
+
         Route::get('portal/{page}', PortalController::class)
             ->whereIn('page', ['my-profile', 'my-attendance', 'my-leave-credits', 'my-leave-requests', 'my-payslips', 'staffing', 'plantilla-summary'])
             ->name('portal');
@@ -52,6 +57,7 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
         Route::post('leave-applications/{leave}/review', LeaveReviewController::class)->name('leave.review');
         Route::get('attendance/logs', [AttendanceLogImportController::class, 'index'])->name('attendance-logs.index');
         Route::post('attendance/logs', [AttendanceLogImportController::class, 'store'])->name('attendance-logs.store');
+        Route::delete('attendance/logs/{batch}', [AttendanceLogImportController::class, 'destroy'])->whereNumber('batch')->name('attendance-logs.destroy');
         Route::get('attendance/daily-punches', [DailyPunchController::class, 'index'])->name('attendance.daily-punches.index');
         Route::get('attendance/daily-punches/export', [DailyPunchController::class, 'export'])->name('attendance.daily-punches.export');
         Route::get('attendance/monthly-report', [MonthlyAttendanceReportController::class, 'index'])->name('attendance-report.index');
@@ -60,6 +66,7 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
         Route::patch('employees/{employee}/biometric-id/lock', [BiometricLinkController::class, 'setLock'])->whereNumber('employee')->name('employees.biometric-id.lock');
         Route::get('attendance/dtr/demo', [DailyTimeRecordController::class, 'demo'])->name('attendance.dtr.demo');
         Route::get('attendance/dtr/{employee}', DailyTimeRecordController::class)->whereNumber('employee')->name('attendance.dtr');
+        Route::put('attendance/dtr/{employee}/review', [DailyTimeRecordController::class, 'confirmReview'])->whereNumber('employee')->name('attendance.dtr.review');
         Route::get('attendance-corrections', [AttendanceCorrectionController::class, 'index'])->name('attendance-corrections.index');
         Route::post('attendance-corrections', [AttendanceCorrectionController::class, 'store'])->name('attendance-corrections.store');
         Route::post('attendance-corrections/{correction}/review', [AttendanceCorrectionController::class, 'review'])->name('attendance-corrections.review');

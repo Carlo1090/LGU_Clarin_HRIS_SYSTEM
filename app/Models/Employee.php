@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\EmployeeFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,11 +31,20 @@ class Employee extends Model
         return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'biometric_id' => 'integer', 'biometric_locked' => 'boolean', 'custom_fields' => 'array'];
     }
 
+    /** Resolve both account links used by existing employee records. */
+    public static function accountAvatarQuery(string $table = 'employees'): Builder
+    {
+        return User::query()->select('users.avatar')
+            ->whereColumn('users.id', $table . '.user_id')
+            ->orWhere(fn($query) => $query->whereNull($table . '.user_id')->whereColumn('users.employee_id', $table . '.id'))
+            ->orderBy('users.id')->limit(1);
+    }
+
     public function referenceCode(): string
     {
         $letters = preg_replace('/[^\p{L}]/u', '', $this->first_name) ?? '';
 
-        return mb_strtoupper(mb_substr($letters, 0, 3, 'UTF-8'), 'UTF-8').$this->employee_number;
+        return mb_strtoupper(mb_substr($letters, 0, 3, 'UTF-8'), 'UTF-8') . $this->employee_number;
     }
 
     /** @return BelongsTo<User, $this> */

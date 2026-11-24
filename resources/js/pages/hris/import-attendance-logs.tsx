@@ -1,10 +1,11 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { useTableSearch } from '@/components/table-search';
+import PersonAvatar from '@/components/person-avatar';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type {
-    AttendanceImportPreview,
     BiometricPunchGroup,
     ImportBatchSummary,
 } from '@/types/attendance';
@@ -46,15 +47,15 @@ export default function ImportAttendanceLogs({
     batch,
     groups,
     unassigned,
+    assigned,
     month,
     selectedId,
     punches,
-    preview,
-    timezone,
 }: {
     batch: ImportBatchSummary | null;
     groups: Page<BiometricPunchGroup>;
     unassigned: boolean;
+    assigned: boolean;
     month: string | null;
     selectedId: number | null;
     punches: Page<{
@@ -64,44 +65,65 @@ export default function ImportAttendanceLogs({
         punch_state: number | null;
         verify_mode: number | null;
         work_code: number | null;
-        derived_slot: string | null;
-        is_duplicate: boolean;
-        flags: Record<string, boolean | string>;
+        raw_status: number | null;
     }> | null;
-    preview: AttendanceImportPreview | null;
-    timezone: string;
 }) {
+    useEffect(() => {
+        if (!batch || batch.status !== 'processing') {
+            return;
+        }
+        const interval = window.setInterval(() => {
+            router.reload({ only: ['batch', 'groups'] });
+        }, 2500);
+        return () => window.clearInterval(interval);
+    }, [batch?.id, batch?.status]);
+
+    const search = useTableSearch(
+        groups.data,
+        ['Biometric ID', 'Employee', 'Punches', 'First punch', 'Last punch'],
+        (g) => [
+            g.biometric_id,
+            g.employee_number
+                ? [g.last_name, g.first_name, g.employee_number].join(' ')
+                : 'Unassigned',
+            g.punch_count,
+            g.first_punch,
+            g.last_punch,
+        ],
+    );
     const inputRef = useRef<HTMLInputElement>(null);
-    const [previewReady, setPreviewReady] = useState(false);
-    const form = useForm<{ file: File | null; confirm: boolean }>({
+    const form = useForm<{ file: File | null }>({
         file: null,
-        confirm: false,
     });
     const monthFilter = month ? { month } : {};
 
-    function previewUpload(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setPreviewReady(false);
-        form.setData('confirm', false);
-        form.post(logsUrl, { onSuccess: () => setPreviewReady(true) });
-    }
-
-    function confirmImport() {
-        form.setData('confirm', true);
+    function importSelectedFile(file: File) {
+        form.transform(() => ({ file, confirm: true }));
         form.post(logsUrl, {
             onSuccess: () => {
-                setPreviewReady(false);
                 form.reset();
                 if (inputRef.current) {
                     inputRef.current.value = '';
                 }
             },
-            onFinish: () => form.setData('confirm', false),
         });
     }
 
+    function deleteImport() {
+        if (!batch) return;
+        if (!window.confirm(`Delete imported logs from "${batch.file_name}"?`)) return;
+
+        router.delete(`/hris/attendance/logs/${batch.id}`, {
+            preserveScroll: true,
+        });
+    }
+
+    function confirmAndShowAll() {
+        router.visit(logsUrl);
+    }
+
     return (
-        <main className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+        <main className="workspace-page max-w-7xl">
             <Head title="Import Attendance Logs" />
             <AttendanceWorkspaceHeader
                 active="import"
@@ -116,10 +138,7 @@ export default function ImportAttendanceLogs({
                     <Link href="/hris/employees">Link IDs on Employees</Link>
                 </Button>
             </div>
-            <form
-                onSubmit={previewUpload}
-                className="space-y-4 rounded-xl border bg-card p-5"
-            >
+            <div className="workspace-panel space-y-4 p-5">
                 <div className="max-w-xl space-y-2">
                     <label
                         htmlFor="attendance-log"
@@ -135,12 +154,11 @@ export default function ImportAttendanceLogs({
                         required
                         disabled={form.processing}
                         onChange={(event) => {
-                            form.setData(
-                                'file',
-                                event.target.files?.[0] ?? null,
-                            );
-                            setPreviewReady(false);
+                            const file = event.target.files?.[0];
                             form.clearErrors('file');
+                            if (file) {
+                                importSelectedFile(file);
+                            }
                         }}
                     />
                     {form.errors.file && (
@@ -150,12 +168,6 @@ export default function ImportAttendanceLogs({
                     )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                    <Button
-                        type="submit"
-                        disabled={!form.data.file || form.processing}
-                    >
-                        Preview import
-                    </Button>
                     {form.processing && (
                         <p
                             role="status"
@@ -167,96 +179,11 @@ export default function ImportAttendanceLogs({
                         </p>
                     )}
                 </div>
-            </form>
-
-            {preview && previewReady && (
-                <section
-                    className="space-y-4 rounded-xl border bg-card p-5"
-                    aria-labelledby="preview-heading"
-                >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h2
-                                id="preview-heading"
-                                className="text-lg font-semibold"
-                            >
-                                Import preview
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Device timestamps are stored as local
-                                {` ${timezone}`} time without adjustment.
-                            </p>
-                        </div>
-                        <Button
-                            type="button"
-                            disabled={
-                                !form.data.file ||
-                                !previewReady ||
-                                form.processing ||
-                                preview.total_rows === 0
-                            }
-                            onClick={confirmImport}
-                        >
-                            {form.processing
-                                ? 'Importing…'
-                                : 'Confirm and import'}
-                        </Button>
-                    </div>
-                    <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
-                        {[
-                            ['Rows read', preview.total_rows],
-                            [
-                                'Date range',
-                                preview.date_range.from
-                                    ? `${preview.date_range.from.slice(0, 10)} – ${preview.date_range.to?.slice(0, 10)}`
-                                    : '—',
-                            ],
-                            [
-                                'Distinct machine IDs',
-                                preview.distinct_machine_ids,
-                            ],
-                            ['Unlinked IDs', preview.unlinked_ids.length],
-                            ['Already imported / repeated', preview.would_skip],
-                            ['Malformed rows', preview.invalid_count],
-                        ].map(([label, value]) => (
-                            <div
-                                key={label}
-                                className="rounded-lg bg-muted p-3"
-                            >
-                                <dt>{label}</dt>
-                                <dd className="mt-1 text-lg font-semibold tabular-nums">
-                                    {value}
-                                </dd>
-                            </div>
-                        ))}
-                    </dl>
-                    {preview.unlinked_ids.length > 0 && (
-                        <p className="text-sm text-amber-800 dark:text-amber-300">
-                            Unlinked machine IDs:{' '}
-                            {preview.unlinked_ids.join(', ')}. These punches
-                            will still be imported.
-                        </p>
-                    )}
-                    {preview.errors.length > 0 && (
-                        <details open className="text-sm">
-                            <summary className="cursor-pointer font-medium">
-                                Malformed rows ({preview.invalid_count})
-                            </summary>
-                            <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto">
-                                {preview.errors.map(({ line, reason }) => (
-                                    <li key={line}>
-                                        Line {line} — {reason}
-                                    </li>
-                                ))}
-                            </ul>
-                        </details>
-                    )}
-                </section>
-            )}
+            </div>
 
             {batch && (
                 <section
-                    className="space-y-3 rounded-xl border bg-card p-5"
+                    className="workspace-panel space-y-3 p-5"
                     aria-labelledby="import-summary"
                 >
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -266,10 +193,39 @@ export default function ImportAttendanceLogs({
                         >
                             Import summary
                         </h2>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {batch.status === 'completed' && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={confirmAndShowAll}
+                                >
+                                    Confirm and show all IDs
+                                </Button>
+                            )}
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={deleteImport}
+                            >
+                                Delete imported logs
+                            </Button>
+                        </div>
                     </div>
                     <p className="text-sm break-all text-muted-foreground">
                         {batch.file_name}
                     </p>
+                    {batch.status === 'processing' && (
+                        <p className="text-sm text-blue-700 dark:text-blue-300" role="status">
+                            Import is processing in the background.
+                        </p>
+                    )}
+                    {batch.status === 'failed' && (
+                        <p className="text-sm text-destructive" role="alert">
+                            Import failed{batch.error_message ? `: ${batch.error_message}` : '.'}
+                        </p>
+                    )}
                     <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                         {[
                             ['Punch lines read', batch.total_lines],
@@ -288,6 +244,20 @@ export default function ImportAttendanceLogs({
                             </div>
                         ))}
                     </dl>
+                    {batch.recompute_summary && (
+                        <div className="space-y-1 text-sm">
+                            <p>
+                                Employees affected{' '}
+                                {batch.recompute_summary.employees_affected}
+                            </p>
+                            <p>
+                                Unlinked machine IDs{' '}
+                                {batch.recompute_summary.unlinked_machine_ids.join(
+                                    ', ',
+                                ) || 'None'}
+                            </p>
+                        </div>
+                    )}
                     {batch.invalid_lines.length > 0 && (
                         <details className="text-sm">
                             <summary className="cursor-pointer font-medium">
@@ -310,7 +280,7 @@ export default function ImportAttendanceLogs({
 
             {selectedId !== null && punches && (
                 <section
-                    className="space-y-3 rounded-xl border bg-card p-5"
+                    className="workspace-panel space-y-3 p-5"
                     aria-labelledby="punches-heading"
                 >
                     <h2 id="punches-heading" className="text-lg font-semibold">
@@ -321,7 +291,7 @@ export default function ImportAttendanceLogs({
                             {punches.data.map((punch) => (
                                 <li key={punch.id}>
                                     {punch.punched_at} · state{' '}
-                                    {punch.punch_state ?? 'unknown'} · verify{' '}
+                                    {punch.raw_status ?? punch.punch_state ?? 'unknown'} · verify{' '}
                                     {punch.verify_mode === 1
                                         ? 'fingerprint'
                                         : punch.verify_mode === 0
@@ -329,19 +299,6 @@ export default function ImportAttendanceLogs({
                                           : (punch.verify_mode ??
                                             'unknown')}{' '}
                                     · device {punch.device_id ?? '—'}
-                                    {punch.is_duplicate ? ' · duplicate' : ''}
-                                    {Object.keys(punch.flags).length > 0 && (
-                                        <span className="block">
-                                            Flags:{' '}
-                                            {Object.entries(punch.flags)
-                                                .map(([name, value]) =>
-                                                    typeof value === 'boolean'
-                                                        ? name
-                                                        : `${name}: ${value}`,
-                                                )
-                                                .join(', ')}
-                                        </span>
-                                    )}
                                 </li>
                             ))}
                         </ol>
@@ -355,7 +312,7 @@ export default function ImportAttendanceLogs({
             )}
 
             <section
-                className="space-y-3 rounded-xl border bg-card p-5"
+                className="workspace-panel space-y-3 p-5"
                 aria-labelledby="biometric-groups"
             >
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -363,24 +320,46 @@ export default function ImportAttendanceLogs({
                         Imported punches by Biometric ID
                         {month ? ` · ${month}` : ''}
                     </h2>
-                    <Button asChild size="sm" variant="outline">
-                        <Link
-                            href={logsUrl}
-                            data={
-                                unassigned
-                                    ? monthFilter
-                                    : { ...monthFilter, unassigned: 1 }
-                            }
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            asChild
+                            size="sm"
+                            variant={!unassigned && !assigned ? 'default' : 'outline'}
                         >
-                            {unassigned
-                                ? 'Show all IDs'
-                                : 'Show unassigned IDs'}
-                        </Link>
-                    </Button>
+                            <Link href={logsUrl} data={monthFilter}>
+                                Show all IDs
+                            </Link>
+                        </Button>
+                        <Button
+                            asChild
+                            size="sm"
+                            variant={unassigned ? 'default' : 'outline'}
+                        >
+                            <Link
+                                href={logsUrl}
+                                data={{ ...monthFilter, unassigned: 1 }}
+                            >
+                                Show unassigned IDs
+                            </Link>
+                        </Button>
+                        <Button
+                            asChild
+                            size="sm"
+                            variant={assigned ? 'default' : 'outline'}
+                        >
+                            <Link
+                                href={logsUrl}
+                                data={{ ...monthFilter, assigned: 1 }}
+                            >
+                                Show assigned IDs
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
+                {search.toolbar}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-muted">
+                        <thead className="workspace-table-head">
                             <tr>
                                 {[
                                     'Biometric ID',
@@ -400,38 +379,26 @@ export default function ImportAttendanceLogs({
                             </tr>
                         </thead>
                         <tbody>
-                            {groups.data.map((group) => (
+                            {search.rows.map((group) => (
                                 <tr
                                     key={group.biometric_id}
                                     className="border-b"
                                 >
                                     <th scope="row" className="p-3 font-medium">
-                                        <Link
-                                            className="underline underline-offset-4"
-                                            aria-current={
-                                                selectedId ===
-                                                group.biometric_id
-                                                    ? 'true'
-                                                    : undefined
-                                            }
-                                            href={logsUrl}
-                                            data={{
-                                                ...monthFilter,
-                                                ...(unassigned
-                                                    ? { unassigned: 1 }
-                                                    : {}),
-                                                group_page: groups.current_page,
-                                                biometric_id:
-                                                    group.biometric_id,
-                                            }}
-                                        >
-                                            {group.biometric_id}
-                                        </Link>
+                                        {group.biometric_id}
                                     </th>
                                     <td className="p-3">
-                                        {group.employee_number
-                                            ? `${group.last_name}, ${group.first_name} (${group.employee_number})`
-                                            : 'Unassigned'}
+                                        {group.employee_number ? (
+                                            <span className="inline-flex items-center gap-2">
+                                                <PersonAvatar
+                                                    name={`${group.first_name ?? ''} ${group.last_name ?? ''}`.trim()}
+                                                    src={group.avatar}
+                                                />
+                                                {`${group.last_name}, ${group.first_name} (${group.employee_number})`}
+                                            </span>
+                                        ) : (
+                                            'Unassigned'
+                                        )}
                                     </td>
                                     <td className="p-3 tabular-nums">
                                         {group.punch_count}
@@ -444,7 +411,7 @@ export default function ImportAttendanceLogs({
                                     </td>
                                 </tr>
                             ))}
-                            {!groups.data.length && (
+                            {!search.rows.length && (
                                 <tr>
                                     <td
                                         colSpan={5}
