@@ -119,8 +119,8 @@ class AttendanceLogParser
             $written = AttendancePunch::query()->insertOrIgnore($rows);
             $inserted += $written;
             $duplicate += count($rows) - $written;
-            $this->deriver->refreshRows($chunk);
         }
+        $this->deriver->refreshRows($parsed['rows']);
 
         $counts = [
             'total_lines' => $parsed['total_rows'],

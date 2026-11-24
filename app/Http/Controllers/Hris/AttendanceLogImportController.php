@@ -47,6 +47,9 @@ class AttendanceLogImportController
             Str::uuid().'.'.$file->getClientOriginalExtension(),
             'local',
         );
+        if ($storedPath === false) {
+            throw ValidationException::withMessages(['file' => 'The log file could not be stored for processing.']);
+        }
         $batch = AttendanceImport::query()->create([
             'file_name' => Str::limit($file->getClientOriginalName(), 255, ''),
             'file_sha256' => $hash,
@@ -154,9 +157,9 @@ class AttendanceLogImportController
             'first_name' => $employees->get((int) $row->machine_user_id)?->first_name,
             'last_name' => $employees->get((int) $row->machine_user_id)?->last_name,
             'avatar' => $employees->get((int) $row->machine_user_id)?->avatar,
-            'punch_count' => (int) ($stats->get((int) $row->machine_user_id)?->punch_count ?? 0),
-            'first_punch' => $stats->get((int) $row->machine_user_id)?->first_punch,
-            'last_punch' => $stats->get((int) $row->machine_user_id)?->last_punch,
+            'punch_count' => (int) data_get($stats->get((int) $row->machine_user_id), 'punch_count', 0),
+            'first_punch' => data_get($stats->get((int) $row->machine_user_id), 'first_punch'),
+            'last_punch' => data_get($stats->get((int) $row->machine_user_id), 'last_punch'),
         ]);
 
         return [
