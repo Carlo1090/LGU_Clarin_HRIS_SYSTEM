@@ -7,6 +7,7 @@ use App\Attendance\Models\AttendanceDaily;
 use App\Attendance\Models\DepartmentSchedule;
 use App\Attendance\Models\EmployeeScheduleOverride;
 use App\Attendance\Support\HrisEmployeeDirectory;
+use App\Attendance\Services\ScheduleResolver;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\Department;
@@ -137,5 +138,67 @@ class AttendanceScheduleSchemaTest extends TestCase
         $this->assertInstanceOf(HrisEmployeeDirectory::class, $directory);
         $this->assertSame(15, $directory->find($employee->id)['biometric_id']);
         $this->assertSame('Office of Testing', $directory->departmentOf($employee->id)['name']);
+    }
+
+    public function test_resolver_prefers_effective_override_then_department_schedule(): void
+    {
+        $department = Department::factory()->create();
+        $employee = Employee::factory()->create([
+            'department_id' => $department->id,
+        ]);
+
+        $oldDepartmentSchedule = DepartmentSchedule::query()->create([
+            'department_id' => $department->id,
+            'am_in' => '08:00:00',
+            'am_out' => '12:00:00',
+            'pm_in' => '13:00:00',
+            'pm_out' => '17:00:00',
+            'grace_minutes' => 0,
+            'crosses_midnight' => false,
+            'effective_from' => '2026-10-01',
+            'effective_to' => '2026-10-31',
+        ]);
+        $newDepartmentSchedule = DepartmentSchedule::query()->create([
+            'department_id' => $department->id,
+            'am_in' => '07:30:00',
+            'am_out' => '11:30:00',
+            'pm_in' => '12:30:00',
+            'pm_out' => '16:30:00',
+            'grace_minutes' => 5,
+            'crosses_midnight' => false,
+            'effective_from' => '2026-11-01',
+            'effective_to' => null,
+        ]);
+        $override = EmployeeScheduleOverride::query()->create([
+            'employee_id' => $employee->id,
+            'am_in' => '09:00:00',
+            'am_out' => '12:30:00',
+            'pm_in' => '13:30:00',
+            'pm_out' => '18:00:00',
+            'grace_minutes' => 15,
+            'crosses_midnight' => false,
+            'effective_from' => '2026-11-15',
+            'effective_to' => '2026-11-30',
+            'reason' => 'Approved temporary schedule',
+        ]);
+
+        $resolver = $this->app->make(ScheduleResolver::class);
+
+        $this->assertSame(
+            $oldDepartmentSchedule->id,
+            $resolver->resolve($employee->id, '2026-10-15')['schedule_id'],
+        );
+        $this->assertSame(
+            $newDepartmentSchedule->id,
+            $resolver->resolve($employee->id, '2026-11-10')['schedule_id'],
+        );
+        $this->assertSame(
+            'override',
+            $resolver->resolve($employee->id, '2026-11-20')['schedule_source'],
+        );
+        $this->assertSame(
+            $override->id,
+            $resolver->resolve($employee->id, '2026-11-20')['schedule_id'],
+        );
     }
 }
