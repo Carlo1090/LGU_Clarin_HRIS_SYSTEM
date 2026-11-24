@@ -1,6 +1,6 @@
 import { useTableSearch } from '@/components/table-search';
 import PersonAvatar from '@/components/person-avatar';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -114,6 +114,15 @@ export default function ImportAttendanceLogs({
                 }
             },
             onFinish: () => form.setData('confirm', false),
+        });
+    }
+
+    function deleteImport() {
+        if (!batch) return;
+        if (!window.confirm(`Delete imported logs from "${batch.file_name}"?`)) return;
+
+        router.delete(`/hris/attendance/logs/${batch.id}`, {
+            preserveScroll: true,
         });
     }
 
@@ -283,6 +292,14 @@ export default function ImportAttendanceLogs({
                         >
                             Import summary
                         </h2>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={deleteImport}
+                        >
+                            Delete imported logs
+                        </Button>
                     </div>
                     <p className="text-sm break-all text-muted-foreground">
                         {batch.file_name}
@@ -445,27 +462,7 @@ export default function ImportAttendanceLogs({
                                     className="border-b"
                                 >
                                     <th scope="row" className="p-3 font-medium">
-                                        <Link
-                                            className="underline underline-offset-4"
-                                            aria-current={
-                                                selectedId ===
-                                                group.biometric_id
-                                                    ? 'true'
-                                                    : undefined
-                                            }
-                                            href={logsUrl}
-                                            data={{
-                                                ...monthFilter,
-                                                ...(unassigned
-                                                    ? { unassigned: 1 }
-                                                    : {}),
-                                                group_page: groups.current_page,
-                                                biometric_id:
-                                                    group.biometric_id,
-                                            }}
-                                        >
-                                            {group.biometric_id}
-                                        </Link>
+                                        {group.biometric_id}
                                     </th>
                                     <td className="p-3">
                                         {group.employee_number ? (

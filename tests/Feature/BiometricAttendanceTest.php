@@ -103,7 +103,7 @@ test('attendance log list can filter assigned biometric IDs', function () {
             ->where('groups.data.0.employee_number', $employee->employee_number));
 });
 
-test('attendance imports cannot be deleted and every accepted punch stays stored', function () {
+test('attendance imports can be deleted by HR and retain manual attendance records', function () {
     $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
     $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create();
     $employee = Employee::factory()->create(['date_hired' => '2020-01-01', 'biometric_id' => 15, 'biometric_locked' => true]);
@@ -119,10 +119,10 @@ test('attendance imports cannot be deleted and every accepted punch stays stored
     expect($employee->refresh()->biometric_status)->toBe('verified');
 
     $deleteUrl = $url.'/'.$batch->id;
-    $this->actingAs($head)->delete($deleteUrl)->assertNotFound();
-    $this->actingAs($hr)->delete($deleteUrl)->assertNotFound();
-    $this->assertDatabaseHas('attendance_imports', ['id' => $batch->id]);
-    $this->assertDatabaseHas('attendance_punches', ['attendance_import_id' => $batch->id]);
+    $this->actingAs($head)->delete($deleteUrl)->assertForbidden();
+    $this->actingAs($hr)->delete($deleteUrl)->assertRedirect($url)->assertSessionHasNoErrors();
+    $this->assertDatabaseMissing('attendance_imports', ['id' => $batch->id]);
+    $this->assertDatabaseMissing('attendance_punches', ['attendance_import_id' => $batch->id]);
     $this->assertDatabaseHas('attendance_punches', ['biometric_id' => 16, 'punched_at' => '2026-10-20 08:00:00']);
     $this->assertDatabaseHas('attendance_records', ['id' => $manual->id]);
     expect($employee->refresh()->biometric_status)->toBe('verified')

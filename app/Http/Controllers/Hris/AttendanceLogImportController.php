@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Hris;
 use App\Http\Requests\Hris\ImportAttendanceLogRequest;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
+use App\Models\AuditLog;
 use App\Models\Employee;
 use App\Services\AttendanceLogParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,6 +38,37 @@ class AttendanceLogImportController
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance log imported.']);
 
         return to_route('hris.attendance-logs.index', ['batch' => $batch->id]);
+    }
+
+    public function destroy(Request $request, AttendanceImport $batch): RedirectResponse
+    {
+        Gate::authorize('manage-hris-resource', 'attendance');
+
+        DB::transaction(function () use ($request, $batch): void {
+            AttendancePunch::query()
+                ->where(function ($query) use ($batch) {
+                    $query->where('attendance_import_id', $batch->id)
+                        ->orWhere('import_batch_id', $batch->id);
+                })
+                ->delete();
+
+            AuditLog::query()->create([
+                'user_id' => $request->user()->id,
+                'action' => 'attendance.logs_deleted',
+                'model_type' => AttendanceImport::class,
+                'model_id' => $batch->id,
+                'metadata' => json_encode([
+                    'file_name' => $batch->file_name,
+                    'total_lines' => $batch->total_lines,
+                ], JSON_THROW_ON_ERROR),
+            ]);
+
+            $batch->delete();
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Imported attendance logs deleted.']);
+
+        return to_route('hris.attendance-logs.index');
     }
 
     /**
