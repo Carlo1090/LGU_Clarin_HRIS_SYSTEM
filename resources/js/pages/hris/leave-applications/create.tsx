@@ -111,7 +111,7 @@ export default function CreateLeaveApplication({
 
                 <form
                     onSubmit={submit}
-                    className="space-y-6 rounded-2xl border bg-card p-5 sm:p-7"
+                    className="workspace-panel space-y-6 rounded-2xl border bg-card p-5 sm:p-7"
                 >
                     <section className="space-y-4">
                         <div>
