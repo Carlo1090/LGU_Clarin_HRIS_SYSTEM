@@ -97,13 +97,41 @@ class AttendanceLogImportController
             ->when($month !== null, fn ($query) => $query->whereBetween('punched_at', [
                 $month.'-01 00:00:00', Date::parse($month.'-01')->endOfMonth()->toDateString().' 23:59:59',
             ]));
-        $groups = (clone $punchQuery)
-            ->leftJoin('employees as owner', 'owner.biometric_id', '=', 'attendance_punches.machine_user_id')
-            ->selectRaw('attendance_punches.machine_user_id as biometric_id, owner.employee_number, owner.first_name, owner.last_name, COUNT(*) as punch_count, MIN(punched_at) as first_punch, MAX(punched_at) as last_punch')
-            ->addSelect(['avatar' => Employee::accountAvatarQuery('owner')])
-            ->groupBy('attendance_punches.machine_user_id', 'owner.id', 'owner.user_id', 'owner.employee_number', 'owner.first_name', 'owner.last_name')
-            ->orderBy('attendance_punches.machine_user_id')
-            ->simplePaginate(20, pageName: 'group_page')->withQueryString();
+        $groupIds = (clone $punchQuery)
+            ->select('machine_user_id')
+            ->distinct()
+            ->orderBy('machine_user_id')
+            ->simplePaginate(20, ['machine_user_id'], 'group_page')
+            ->withQueryString();
+
+        $ids = $groupIds->getCollection()->pluck('machine_user_id')->filter()->unique()->values();
+        $stats = $ids->isEmpty()
+            ? collect()
+            : (clone $punchQuery)
+                ->whereIn('machine_user_id', $ids)
+                ->selectRaw('machine_user_id, COUNT(*) as punch_count, MIN(punched_at) as first_punch, MAX(punched_at) as last_punch')
+                ->groupBy('machine_user_id')
+                ->get()
+                ->keyBy('machine_user_id');
+        $employees = $ids->isEmpty()
+            ? collect()
+            : Employee::query()
+                ->whereIn('biometric_id', $ids)
+                ->select(['id', 'user_id', 'employee_number', 'first_name', 'last_name', 'biometric_id'])
+                ->addSelect(['avatar' => Employee::accountAvatarQuery()])
+                ->get()
+                ->keyBy('biometric_id');
+
+        $groups = $groupIds->through(fn (object $row) => [
+            'biometric_id' => (int) $row->machine_user_id,
+            'employee_number' => $employees->get((int) $row->machine_user_id)?->employee_number,
+            'first_name' => $employees->get((int) $row->machine_user_id)?->first_name,
+            'last_name' => $employees->get((int) $row->machine_user_id)?->last_name,
+            'avatar' => $employees->get((int) $row->machine_user_id)?->avatar,
+            'punch_count' => (int) ($stats->get((int) $row->machine_user_id)?->punch_count ?? 0),
+            'first_punch' => $stats->get((int) $row->machine_user_id)?->first_punch,
+            'last_punch' => $stats->get((int) $row->machine_user_id)?->last_punch,
+        ]);
 
         return [
             'batch' => $batch ? $batch->only(['id', 'file_name', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count'])
