@@ -48,6 +48,7 @@ export default function ImportAttendanceLogs({
     batch,
     groups,
     unassigned,
+    assigned,
     month,
     selectedId,
     punches,
@@ -57,6 +58,7 @@ export default function ImportAttendanceLogs({
     batch: ImportBatchSummary | null;
     groups: Page<BiometricPunchGroup>;
     unassigned: boolean;
+    assigned: boolean;
     month: string | null;
     selectedId: number | null;
     punches: Page<{
@@ -379,23 +381,37 @@ export default function ImportAttendanceLogs({
                         {month ? ` · ${month}` : ''}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
-                        <Button asChild size="sm" variant="outline">
-                            <Link
-                                href={logsUrl}
-                                data={
-                                    unassigned
-                                        ? monthFilter
-                                        : { ...monthFilter, unassigned: 1 }
-                                }
-                            >
-                                {unassigned
-                                    ? 'Show all IDs'
-                                    : 'Show unassigned IDs'}
+                        <Button
+                            asChild
+                            size="sm"
+                            variant={!unassigned && !assigned ? 'default' : 'outline'}
+                        >
+                            <Link href={logsUrl} data={monthFilter}>
+                                Show all IDs
                             </Link>
                         </Button>
-                        <Button asChild size="sm">
-                            <Link href="/hris/employees">
-                                Assign employee
+                        <Button
+                            asChild
+                            size="sm"
+                            variant={unassigned ? 'default' : 'outline'}
+                        >
+                            <Link
+                                href={logsUrl}
+                                data={{ ...monthFilter, unassigned: 1 }}
+                            >
+                                Show unassigned IDs
+                            </Link>
+                        </Button>
+                        <Button
+                            asChild
+                            size="sm"
+                            variant={assigned ? 'default' : 'outline'}
+                        >
+                            <Link
+                                href={logsUrl}
+                                data={{ ...monthFilter, assigned: 1 }}
+                            >
+                                Show assigned IDs
                             </Link>
                         </Button>
                     </div>

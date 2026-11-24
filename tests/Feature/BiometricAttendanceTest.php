@@ -73,6 +73,36 @@ test('attendance logs preview raw values, reject malformed rows, and skip only r
         ->where('punches.data.2.punched_at', '2026-10-20 17:00:00'));
 });
 
+test('attendance log list can filter assigned biometric IDs', function () {
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+    $employee = Employee::factory()->create(['biometric_id' => 15]);
+    $batch = AttendanceImport::query()->create([
+        'file_name' => 'assigned-test.dat',
+        'uploaded_by' => $hr->id,
+        'status' => 'completed',
+    ]);
+    foreach ([[15, '2026-10-19 08:00:00'], [16, '2026-10-19 09:00:00']] as [$id, $punchedAt]) {
+        AttendancePunch::query()->create([
+            'attendance_import_id' => $batch->id,
+            'import_batch_id' => $batch->id,
+            'biometric_id' => $id,
+            'machine_user_id' => $id,
+            'punched_at' => $punchedAt,
+            'created_at' => now(),
+        ]);
+    }
+
+    $this->actingAs($hr)
+        ->get('/hris/attendance/logs?assigned=1')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('hris/import-attendance-logs')
+            ->where('assigned', true)
+            ->has('groups.data', 1)
+            ->where('groups.data.0.biometric_id', 15)
+            ->where('groups.data.0.employee_number', $employee->employee_number));
+});
+
 test('attendance imports cannot be deleted and every accepted punch stays stored', function () {
     $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
     $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create();

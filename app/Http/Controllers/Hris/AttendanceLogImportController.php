@@ -48,16 +48,19 @@ class AttendanceLogImportController
             'batch' => ['sometimes', 'integer', 'min:1'],
             'biometric_id' => ['sometimes', 'integer', 'between:0,4294967295'],
             'unassigned' => ['sometimes', 'in:1'],
+            'assigned' => ['sometimes', 'in:1'],
             'month' => ['sometimes', 'required', 'date_format:Y-m', 'regex:/^[1-9][0-9]{3}-/'],
         ]);
         $id = isset($filters['biometric_id']) ? (int) $filters['biometric_id'] : null;
         $unassigned = isset($filters['unassigned']);
+        $assigned = isset($filters['assigned']);
         $month = $filters['month'] ?? null;
         $batches = AttendanceImport::query();
         $batch = isset($filters['batch']) ? $batches->findOrFail($filters['batch']) : $batches->latest('id')->first();
 
         $punchQuery = AttendancePunch::query()
             ->when($unassigned, fn ($query) => $query->unassigned())
+            ->when($assigned, fn ($query) => $query->whereHas('employee'))
             ->when($month !== null, fn ($query) => $query->whereBetween('punched_at', [
                 $month.'-01 00:00:00', Date::parse($month.'-01')->endOfMonth()->toDateString().' 23:59:59',
             ]));
@@ -74,6 +77,7 @@ class AttendanceLogImportController
                 + ['invalid_lines' => $batch->invalid_lines ?? []] : null,
             'groups' => $groups,
             'unassigned' => $unassigned,
+            'assigned' => $assigned,
             'month' => $month,
             'selectedId' => $id,
             'preview' => $preview,
