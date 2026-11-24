@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
@@ -16,45 +17,52 @@ export default function ConfirmPassword() {
         <>
             <Head title="Confirm password" />
 
-            <PasskeyVerify
-                routes={{
-                    options: confirmOptions(),
-                    submit: confirmStore(),
-                }}
-                label="Confirm with passkey"
-                loadingLabel="Confirming..."
-                separator="Or confirm with password"
-            />
+            <div className="space-y-6">
+                <Heading
+                    title="Confirm password"
+                    description="This is a secure area of the application. Please confirm your password before continuing."
+                />
 
-            <Form {...store.form()} resetOnSuccess={['password']}>
-                {({ processing, errors }) => (
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <PasswordInput
-                                id="password"
-                                name="password"
-                                placeholder="Password"
-                                autoComplete="current-password"
-                                autoFocus
-                            />
+                <PasskeyVerify
+                    routes={{
+                        options: confirmOptions(),
+                        submit: confirmStore(),
+                    }}
+                    label="Confirm with passkey"
+                    loadingLabel="Confirming..."
+                    separator="Or confirm with password"
+                />
 
-                            <InputError message={errors.password} />
+                <Form {...store.form()} resetOnSuccess={['password']}>
+                    {({ processing, errors }) => (
+                        <div className="space-y-6">
+                            <div className="grid gap-2">
+                                <Label htmlFor="password">Password</Label>
+                                <PasswordInput
+                                    id="password"
+                                    name="password"
+                                    placeholder="Password"
+                                    autoComplete="current-password"
+                                    autoFocus
+                                />
+
+                                <InputError message={errors.password} />
+                            </div>
+
+                            <div className="flex items-center">
+                                <Button
+                                    className="w-full"
+                                    disabled={processing}
+                                    data-test="confirm-password-button"
+                                >
+                                    {processing && <Spinner />}
+                                    Confirm password
+                                </Button>
+                            </div>
                         </div>
-
-                        <div className="flex items-center">
-                            <Button
-                                className="w-full"
-                                disabled={processing}
-                                data-test="confirm-password-button"
-                            >
-                                {processing && <Spinner />}
-                                Confirm password
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </Form>
+                    )}
+                </Form>
+            </div>
         </>
     );
 }
@@ -63,4 +71,4 @@ ConfirmPassword.layout = {
     title: 'Confirm password',
     description:
         'This is a secure area of the application. Please confirm your password before continuing.',
-};
+};  

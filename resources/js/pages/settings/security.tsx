@@ -1,23 +1,17 @@
 import { Form, Head } from '@inertiajs/react';
+import { KeyRound } from 'lucide-react';
 import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { edit } from '@/routes/security';
-import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys';
-import ManagePasskeys from '@/components/manage-passkeys';
-import type { Props as ManageTwoFactorProps } from '@/components/manage-two-factor';
-import ManageTwoFactor from '@/components/manage-two-factor';
 
-// oxfmt-ignore
 type Props = {
     passwordRules: string;
-    requiresMfaEnrollment: boolean;
-} & ManagePasskeysProps &
-    ManageTwoFactorProps;
+};
 
 export default function Security(props: Props) {
     const passwordInput = useRef<HTMLInputElement>(null);
@@ -27,23 +21,24 @@ export default function Security(props: Props) {
         <>
             <Head title="Security settings" />
 
-            <h1 className="sr-only">Security settings</h1>
-
-            <div className="space-y-6">
-                {props.requiresMfaEnrollment && (
-                    <p
-                        role="status"
-                        className="rounded-lg border bg-muted p-4 text-sm"
+            <div className="space-y-8">
+                <div className="flex items-start gap-4">
+                    <span
+                        className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground"
+                        aria-hidden="true"
                     >
-                        Set up two-factor authentication below to open your HRIS
-                        dashboard.
-                    </p>
-                )}
-                <Heading
-                    variant="small"
-                    title="Update password"
-                    description="Ensure your account is using a long, random password to stay secure"
-                />
+                        <KeyRound className="size-5" />
+                    </span>
+                    <div className="space-y-1">
+                        <h1 className="text-xl font-semibold tracking-tight">
+                            Change password
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Choose a strong password that you don't use on any
+                            other site.
+                        </p>
+                    </div>
+                </div>
 
                 <Form
                     {...SecurityController.update.form()}
@@ -78,9 +73,9 @@ export default function Security(props: Props) {
                                     id="current_password"
                                     ref={currentPasswordInput}
                                     name="current_password"
-                                    className="mt-1 block w-full"
+                                    className="block w-full"
                                     autoComplete="current-password"
-                                    placeholder="Current password"
+                                    placeholder="Enter your current password"
                                 />
 
                                 <InputError message={errors.current_password} />
@@ -93,26 +88,31 @@ export default function Security(props: Props) {
                                     id="password"
                                     ref={passwordInput}
                                     name="password"
-                                    className="mt-1 block w-full"
+                                    className="block w-full"
                                     autoComplete="new-password"
-                                    placeholder="New password"
+                                    placeholder="Enter a new password"
                                     passwordrules={props.passwordRules}
                                 />
+
+                                <p className="text-xs text-muted-foreground">
+                                    Use a long password that mixes letters,
+                                    numbers, and symbols.
+                                </p>
 
                                 <InputError message={errors.password} />
                             </div>
 
                             <div className="grid gap-2">
                                 <Label htmlFor="password_confirmation">
-                                    Confirm password
+                                    Confirm new password
                                 </Label>
 
                                 <PasswordInput
                                     id="password_confirmation"
                                     name="password_confirmation"
-                                    className="mt-1 block w-full"
+                                    className="block w-full"
                                     autoComplete="new-password"
-                                    placeholder="Confirm password"
+                                    placeholder="Re-enter the new password"
                                     passwordrules={props.passwordRules}
                                 />
 
@@ -121,29 +121,20 @@ export default function Security(props: Props) {
                                 />
                             </div>
 
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 pt-2">
                                 <Button
                                     disabled={processing}
+                                    className="rounded-full px-6"
                                     data-test="update-password-button"
                                 >
-                                    Save
+                                    {processing && <Spinner />}
+                                    Update password
                                 </Button>
                             </div>
                         </>
                     )}
                 </Form>
             </div>
-
-            <ManageTwoFactor
-                canManageTwoFactor={props.canManageTwoFactor}
-                requiresConfirmation={props.requiresConfirmation}
-                twoFactorEnabled={props.twoFactorEnabled}
-            />
-
-            <ManagePasskeys
-                canManagePasskeys={props.canManagePasskeys}
-                passkeys={props.passkeys}
-            />
         </>
     );
 }

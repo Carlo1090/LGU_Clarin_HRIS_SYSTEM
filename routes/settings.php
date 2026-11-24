@@ -3,7 +3,6 @@
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Middleware\EnsureHrisAccountReady;
-use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', EnsureHrisAccountReady::class])->group(function () {
@@ -20,7 +19,6 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('settings/security', [SecurityController::class, 'edit'])
-        ->middleware(RequirePassword::class)
         ->name('security.edit');
 
     Route::put('settings/password', [SecurityController::class, 'update'])
