@@ -364,7 +364,7 @@ export default function PortalPage({
         <div className="workspace-page max-w-7xl">
             <Head title={title} />
             <WorkspaceHeader title={title} description={description}>
-                <LeaveFormPreviewDialog />
+                {leaveTypes && <LeaveFormPreviewDialog />}
             </WorkspaceHeader>
 
             {leaveTypes && leaveApplicant && (

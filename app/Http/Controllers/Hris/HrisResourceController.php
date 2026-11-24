@@ -319,14 +319,12 @@ class HrisResourceController extends Controller
             'model' => Announcement::class,
             'fields' => [
                 ['name' => 'title', 'label' => 'Title', 'type' => 'text', 'required' => true],
-                ['name' => 'content', 'label' => 'Content', 'type' => 'textarea', 'required' => true],
-                ['name' => 'posted_by', 'label' => 'Posted by', 'type' => 'select', 'options' => 'users'],
-                ['name' => 'audience', 'label' => 'Audience', 'type' => 'text', 'required' => true],
-                ['name' => 'starts_at', 'label' => 'Starts at', 'type' => 'datetime-local'],
-                ['name' => 'ends_at', 'label' => 'Ends at', 'type' => 'datetime-local'],
+                ['name' => 'content', 'label' => 'Message', 'type' => 'textarea', 'required' => true],
+                ['name' => 'starts_at', 'label' => 'Starts at (Manila time)', 'type' => 'datetime-local'],
+                ['name' => 'ends_at', 'label' => 'Ends at (Manila time)', 'type' => 'datetime-local'],
                 ['name' => 'is_published', 'label' => 'Published', 'type' => 'checkbox'],
             ],
-            'rules' => ['title' => 'required|string|max:255', 'content' => 'required|string', 'posted_by' => 'nullable|exists:users,id', 'audience' => 'required|string|max:255', 'starts_at' => 'nullable|date', 'ends_at' => 'nullable|date|after_or_equal:starts_at', 'is_published' => 'boolean'],
+            'rules' => ['title' => 'required|string|max:255', 'content' => 'required|string', 'starts_at' => 'nullable|date_format:Y-m-d\TH:i', 'ends_at' => 'nullable|date_format:Y-m-d\TH:i', 'is_published' => 'boolean'],
             'unique' => [],
         ],
         'system-settings' => [
@@ -529,7 +527,7 @@ class HrisResourceController extends Controller
             : [];
 
         if ($term !== '') {
-            $terms = $column === '' ? preg_split('/\s+/u', $term) : [$term];
+            $terms = $column === '' ? (preg_split('/\s+/u', $term) ?: [$term]) : [$term];
             foreach ($terms as $word) {
                 $query->where(function ($match) use ($fields, $column, $word) {
                     foreach ($fields as $field) {
@@ -598,12 +596,14 @@ class HrisResourceController extends Controller
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'assignBiometricId' => $resource === 'employees' ? $assignBiometricId : null,
             'fields' => $fields,
-            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->employee_id)]
+            'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->getAttribute('employee_id'))]
                 + collect($accountFields)->mapWithKeys(fn ($field) => [$field.'_avatar' => $accountAvatars->get($record->getAttribute($field))])->all()
                 + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
-                + ($canEditEmployeeEmail && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
+                + ($canEditEmployeeEmail && $record instanceof Employee && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
                 + ($resource === 'employees' ? ['work_schedule' => $scheduleLabels->get($record->getKey())] : [])
-                + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
+                + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record instanceof Announcement && $field['type'] === 'datetime-local'
+                    ? $record->getAttribute($field['name'])?->setTimezone(Announcement::TIMEZONE)->format('Y-m-d\TH:i')
+                    : $record->getAttribute($field['name'])])->all()),
             'editing' => $request->integer('edit') ?: null,
         ]);
     }
@@ -751,7 +751,11 @@ class HrisResourceController extends Controller
         }
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
-        $model::query()->create($request->validate($this->validationRules($config)));
+        $data = $request->validate($this->validationRules($config));
+        if ($resource === 'announcements') {
+            $data = $this->announcementSchedule($data) + ['posted_by' => $request->user()->id, 'audience' => 'all'];
+        }
+        $model::query()->create($data);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record created.']);
 
@@ -781,6 +785,9 @@ class HrisResourceController extends Controller
         $model = $config['model'];
         $entry = $model::query()->findOrFail($record);
         $data = $request->validate($this->validationRules($config, $entry));
+        if ($entry instanceof Announcement) {
+            $data = $this->announcementSchedule($data, $entry);
+        }
         if ($entry instanceof Employee && $request->has('account_email')) {
             DB::transaction(function () use ($entry, $request, $data): void {
                 $account = $entry->user()->lockForUpdate()->first();
@@ -823,6 +830,23 @@ class HrisResourceController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record deleted.']);
 
         return $this->resourceIndexAfterMutation($resource);
+    }
+
+    private function announcementSchedule(array $data, ?Announcement $announcement = null): array
+    {
+        foreach (['starts_at', 'ends_at'] as $field) {
+            if (isset($data[$field])) {
+                $data[$field] = Date::parse($data[$field], Announcement::TIMEZONE)->utc();
+            }
+        }
+
+        $start = array_key_exists('starts_at', $data) ? $data['starts_at'] : $announcement?->starts_at;
+        $end = array_key_exists('ends_at', $data) ? $data['ends_at'] : $announcement?->ends_at;
+        if ($start && $end && $end <= $start) {
+            throw ValidationException::withMessages(['ends_at' => 'The end time must be after the start time.']);
+        }
+
+        return $data;
     }
 
     private function resourceIndexAfterMutation(string $resource): RedirectResponse

@@ -28,6 +28,11 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->profileRules($this->user()->id);
+        return match ($this->input('section', 'personal')) {
+            'location' => ['location' => ['present', 'nullable', 'string', 'max:160']],
+            'bio' => ['bio' => ['present', 'nullable', 'string', 'max:2000']],
+            'personal' => $this->profileRules($this->user()->id) + ['phone' => ['nullable', 'string', 'max:40']],
+            default => ['section' => ['required', 'string', 'in:personal,location,bio']],
+        };
     }
 }

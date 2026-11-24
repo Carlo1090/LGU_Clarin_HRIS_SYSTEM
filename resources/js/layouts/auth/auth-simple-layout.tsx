@@ -18,7 +18,7 @@ export default function AuthSimpleLayout({
     const isLogin = usePage().component === 'auth/login';
 
     return (
-        <div className="public-surface flex min-h-svh flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
+        <div className={`${isLogin ? 'login-page ' : ''}public-surface flex min-h-svh flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground`}>
             <a
                 href="#auth-content"
                 className="sr-only z-[60] rounded-md bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
@@ -28,7 +28,7 @@ export default function AuthSimpleLayout({
             <PublicHeader />
             <main
                 id="auth-content"
-                className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-2 lg:gap-16 lg:px-10"
+                className="mx-auto grid w-full max-w-[var(--welcome-width,72rem)] flex-1 items-center gap-10 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-2 lg:gap-16 lg:px-10"
             >
                 <div className="mx-auto w-full max-w-md min-w-0">
                     {isLogin && (
@@ -64,7 +64,7 @@ export default function AuthSimpleLayout({
                     data-test="auth-hero"
                 >
                     <div className="overflow-hidden rounded-[2rem] border border-border bg-gradient-to-br from-accent/70 via-card to-card p-6 shadow-xl shadow-[#142014]/[0.04] xl:p-8 dark:from-[#1C3020] dark:via-card">
-                        <div className="relative isolate flex h-[370px] items-end justify-center xl:h-[400px]">
+                        <div className="relative isolate flex h-[23.125rem] items-end justify-center xl:h-[25rem]">
                             <div
                                 aria-hidden="true"
                                 className="pointer-events-none absolute top-5 left-1/2 -z-10 size-80 -translate-x-1/2 rounded-full border border-primary/25"

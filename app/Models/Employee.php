@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
+ * @property-read string|null $avatar Account photo selected by accountAvatarQuery().
+ * @property-read PlantillaItem|null $plantillaItem
  * @property-read Carbon|null $birth_date
  * @property-read Carbon|null $date_hired
  * @property-read Carbon|null $date_regularized
@@ -31,7 +33,11 @@ class Employee extends Model
         return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'biometric_id' => 'integer', 'biometric_locked' => 'boolean', 'custom_fields' => 'array'];
     }
 
-    /** Resolve both account links used by existing employee records. */
+    /**
+     * Resolve both account links used by existing employee records.
+     *
+     * @return Builder<User>
+     */
     public static function accountAvatarQuery(string $table = 'employees'): Builder
     {
         return User::query()->select('users.avatar')

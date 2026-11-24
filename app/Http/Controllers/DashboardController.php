@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Announcement;
 use App\Models\AttendanceRecord;
 use App\Models\AuditLog;
 use App\Models\Department;
@@ -21,6 +22,7 @@ use App\Models\User;
 use App\Models\Vacancy;
 use App\Support\DashboardInsights;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -117,7 +119,25 @@ class DashboardController extends Controller
             default => [],
         };
 
+        $now = now();
+        $announcements = Announcement::query()
+            ->where('audience', 'all')
+            ->where('is_published', true)
+            ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', $now))
+            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>', $now))
+            ->selectRaw('id, title, content, CASE
+                WHEN starts_at > COALESCE(published_at, created_at) THEN starts_at
+                ELSE COALESCE(published_at, created_at, starts_at)
+            END AS visible_at')
+            ->withCasts(['visible_at' => 'immutable_datetime'])
+            ->orderByDesc('visible_at')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get();
+
         return Inertia::render('dashboard', [
+            'announcements' => $announcements,
+            'canManageAnnouncements' => Gate::allows('manage-hris-resource', 'announcements'),
             'role' => $role ?? 'Unassigned',
             'office' => $employee?->department?->name,
             'cards' => $cards,

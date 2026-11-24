@@ -451,8 +451,18 @@ function ResourceRecords({
                                 ? 'Edit record'
                                 : resource === 'employees'
                                   ? 'Create employee account'
-                                  : 'Add record'}
+                                  : resource === 'announcements'
+                                    ? 'Create announcement'
+                                    : 'Add record'}
                         </EditorHeading>
+                        {resource === 'announcements' && (
+                            <p className="mb-4 text-sm text-muted-foreground">
+                                Check Published to show this announcement on all
+                                dashboards. Leave the start time blank to publish
+                                immediately, or set a Manila date and time to
+                                schedule it.
+                            </p>
+                        )}
                         {resource === 'employees' && (
                             <div className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                                 <p>

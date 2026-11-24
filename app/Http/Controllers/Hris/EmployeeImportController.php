@@ -49,6 +49,10 @@ class EmployeeImportController
         ]);
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
     private function withAvatars(array $rows): array
     {
         if ($rows === []) {

@@ -46,6 +46,27 @@ class ProfileUpdateTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_profile_sections_save_independently_and_can_be_cleared(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->patch(route('profile.update'), [
+            'name' => $user->name, 'email' => $user->email, 'phone' => '+63 912 345 6789',
+        ])->assertSessionHasNoErrors();
+
+        $this->patch(route('profile.update'), ['section' => 'location', 'location' => 'Clarin', 'name' => 'Ignored'])
+            ->assertSessionHasNoErrors();
+        $this->patch(route('profile.update'), ['section' => 'bio', 'bio' => 'Municipal employee.'])->assertSessionHasNoErrors();
+        $this->get(route('profile.edit'))->assertInertia(fn ($page) => $page
+            ->where('details.location', 'Clarin')->where('details.bio', 'Municipal employee.')
+            ->where('details.phone', '+63 912 345 6789')->where('auth.user.name', $user->name)
+            ->missing('auth.user.bio'));
+        $this->patch(route('profile.update'), ['section' => 'bio', 'bio' => str_repeat('x', 2001)])->assertSessionHasErrors('bio');
+        $this->patch(route('profile.update'), ['section' => 'bio', 'bio' => ''])->assertSessionHasNoErrors();
+        $this->assertNull($user->refresh()->bio);
+        $this->assertSame('Clarin', $user->location);
+        $this->assertNotNull($user->email_verified_at);
+    }
+
     public function test_profile_information_can_be_updated()
     {
         $user = User::factory()->create();

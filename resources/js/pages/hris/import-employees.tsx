@@ -60,8 +60,13 @@ export default function ImportEmployees({
 }) {
     const credentialSearch = useTableSearch(
         credentials,
-        ['Employee number', 'Name', 'Username'],
-        (row) => [row.employee_number, row.name, row.username],
+        ['Employee number', 'Reference code', 'Name', 'Username'],
+        (row) => [
+            row.employee_number,
+            row.reference_code,
+            row.name,
+            row.username,
+        ],
         'Search created accounts',
     );
     const previewSearch = useTableSearch(
