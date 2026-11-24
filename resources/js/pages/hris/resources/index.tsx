@@ -37,6 +37,7 @@ type Props = {
     attendanceMonth?: string;
     canManageAttendance?: boolean;
     canLinkBiometricIds?: boolean;
+    assignBiometricId?: number | null;
     statusSummary?: { status: string; total: number }[];
     createdAccountCredentials?: {
         employee_number: string;
@@ -90,6 +91,7 @@ function ResourceRecords({
     attendanceMonth,
     canManageAttendance = false,
     canLinkBiometricIds = false,
+    assignBiometricId = null,
     statusSummary = [],
     createdAccountCredentials = null,
     accountSetupEmailSent = null,
@@ -623,6 +625,23 @@ function ResourceRecords({
                         you unlock the ID. To remove an unlocked ID, clear the
                         field and save.
                     </p>
+                )}
+
+                {assignBiometricId !== null && (
+                    <section className="workspace-panel flex flex-wrap items-center justify-between gap-3 border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
+                        <div>
+                            <p className="font-medium">
+                                Assign imported Biometric ID {assignBiometricId}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                                Choose an employee below, enter this ID in the
+                                Biometric ID column, then select Save.
+                            </p>
+                        </div>
+                        <Button asChild size="sm" variant="outline">
+                            <Link href="/hris/employees">Clear assignment filter</Link>
+                        </Button>
+                    </section>
                 )}
 
                 {reviewError && (

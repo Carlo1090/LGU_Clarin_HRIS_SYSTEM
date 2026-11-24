@@ -46,6 +46,28 @@ class HrisResourceTest extends TestCase
             ->assertInertia(fn ($page) => $page->has('records.data', 0));
     }
 
+    public function test_assign_biometric_id_filter_shows_only_unlinked_employees(): void
+    {
+        $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+        $department = Department::factory()->create();
+        $unlinked = Employee::factory()->create([
+            'department_id' => $department->id,
+            'biometric_id' => null,
+        ]);
+        $linked = Employee::factory()->create([
+            'department_id' => $department->id,
+            'biometric_id' => 123,
+        ]);
+
+        $this->actingAs($hr)
+            ->get('/hris/employees?assign_biometric_id=123')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('assignBiometricId', 123)
+                ->has('records.data', 1)
+                ->where('records.data.0.id', $unlinked->id));
+    }
+
     public function test_attendance_lists_employees_once_with_dtr_links_and_respects_department_scope(): void
     {
         $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();

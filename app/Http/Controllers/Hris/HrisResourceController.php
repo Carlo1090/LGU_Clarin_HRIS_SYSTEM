@@ -358,9 +358,14 @@ class HrisResourceController extends Controller
     {
         Gate::authorize('view-hris-resource', $resource);
         $config = $this->resourceConfig($resource);
-        $search = $request->validate(['q' => ['nullable', 'string', 'max:120'], 'column' => ['nullable', 'string', 'max:64']]);
+        $search = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'column' => ['nullable', 'string', 'max:64'],
+            'assign_biometric_id' => ['nullable', 'integer', 'between:1,4294967295'],
+        ]);
         $term = trim($search['q'] ?? '');
         $column = $search['column'] ?? '';
+        $assignBiometricId = isset($search['assign_biometric_id']) ? (int) $search['assign_biometric_id'] : null;
         if ($resource === 'plantilla-items') {
             $records = PlantillaItem::query()->with(['department', 'employee' => fn ($query) => $query->addSelect(['avatar' => Employee::accountAvatarQuery()])])
                 ->when($term !== '', function ($query) use ($term, $column) {
@@ -457,6 +462,9 @@ class HrisResourceController extends Controller
         $fields = $this->fieldsWithOptions($config['fields'], $departmentHead ? ($departmentId ?? 0) : null);
         $model = $config['model'];
         $query = $model::query();
+        if ($resource === 'employees' && $assignBiometricId !== null) {
+            $query->whereNull('biometric_id');
+        }
 
         if ($resource === 'departments') {
             $records = Department::query()->orderBy('name')->get()->map(fn (Department $department) => [
@@ -565,6 +573,7 @@ class HrisResourceController extends Controller
             'statusSummary' => $statusSummary,
             'createdAccountCredentials' => $resource === 'employees' ? $request->session()->get('createdAccountCredentials') : null,
             'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
+            'assignBiometricId' => $resource === 'employees' ? $assignBiometricId : null,
             'fields' => $fields,
             'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->employee_id)]
                 + collect($accountFields)->mapWithKeys(fn ($field) => [$field.'_avatar' => $accountAvatars->get($record->getAttribute($field))])->all()

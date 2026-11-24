@@ -404,6 +404,7 @@ export default function ImportAttendanceLogs({
                                     'Punches',
                                     'First punch',
                                     'Last punch',
+                                    'Action',
                                 ].map((label) => (
                                     <th
                                         key={label}
@@ -466,12 +467,39 @@ export default function ImportAttendanceLogs({
                                     <td className="p-3 tabular-nums">
                                         {group.last_punch}
                                     </td>
+                                    <td className="p-3">
+                                        {group.employee_number ? (
+                                            <Button asChild size="sm" variant="outline">
+                                                <Link
+                                                    href="/hris/employees"
+                                                    data={{
+                                                        q: group.employee_number,
+                                                        column: 'employee_number',
+                                                    }}
+                                                >
+                                                    View employee
+                                                </Link>
+                                            </Button>
+                                        ) : (
+                                            <Button asChild size="sm">
+                                                <Link
+                                                    href="/hris/employees"
+                                                    data={{
+                                                        assign_biometric_id:
+                                                            group.biometric_id,
+                                                    }}
+                                                >
+                                                    Assign employee
+                                                </Link>
+                                            </Button>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                             {!search.rows.length && (
                                 <tr>
                                     <td
-                                        colSpan={5}
+                                        colSpan={6}
                                         className="p-5 text-center text-muted-foreground"
                                     >
                                         No biometric IDs found.
