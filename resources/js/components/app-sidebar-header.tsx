@@ -55,7 +55,10 @@ export function AppSidebarHeader() {
     const announced = useRef(new Set<number>());
 
     useEffect(() => {
-        if (!latestAnnouncement || announced.current.has(latestAnnouncement.id)) {
+        if (
+            !latestAnnouncement ||
+            announced.current.has(latestAnnouncement.id)
+        ) {
             return;
         }
 
@@ -184,9 +187,16 @@ export function AppSidebarHeader() {
                                             event.preventDefault();
                                             if (item.type === 'announcement') {
                                                 const openAnnouncement = () =>
-                                                    visit('/dashboard#dashboard-announcements');
-                                                if (item.isRead) openAnnouncement();
-                                                else markRead(item.id, openAnnouncement);
+                                                    visit(
+                                                        '/dashboard#dashboard-announcements',
+                                                    );
+                                                if (item.isRead)
+                                                    openAnnouncement();
+                                                else
+                                                    markRead(
+                                                        item.id,
+                                                        openAnnouncement,
+                                                    );
                                             } else if (!item.isRead) {
                                                 markRead(item.id);
                                             }
@@ -231,7 +241,8 @@ export function AppSidebarHeader() {
                                             )}
                                             {!item.isRead && (
                                                 <span className="sr-only">
-                                                    {item.type === 'announcement'
+                                                    {item.type ===
+                                                    'announcement'
                                                         ? 'Select to open announcements and mark as read'
                                                         : 'Select to mark as read'}
                                                 </span>

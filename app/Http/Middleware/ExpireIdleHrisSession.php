@@ -36,7 +36,9 @@ class ExpireIdleHrisSession
                 : to_route('login')->with('status', 'Your session expired. Sign in again.');
         }
 
-        $request->session()->put(self::LAST_ACTIVITY, $now);
+        if (! $request->headers->has('X-HRIS-Background-Poll')) {
+            $request->session()->put(self::LAST_ACTIVITY, $now);
+        }
         if ($request->routeIs('two-factor.enable', 'two-factor.confirm', 'two-factor.qr-code', 'two-factor.secret-key')) {
             abort_unless(HrisEnrollmentPolicy::offers($user, 'totp'), 403);
         }

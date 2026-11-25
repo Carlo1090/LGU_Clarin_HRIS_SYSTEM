@@ -1,15 +1,7 @@
 import { KeyRound, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+import { useFeedback } from '@/components/feedback-provider';
 import type { Passkey } from '@/types/auth';
 
 type Props = {
@@ -20,7 +12,17 @@ type Props = {
 export default function PasskeyItem({ passkey, onDelete }: Props) {
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleDelete = () => {
+    const feedback = useFeedback();
+    const handleDelete = async () => {
+        if (
+            !(await feedback.confirm(
+                'Remove the passkey ' +
+                    passkey.name +
+                    '? It can no longer be used to sign in.',
+                'Remove passkey',
+            ))
+        )
+            return;
         setIsDeleting(true);
         onDelete(passkey.id, () => setIsDeleting(false));
     };
@@ -56,38 +58,15 @@ export default function PasskeyItem({ passkey, onDelete }: Props) {
                 </div>
             </div>
 
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Remove</span>
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogTitle>Remove passkey</DialogTitle>
-                    <DialogDescription>
-                        Are you sure you want to remove the "{passkey.name}"
-                        passkey? You will no longer be able to use it to sign
-                        in.
-                    </DialogDescription>
-                    <DialogFooter className="gap-2">
-                        <DialogClose asChild>
-                            <Button variant="secondary">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                        >
-                            {isDeleting ? 'Removing...' : 'Remove passkey'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <Button
+                variant="ghost"
+                size="icon"
+                aria-label={'Remove passkey ' + passkey.name}
+                onClick={handleDelete}
+                disabled={isDeleting}
+            >
+                <Trash2 className="size-4 text-destructive" />
+            </Button>
         </div>
     );
 }

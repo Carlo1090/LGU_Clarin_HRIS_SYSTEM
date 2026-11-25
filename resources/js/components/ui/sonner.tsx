@@ -1,3 +1,5 @@
+import './toast.css';
+import { CircleCheck, CircleX, Info, LoaderCircle, TriangleAlert } from 'lucide-react';
 import { useFlashToast } from '@/hooks/use-flash-toast';
 import { useAppearance } from '@/hooks/use-appearance';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
@@ -11,14 +13,10 @@ function Toaster({ ...props }: ToasterProps) {
         <Sonner
             theme={appearance}
             className="toaster group"
-            position="bottom-right"
-            style={
-                {
-                    '--normal-bg': 'var(--popover)',
-                    '--normal-text': 'var(--popover-foreground)',
-                    '--normal-border': 'var(--border)',
-                } as React.CSSProperties
-            }
+            position="top-right"
+            closeButton
+            toastOptions={{ className: 'hr-toast' }}
+            icons={{success: <CircleCheck />, error: <CircleX />, warning: <TriangleAlert />, info: <Info />, loading: <LoaderCircle className="animate-spin" />}}
             {...props}
         />
     );

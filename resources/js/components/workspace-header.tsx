@@ -25,14 +25,6 @@ export default function WorkspaceHeader({
                     {description && <p>{description}</p>}
                     {children}
                 </div>
-                <img
-                    className="workspace-banner-art"
-                    src="/images/clarin-officials.png"
-                    alt=""
-                    width={1293}
-                    height={1217}
-                    decoding="async"
-                />
             </SpotlightCard>
         </header>
     );

@@ -58,27 +58,10 @@
     border-radius: 999px;
 }
 
-.workspace-banner-art {
-    display: none;
-}
-
 @container (min-width: 40rem) {
     .workspace-banner-content.spotlight-card {
         min-height: 9rem;
         padding: 1.75rem 2rem;
-        padding-right: min(30%, 16rem);
-    }
-
-    .workspace-banner-art {
-        display: block;
-        position: absolute;
-        bottom: 0;
-        right: 1.25rem;
-        width: min(24%, 12rem);
-        height: 92%;
-        object-fit: contain;
-        object-position: bottom;
-        pointer-events: none;
     }
 }
 
@@ -139,5 +122,19 @@
         border-radius: 999px;
         background: #a6eb20;
         color: #142014;
+    }
+}
+
+/* Measure workspace content against the space left by the sidebar. */
+@media screen and (min-width: 90rem) {
+    .dashboard-surface
+        :is(.dashboard-page, .workspace-page, .workspace-leave-form) {
+        width: 88%;
+        max-width: none;
+        margin-inline: auto;
+    }
+
+    .dashboard-surface .workspace-invite {
+        max-width: 36rem;
     }
 }

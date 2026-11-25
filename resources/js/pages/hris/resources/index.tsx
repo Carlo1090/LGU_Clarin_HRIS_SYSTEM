@@ -1,3 +1,5 @@
+import { useFeedback } from '@/components/feedback-provider';
+import { DirectoryResults } from '@/components/directory-results';
 import { DirectorySearch } from '@/components/table-search';
 import TableAction from '@/components/table-action';
 import PersonAvatar from '@/components/person-avatar';
@@ -65,7 +67,14 @@ type FormData = Record<string, string | number | boolean | null>;
 
 const statusSuggestions: Partial<Record<string, string[]>> = {
     vacancies: ['open', 'closed', 'filled', 'on hold'],
-    applicants: ['pending', 'shortlisted', 'interviewed', 'hired', 'rejected', 'withdrawn'],
+    applicants: [
+        'pending',
+        'shortlisted',
+        'interviewed',
+        'hired',
+        'rejected',
+        'withdrawn',
+    ],
     attendance: ['present', 'late', 'absent', 'incomplete'],
     'payroll-periods': ['draft', 'approved', 'closed'],
     payrolls: ['draft', 'approved', 'paid', 'error'],
@@ -166,6 +175,7 @@ function ResourceRecords({
                 : serverFields,
         [resource, serverFields],
     );
+    const feedback = useFeedback();
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
     const isAttendance = resource === 'attendance';
@@ -175,13 +185,13 @@ function ResourceRecords({
         Boolean(leaveReviewStage) ||
         isAttendance;
 
-    function reviewLeave(id: number, decision: 'advance' | 'reject') {
+    async function reviewLeave(id: number, decision: 'advance' | 'reject') {
         if (
-            !window.confirm(
+            !(await feedback.confirm(
                 decision === 'reject'
                     ? 'Reject this leave request?'
                     : 'Confirm this leave decision?',
-            )
+            ))
         )
             return;
 
@@ -223,8 +233,23 @@ function ResourceRecords({
         setConfirmationPassword('');
     }, [resource]);
 
-    const submit = (event: FormEvent<HTMLFormElement>) => {
+    const submit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (
+            resource === 'employees' &&
+            editingId &&
+            String(form.data.employment_status).toLowerCase() ===
+                'terminated' &&
+            String(
+                records.data.find((row) => row.id === editingId)
+                    ?.employment_status,
+            ).toLowerCase() !== 'terminated' &&
+            !(await feedback.confirm(
+                `Mark ${[form.data.first_name, form.data.last_name].filter(Boolean).join(' ') || 'employee #' + editingId} as terminated?`,
+                'Terminate employee',
+            ))
+        )
+            return;
         const url = `/hris/${resource}`;
 
         form.transform((data) =>
@@ -293,15 +318,36 @@ function ResourceRecords({
         form.clearErrors();
     };
 
-    const remove = (row: HrisRow) => {
-        if (window.confirm(`Delete this ${title.toLowerCase()} record?`)) {
+    const remove = async (row: HrisRow) => {
+        const employee = [row.first_name, row.last_name]
+            .filter(Boolean)
+            .join(' ');
+        const target =
+            resource === 'employees' && employee
+                ? employee + ' (#' + row.id + ')'
+                : title.toLowerCase() + ' record #' + row.id;
+        if (
+            await feedback.confirm(
+                `Permanently delete ${target}? This record cannot be recovered.`,
+                ['employees', 'payrolls', 'payroll-periods', 'roles'].includes(
+                    resource,
+                )
+                    ? resource === 'employees'
+                        ? 'Delete employee'
+                        : 'Delete record'
+                    : undefined,
+            )
+        ) {
             router.delete(`/hris/${resource}/${row.id}`);
         }
     };
 
     const displayValue = (field: Field, value: HrisValue | undefined) => {
         if (value === null || value === undefined || value === '') return '—';
-        if (['leave-applications', 'vacancies'].includes(resource) && field.name === 'status') {
+        if (
+            ['leave-applications', 'vacancies'].includes(resource) &&
+            field.name === 'status'
+        ) {
             return String(value).replaceAll('_', ' ');
         }
         if (resource === 'employees' && isSexField(field.name)) {
@@ -513,9 +559,9 @@ function ResourceRecords({
                         {resource === 'announcements' && (
                             <p className="mb-4 text-sm text-muted-foreground">
                                 Check Published to show this announcement on all
-                                dashboards. Leave the start time blank to publish
-                                immediately, or set a Manila date and time to
-                                schedule it.
+                                dashboards. Leave the start time blank to
+                                publish immediately, or set a Manila date and
+                                time to schedule it.
                             </p>
                         )}
                         {resource === 'employees' && (
@@ -541,6 +587,23 @@ function ResourceRecords({
                             </div>
                         )}
                         <form
+                            onInput={(event) => {
+                                const input = event.target;
+                                if (
+                                    !(
+                                        input instanceof HTMLInputElement ||
+                                        input instanceof HTMLSelectElement ||
+                                        input instanceof HTMLTextAreaElement
+                                    )
+                                )
+                                    return;
+                                const key =
+                                    input.closest('label')?.dataset.field;
+                                if (!key) return;
+                                if (!input.validity.valid)
+                                    form.setError(key, input.validationMessage);
+                                else form.clearErrors(key);
+                            }}
                             onSubmit={submit}
                             className="grid gap-4 @min-[34rem]/workspace:grid-cols-2 @min-[56rem]/workspace:grid-cols-3"
                         >
@@ -554,6 +617,7 @@ function ResourceRecords({
                             {fields.map((field) => (
                                 <label
                                     key={field.name}
+                                    data-field={field.name}
                                     className={`space-y-1 text-sm ${field.type === 'textarea' ? '@min-[34rem]/workspace:col-span-2 @min-[56rem]/workspace:col-span-3' : ''}`}
                                 >
                                     <span>
@@ -626,12 +690,14 @@ function ResourceRecords({
                                         <input
                                             type={field.type}
                                             list={
-                                                field.name === 'status' && availableStatuses
+                                                field.name === 'status' &&
+                                                availableStatuses
                                                     ? statusListId
                                                     : undefined
                                             }
                                             placeholder={
-                                                field.name === 'status' && availableStatuses
+                                                field.name === 'status' &&
+                                                availableStatuses
                                                     ? 'Choose or type a status'
                                                     : undefined
                                             }
@@ -679,7 +745,10 @@ function ResourceRecords({
                             ))}
                             {resource === 'employees' &&
                                 accountEmail !== null && (
-                                    <label className="space-y-1 text-sm">
+                                    <label
+                                        data-field="account_email"
+                                        className="space-y-1 text-sm"
+                                    >
                                         <span>Email (optional)</span>
                                         <input
                                             type="email"
@@ -821,7 +890,10 @@ function ResourceRecords({
                             id="records-heading"
                             className="text-lg font-semibold tracking-tight"
                         >
-                            {directory?.title ?? (resource === 'vacancies' ? 'Vacancy listings' : 'Records')}
+                            {directory?.title ??
+                                (resource === 'vacancies'
+                                    ? 'Vacancy listings'
+                                    : 'Records')}
                         </h2>
                         <span className="text-sm text-muted-foreground">
                             {records.data.length} on this page
@@ -831,129 +903,140 @@ function ResourceRecords({
                         columns={[{ name: 'id', label: 'ID' }, ...fields]}
                         label={`Search ${title.toLowerCase()}`}
                     />
-                    {directory ? (
-                        <ResourceDirectory
-                            layout={directory}
-                            rows={records.data}
-                            fields={
-                                resource === 'employees'
-                                    ? [
-                                          ...fields,
-                                          {
-                                              name: 'work_schedule',
-                                              label: 'Schedule',
-                                              type: 'text',
-                                          },
-                                      ]
-                                    : fields
-                            }
-                            canLinkBiometricIds={canLinkBiometricIds}
-                            renderValue={displayValue}
-                            renderActions={hasActions ? rowActions : undefined}
-                        />
-                    ) : (
-                        <div
-                            role="region"
-                            aria-labelledby="records-heading"
-                            tabIndex={0}
-                            className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                        >
-                            <table className="w-full text-left text-sm">
-                                <thead className="workspace-table-head whitespace-nowrap">
-                                    <tr>
-                                        <th scope="col" className="px-3 py-3 font-medium">
-                                            ID
-                                        </th>
-                                        {fields.map((field) => (
+                    <DirectoryResults>
+                        {directory ? (
+                            <ResourceDirectory
+                                layout={directory}
+                                rows={records.data}
+                                fields={
+                                    resource === 'employees'
+                                        ? [
+                                              ...fields,
+                                              {
+                                                  name: 'work_schedule',
+                                                  label: 'Schedule',
+                                                  type: 'text',
+                                              },
+                                          ]
+                                        : fields
+                                }
+                                canLinkBiometricIds={canLinkBiometricIds}
+                                renderValue={displayValue}
+                                renderActions={
+                                    hasActions ? rowActions : undefined
+                                }
+                            />
+                        ) : (
+                            <div
+                                role="region"
+                                aria-labelledby="records-heading"
+                                tabIndex={0}
+                                className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                            >
+                                <table className="w-full text-left text-sm">
+                                    <thead className="workspace-table-head whitespace-nowrap">
+                                        <tr>
                                             <th
-                                                key={field.name}
                                                 scope="col"
                                                 className="px-3 py-3 font-medium"
                                             >
-                                                {field.label}
+                                                ID
                                             </th>
-                                        ))}
-                                        {hasActions && (
-                                            <th scope="col" className="px-3 py-3 font-medium">
-                                                Actions
-                                            </th>
-                                        )}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {records.data.map((row) => (
-                                        <tr
-                                            key={row.id}
-                                            className="border-t transition-colors hover:bg-muted/60"
-                                        >
-                                            <td className="px-3 py-3">
-                                                {row.id}
-                                            </td>
                                             {fields.map((field) => (
-                                                <td
+                                                <th
                                                     key={field.name}
-                                                    className={
-                                                        resource === 'vacancies'
-                                                            ? 'max-w-64 px-3 py-3 [overflow-wrap:break-word]'
-                                                            : 'max-w-64 truncate px-3 py-3'
-                                                    }
+                                                    scope="col"
+                                                    className="px-3 py-3 font-medium"
                                                 >
-                                                    {(field.name ===
-                                                        'employee_id' ||
-                                                        field.account) &&
-                                                        row[field.name] !=
-                                                            null && (
-                                                            <PersonAvatar
-                                                                name={String(
-                                                                    displayValue(
-                                                                        field,
-                                                                        row[
-                                                                            field
-                                                                                .name
-                                                                        ],
-                                                                    ),
-                                                                )}
-                                                                src={String(
-                                                                    (field.account
-                                                                        ? row[
-                                                                              `${field.name}_avatar`
-                                                                          ]
-                                                                        : row.avatar) ??
-                                                                        '',
-                                                                )}
-                                                            />
-                                                        )}{' '}
-                                                    {displayValue(
-                                                        field,
-                                                        row[field.name],
-                                                    )}
-                                                </td>
+                                                    {field.label}
+                                                </th>
                                             ))}
                                             {hasActions && (
-                                                <td className="px-3 py-3 whitespace-nowrap">
-                                                    {rowActions(row)}
-                                                </td>
+                                                <th
+                                                    scope="col"
+                                                    className="px-3 py-3 font-medium"
+                                                >
+                                                    Actions
+                                                </th>
                                             )}
                                         </tr>
-                                    ))}
-                                    {records.data.length === 0 && (
-                                        <tr>
-                                            <td
-                                                colSpan={
-                                                    fields.length +
-                                                    1 +
-                                                    Number(hasActions)
-                                                }
-                                                className="px-3 py-8 text-center text-muted-foreground"
+                                    </thead>
+                                    <tbody>
+                                        {records.data.map((row) => (
+                                            <tr
+                                                key={row.id}
+                                                className="border-t transition-colors hover:bg-muted/60"
                                             >
-                                                No records found.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                                <td className="px-3 py-3">
+                                                    {row.id}
+                                                </td>
+                                                {fields.map((field) => (
+                                                    <td
+                                                        key={field.name}
+                                                        className={
+                                                            resource ===
+                                                            'vacancies'
+                                                                ? 'max-w-64 px-3 py-3 [overflow-wrap:break-word]'
+                                                                : 'max-w-64 truncate px-3 py-3'
+                                                        }
+                                                    >
+                                                        {(field.name ===
+                                                            'employee_id' ||
+                                                            field.account) &&
+                                                            row[field.name] !=
+                                                                null && (
+                                                                <PersonAvatar
+                                                                    name={String(
+                                                                        displayValue(
+                                                                            field,
+                                                                            row[
+                                                                                field
+                                                                                    .name
+                                                                            ],
+                                                                        ),
+                                                                    )}
+                                                                    src={String(
+                                                                        (field.account
+                                                                            ? row[
+                                                                                  `${field.name}_avatar`
+                                                                              ]
+                                                                            : row.avatar) ??
+                                                                            '',
+                                                                    )}
+                                                                />
+                                                            )}{' '}
+                                                        {displayValue(
+                                                            field,
+                                                            row[field.name],
+                                                        )}
+                                                    </td>
+                                                ))}
+                                                {hasActions && (
+                                                    <td className="px-3 py-3 whitespace-nowrap">
+                                                        {rowActions(row)}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                        {records.data.length === 0 && (
+                                            <tr>
+                                                <td
+                                                    colSpan={
+                                                        fields.length +
+                                                        1 +
+                                                        Number(hasActions)
+                                                    }
+                                                    className="px-3 py-8 text-center text-muted-foreground"
+                                                >
+                                                    No records found.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </DirectoryResults>
                     <RecordPagination links={records.links} />
                 </section>
             </div>

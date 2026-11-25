@@ -87,7 +87,7 @@ class AttendanceLogImportController
             $batch->delete();
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Imported attendance logs deleted.']);
+        Inertia::flash('toast', ['type' => 'success', 'kind' => 'delete', 'message' => 'Attendance import removed.']);
 
         return to_route('hris.attendance-logs.index');
     }

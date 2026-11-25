@@ -45,7 +45,10 @@ function ManilaClock() {
                 {now && (
                     <>
                         {' · '}
-                        <time className="tabular-nums" dateTime={now.toISOString()}>
+                        <time
+                            className="tabular-nums"
+                            dateTime={now.toISOString()}
+                        >
                             {manilaClock.format(now)}
                         </time>
                     </>
@@ -74,11 +77,12 @@ function AnnouncementEntry({
                     dateTime={announcement.visible_at}
                     className="block text-xs text-muted-foreground"
                 >
-                    Posted {manilaDateTime.format(new Date(announcement.visible_at))}{' '}
+                    Posted{' '}
+                    {manilaDateTime.format(new Date(announcement.visible_at))}{' '}
                     Manila time
                 </time>
             )}
-            <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">
+            <p className="text-sm [overflow-wrap:anywhere] whitespace-pre-wrap">
                 {announcement.content}
             </p>
         </article>

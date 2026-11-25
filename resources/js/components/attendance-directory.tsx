@@ -231,10 +231,17 @@ export default function AttendanceDirectory({
                                         )}
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <Button asChild variant="outline" size="sm">
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                        >
                                             <Link
                                                 href="/hris/attendance/daily-punches"
-                                                data={{ month: attendanceMonth, employee: employee.id }}
+                                                data={{
+                                                    month: attendanceMonth,
+                                                    employee: employee.id,
+                                                }}
                                             >
                                                 Daily punches
                                             </Link>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\ExpireIdleHrisSession;
 use App\Models\Announcement;
 use App\Models\Role;
 use App\Models\User;
@@ -78,7 +79,8 @@ class AnnouncementTest extends TestCase
             ->assertInertia(fn ($page) => $page->has('announcements', 0));
 
         $this->travel(1)->hour();
-        $this->get(route('dashboard'))->assertInertia(fn ($page) => $page
+        $this->withSession([ExpireIdleHrisSession::LAST_ACTIVITY => now()->timestamp])
+            ->get(route('dashboard'))->assertInertia(fn ($page) => $page
             ->where('announcements.0.title', 'Office assembly')
             ->where('announcements.0.visible_at', '2026-11-24T05:00:00.000000Z'));
     }

@@ -18,7 +18,9 @@ export default function AuthSimpleLayout({
     const isLogin = usePage().component === 'auth/login';
 
     return (
-        <div className={`${isLogin ? 'login-page ' : ''}public-surface flex min-h-svh flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground`}>
+        <div
+            className={`${isLogin ? 'login-page ' : ''}public-surface flex min-h-svh flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground`}
+        >
             <a
                 href="#auth-content"
                 className="sr-only z-[60] rounded-md bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"

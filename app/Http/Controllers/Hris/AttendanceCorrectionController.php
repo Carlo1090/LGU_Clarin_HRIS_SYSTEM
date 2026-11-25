@@ -175,6 +175,8 @@ class AttendanceCorrectionController extends Controller
             ]);
         });
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance correction decision saved.']);
+
         return back();
     }
 }

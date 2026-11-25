@@ -20,7 +20,9 @@ test('HRIS accounts record last login and expire after their configured idle tim
         ->where('showLastLogin', true)->where('lastLoginAt', now()->toIso8601String()));
     $this->travel($minutes - 1)->minutes();
     $this->get(route('profile.edit'))->assertOk();
-    $this->travel($minutes)->minutes();
+    $this->travel($minutes - 1)->minutes();
+    $this->get(route('dashboard'), ['X-HRIS-Background-Poll' => '1'])->assertOk();
+    $this->travel(1)->minute();
     $this->get(route('profile.edit'))->assertRedirect(route('login'));
     $this->assertGuest();
 })->with([

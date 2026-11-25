@@ -139,7 +139,7 @@ class LeaveApplicationController extends Controller
             ]);
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Leave application created and sent for review.']);
+        Inertia::flash('toast', ['type' => 'success', 'kind' => 'create', 'message' => 'Leave application created and sent for review.']);
 
         return to_route('hris.resources.index', ['resource' => 'leave-applications']);
     }

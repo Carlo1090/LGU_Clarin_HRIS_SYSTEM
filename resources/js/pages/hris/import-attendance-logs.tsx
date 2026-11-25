@@ -1,3 +1,4 @@
+import { useFeedback } from '@/components/feedback-provider';
 import { useTableSearch } from '@/components/table-search';
 import PersonAvatar from '@/components/person-avatar';
 import { Head, Link, router, useForm } from '@inertiajs/react';
@@ -93,6 +94,7 @@ export default function ImportAttendanceLogs({
             g.last_punch,
         ],
     );
+    const feedback = useFeedback();
     const inputRef = useRef<HTMLInputElement>(null);
     const form = useForm<{ file: File | null }>({
         file: null,
@@ -100,9 +102,26 @@ export default function ImportAttendanceLogs({
     const monthFilter = month ? { month } : {};
 
     function importSelectedFile(file: File) {
+        if (!navigator.onLine) return;
+        const notification = feedback.progress('Submitting attendance log...');
+        const failed = () =>
+            notification.error(
+                'Attendance import could not be submitted. Check your connection and try again.',
+                () => importSelectedFile(file),
+            );
         form.transform(() => ({ file, confirm: true }));
         form.post(logsUrl, {
+            onCancel: notification.cancel,
+            onError: notification.cancel,
+            onHttpException: () => {
+                failed();
+            },
+            onNetworkError: () => {
+                notification.cancel();
+                // The connection listener explains the uncertain result; the server may have received the file.
+            },
             onSuccess: () => {
+                notification.success('Attendance log submitted.');
                 form.reset();
                 if (inputRef.current) {
                     inputRef.current.value = '';
@@ -111,9 +130,14 @@ export default function ImportAttendanceLogs({
         });
     }
 
-    function deleteImport() {
+    async function deleteImport() {
         if (!batch) return;
-        if (!window.confirm(`Delete imported logs from "${batch.file_name}"?`))
+        if (
+            !(await feedback.confirm(
+                `Delete imported logs from "${batch.file_name}"?`,
+                'Remove import',
+            ))
+        )
             return;
 
         router.delete(`/hris/attendance/logs/${batch.id}`, {

@@ -63,7 +63,8 @@ export default function DailyPunches({
             {departmentUnavailable && (
                 <p role="status" className="workspace-panel p-5 text-sm">
                     Your account has no assigned department. Contact HR to link
-                    your employee record and department so you can view its punches.
+                    your employee record and department so you can view its
+                    punches.
                 </p>
             )}
 
@@ -81,7 +82,9 @@ export default function DailyPunches({
                     </div>
                     {!departmentUnavailable && (
                         <Button asChild variant="outline">
-                            <a href={exportHref(filters)}>Export Excel workbook</a>
+                            <a href={exportHref(filters)}>
+                                Export Excel workbook
+                            </a>
                         </Button>
                     )}
                 </div>
@@ -325,7 +328,12 @@ export default function DailyPunches({
                                             <Link
                                                 className="mt-2 block font-medium text-foreground underline underline-offset-4"
                                                 href="/hris/attendance/logs"
-                                                data={{ month: filters.start_date.slice(0, 7) }}
+                                                data={{
+                                                    month: filters.start_date.slice(
+                                                        0,
+                                                        7,
+                                                    ),
+                                                }}
                                             >
                                                 Open biometric log imports
                                             </Link>
