@@ -1,5 +1,5 @@
 import { Form } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -17,7 +17,6 @@ import {
 import { Label } from '@/components/ui/label';
 
 export default function DeleteUser() {
-    const [typed, setTyped] = useState('');
     const passwordInput = useRef<HTMLInputElement>(null);
 
     return (
@@ -35,7 +34,7 @@ export default function DeleteUser() {
                     </p>
                 </div>
 
-                <Dialog onOpenChange={() => setTyped('')}>
+                <Dialog>
                     <DialogTrigger asChild>
                         <Button
                             variant="destructive"
@@ -85,19 +84,6 @@ export default function DeleteUser() {
                                         <InputError message={errors.password} />
                                     </div>
 
-                                    <Label htmlFor="delete-phrase">
-                                        Type DELETE to confirm
-                                    </Label>
-                                    <input
-                                        id="delete-phrase"
-                                        className="w-full rounded-md border p-2"
-                                        value={typed}
-                                        onChange={(e) =>
-                                            setTyped(e.target.value)
-                                        }
-                                        required
-                                        pattern="DELETE"
-                                    />
                                     <DialogFooter className="gap-2">
                                         <DialogClose asChild>
                                             <Button
@@ -112,9 +98,7 @@ export default function DeleteUser() {
 
                                         <Button
                                             variant="destructive"
-                                            disabled={
-                                                processing || typed !== 'DELETE'
-                                            }
+                                            disabled={processing}
                                             asChild
                                         >
                                             <button

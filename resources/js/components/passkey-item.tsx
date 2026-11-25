@@ -19,7 +19,7 @@ export default function PasskeyItem({ passkey, onDelete }: Props) {
                 'Remove the passkey ' +
                     passkey.name +
                     '? It can no longer be used to sign in.',
-                'DELETE',
+                'Remove passkey',
             ))
         )
             return;

@@ -161,7 +161,10 @@ function ResourceRecords({
                 records.data.find((row) => row.id === editingId)
                     ?.employment_status,
             ).toLowerCase() !== 'terminated' &&
-            !(await feedback.confirm('Terminate this employee?', 'DELETE'))
+            !(await feedback.confirm(
+                `Mark ${[form.data.first_name, form.data.last_name].filter(Boolean).join(' ') || 'employee #' + editingId} as terminated?`,
+                'Terminate employee',
+            ))
         )
             return;
         const url = `/hris/${resource}`;
@@ -217,13 +220,22 @@ function ResourceRecords({
     };
 
     const remove = async (row: HrisRow) => {
+        const employee = [row.first_name, row.last_name]
+            .filter(Boolean)
+            .join(' ');
+        const target =
+            resource === 'employees' && employee
+                ? employee + ' (#' + row.id + ')'
+                : title.toLowerCase() + ' record #' + row.id;
         if (
             await feedback.confirm(
-                `Delete ${title.toLowerCase()} record #${row.id}?`,
+                `Permanently delete ${target}? This record cannot be recovered.`,
                 ['employees', 'payrolls', 'payroll-periods', 'roles'].includes(
                     resource,
                 )
-                    ? 'DELETE'
+                    ? resource === 'employees'
+                        ? 'Delete employee'
+                        : 'Delete record'
                     : undefined,
             )
         ) {

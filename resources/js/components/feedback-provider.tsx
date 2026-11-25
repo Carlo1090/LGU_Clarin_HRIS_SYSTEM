@@ -17,10 +17,10 @@ import {
     DialogFooter,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { feedback } from '@/lib/feedback';
 
-type Confirm = (message: string, requiredText?: string) => Promise<boolean>;
+type Confirm = (message: string, destructiveLabel?: string) => Promise<boolean>;
 const Context = createContext<(typeof feedback & { confirm: Confirm }) | null>(
     null,
 );
@@ -34,9 +34,9 @@ export function useFeedback() {
 export function FeedbackProvider({ children }: { children: ReactNode }) {
     const [prompt, setPrompt] = useState<{
         message: string;
-        requiredText?: string;
+        destructiveLabel?: string;
     } | null>(null);
-    const [typed, setTyped] = useState('');
+    const [acknowledged, setAcknowledged] = useState(false);
     const resolve = useRef<((answer: boolean) => void) | null>(null);
     const cancel = useRef<HTMLButtonElement>(null);
     const finish = useCallback((answer: boolean) => {
@@ -52,12 +52,12 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         };
     }, [finish]);
     const confirm = useCallback<Confirm>(
-        (message, requiredText) =>
+        (message, destructiveLabel) =>
             new Promise((done) => {
                 resolve.current?.(false);
                 resolve.current = done;
-                setTyped('');
-                setPrompt({ message, requiredText });
+                setAcknowledged(false);
+                setPrompt({ message, destructiveLabel });
             }),
         [],
     );
@@ -78,19 +78,20 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
                     }}
                 >
                     <DialogTitle>
-                        {prompt?.requiredText
+                        {prompt?.destructiveLabel
                             ? 'Confirm irreversible action'
                             : 'Confirm action'}
                     </DialogTitle>
                     <DialogDescription>{prompt?.message}</DialogDescription>
-                    {prompt?.requiredText && (
-                        <label className="grid gap-2 text-sm">
-                            Type {prompt.requiredText} to confirm
-                            <Input
-                                value={typed}
-                                autoComplete="off"
-                                onChange={(e) => setTyped(e.target.value)}
+                    {prompt?.destructiveLabel && (
+                        <label className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3 text-sm">
+                            <Checkbox
+                                checked={acknowledged}
+                                onCheckedChange={(value) =>
+                                    setAcknowledged(value === true)
+                                }
                             />
+                            I understand the consequences and want to proceed.
                         </label>
                     )}
                     <DialogFooter>
@@ -103,15 +104,16 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
                         </Button>
                         <Button
                             variant={
-                                prompt?.requiredText ? 'destructive' : 'default'
+                                prompt?.destructiveLabel
+                                    ? 'destructive'
+                                    : 'default'
                             }
                             disabled={
-                                !!prompt?.requiredText &&
-                                typed !== prompt.requiredText
+                                !!prompt?.destructiveLabel && !acknowledged
                             }
                             onClick={() => finish(true)}
                         >
-                            Confirm
+                            {prompt?.destructiveLabel ?? 'Confirm'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

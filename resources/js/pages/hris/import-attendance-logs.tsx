@@ -200,7 +200,7 @@ export default function ImportAttendanceLogs({
                                 if (
                                     await feedback.confirm(
                                         `Remove "${batch.file_name}"? This will delete the ${count} attendance ${punches} added by this import.`,
-                                        'DELETE',
+                                        'Remove import',
                                     )
                                 ) {
                                     removal.delete(`${logsUrl}/${batch.id}`);
