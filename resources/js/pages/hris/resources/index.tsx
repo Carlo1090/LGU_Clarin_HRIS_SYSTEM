@@ -12,7 +12,7 @@ import {
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Check, FileUp, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useId, useMemo, useState } from 'react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormPreviewDialog from '@/components/leave-form-preview-dialog';
@@ -67,6 +67,17 @@ const moduleDescriptions: Record<string, string> = {
 };
 
 type FormData = Record<string, string | number | boolean | null>;
+
+const statusSuggestions: Partial<Record<string, string[]>> = {
+    vacancies: ['open', 'closed', 'filled', 'on hold'],
+    applicants: ['pending', 'shortlisted', 'interviewed', 'hired', 'rejected', 'withdrawn'],
+    attendance: ['present', 'late', 'absent', 'incomplete'],
+    'payroll-periods': ['draft', 'approved', 'closed'],
+    payrolls: ['draft', 'approved', 'paid', 'error'],
+    'evaluation-periods': ['draft', 'active', 'closed'],
+    'privacy-requests': ['pending', 'processed', 'rejected'],
+    'plantilla-items': ['active', 'inactive'],
+};
 
 const emptyValue = (field: Field): string | number | boolean | null =>
     field.type === 'checkbox' ? false : '';
@@ -152,6 +163,8 @@ function ResourceRecords({
     accountSetupEmailSent = null,
     records,
 }: Props) {
+    const statusListId = useId();
+    const availableStatuses = statusSuggestions[resource];
     const fields = useMemo(
         () =>
             resource === 'employees'
@@ -493,6 +506,13 @@ function ResourceRecords({
                             onSubmit={submit}
                             className="grid gap-4 @min-[34rem]/workspace:grid-cols-2 @min-[56rem]/workspace:grid-cols-3"
                         >
+                            {availableStatuses && (
+                                <datalist id={statusListId}>
+                                    {availableStatuses.map((status) => (
+                                        <option key={status} value={status} />
+                                    ))}
+                                </datalist>
+                            )}
                             {fields.map((field) => (
                                 <label
                                     key={field.name}
@@ -567,6 +587,16 @@ function ResourceRecords({
                                     ) : (
                                         <input
                                             type={field.type}
+                                            list={
+                                                field.name === 'status' && availableStatuses
+                                                    ? statusListId
+                                                    : undefined
+                                            }
+                                            placeholder={
+                                                field.name === 'status' && availableStatuses
+                                                    ? 'Choose or type a status'
+                                                    : undefined
+                                            }
                                             step={
                                                 field.type === 'number'
                                                     ? 'any'
