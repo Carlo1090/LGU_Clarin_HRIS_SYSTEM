@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Department;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
 
@@ -33,8 +32,6 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        foreach (Department::PLANTILLA_OFFICES as $code => $name) {
-            Department::updateOrCreate(['code' => $code], ['name' => $name]);
-        }
+        $this->call(PlantillaDepartmentSeeder::class);
     }
 }

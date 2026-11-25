@@ -14,12 +14,8 @@ class DemoEmployeeImportDirectorySeeder extends Seeder
         $department = Department::query()->where('code', 'MAYOR')->first()
             ?? Department::query()->orderBy('id')->first();
 
-        if ($department === null) {
-            $department = Department::firstOrCreate(
-                ['code' => 'MAYOR'],
-                ['name' => Department::PLANTILLA_OFFICES['MAYOR']],
-            );
-        }
+        $this->call(PlantillaDepartmentSeeder::class);
+        $department ??= Department::query()->where('code', 'MAYOR')->firstOrFail();
 
         DB::transaction(function () use ($department): void {
             Position::firstOrCreate(
