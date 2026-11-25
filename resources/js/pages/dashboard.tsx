@@ -6,7 +6,7 @@ import TechText from '@/components/TechText';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import SpotlightCard from '@/components/SpotlightCard';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage, usePoll } from '@inertiajs/react';
 import {
     ArrowDownToLine,
     ArrowUpRight,
@@ -314,6 +314,8 @@ export default function Dashboard({
     announcements,
     canManageAnnouncements,
 }: Props) {
+    usePoll(60_000, { only: ['announcements', 'notifications'] });
+
     const { auth } = usePage().props;
 
     useEffect(() => {

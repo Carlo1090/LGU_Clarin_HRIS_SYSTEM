@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/react';
-import { Megaphone } from 'lucide-react';
+import { Clock3, Megaphone } from 'lucide-react';
 
 export type DashboardAnnouncement = {
     id: number;
@@ -20,15 +20,19 @@ const manilaDateTime = new Intl.DateTimeFormat('en-PH', {
 
 function AnnouncementEntry({
     announcement,
+    featured = false,
 }: {
     announcement: DashboardAnnouncement;
+    featured?: boolean;
 }) {
     return (
         <article className="min-w-0 space-y-1.5">
-            <h3 className="text-sm font-semibold [overflow-wrap:anywhere]">
+            <h3
+                className={`font-semibold [overflow-wrap:anywhere] ${featured ? 'text-lg' : 'text-sm'}`}
+            >
                 {announcement.title}
             </h3>
-            {announcement.visible_at && (
+            {!featured && announcement.visible_at && (
                 <time
                     dateTime={announcement.visible_at}
                     className="block text-xs text-muted-foreground"
@@ -55,12 +59,17 @@ export default function DashboardAnnouncements({
 
     return (
         <section
-            aria-labelledby="dashboard-announcements"
-            className="space-y-4 rounded-lg border border-l-4 border-l-primary bg-card p-4 text-card-foreground sm:p-5"
+            id="dashboard-announcements"
+            aria-labelledby="dashboard-announcements-title"
+            className={`scroll-mt-20 space-y-4 rounded-xl border border-l-4 p-4 text-card-foreground sm:p-5 ${
+                latest
+                    ? 'border-primary/40 border-l-primary bg-gradient-to-r from-primary/15 to-card'
+                    : 'border-l-primary bg-card'
+            }`}
         >
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2
-                    id="dashboard-announcements"
+                    id="dashboard-announcements-title"
                     className="flex items-center gap-2 text-sm font-semibold"
                 >
                     <Megaphone
@@ -69,16 +78,21 @@ export default function DashboardAnnouncements({
                     />
                     Announcements
                 </h2>
-                {canManage && (
-                    <Button asChild size="sm" variant="outline">
-                        <Link href="/hris/announcements">
-                            Manage announcements
-                        </Link>
-                    </Button>
+                {latest?.visible_at && (
+                    <time
+                        dateTime={latest.visible_at}
+                        className="ml-auto inline-flex max-w-full items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+                    >
+                        <Clock3 className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span>
+                            {manilaDateTime.format(new Date(latest.visible_at))}{' '}
+                            Manila time
+                        </span>
+                    </time>
                 )}
             </div>
             {latest ? (
-                <AnnouncementEntry announcement={latest} />
+                <AnnouncementEntry announcement={latest} featured />
             ) : (
                 <p className="text-sm text-muted-foreground">
                     No active announcements.
@@ -98,6 +112,11 @@ export default function DashboardAnnouncements({
                         ))}
                     </div>
                 </details>
+            )}
+            {canManage && (
+                <Button asChild size="sm" variant="outline">
+                    <Link href="/hris/announcements">Manage announcements</Link>
+                </Button>
             )}
         </section>
     );

@@ -119,17 +119,9 @@ class DashboardController extends Controller
             default => [],
         };
 
-        $now = now();
         $announcements = Announcement::query()
-            ->where('audience', 'all')
-            ->where('is_published', true)
-            ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', $now))
-            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>', $now))
-            ->selectRaw('id, title, content, CASE
-                WHEN starts_at > COALESCE(published_at, created_at) THEN starts_at
-                ELSE COALESCE(published_at, created_at, starts_at)
-            END AS visible_at')
-            ->withCasts(['visible_at' => 'immutable_datetime'])
+            ->visible()
+            ->withVisibleAt()
             ->orderByDesc('visible_at')
             ->orderByDesc('id')
             ->limit(5)
@@ -141,7 +133,7 @@ class DashboardController extends Controller
             'role' => $role ?? 'Unassigned',
             'office' => $employee?->department?->name,
             'cards' => $cards,
-            'analytics' => $insights->for($user, $months),
+            'analytics' => fn () => $insights->for($user, $months),
         ]);
     }
 

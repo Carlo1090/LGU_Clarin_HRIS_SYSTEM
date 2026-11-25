@@ -82,4 +82,43 @@ class AnnouncementTest extends TestCase
             ->where('announcements.0.title', 'Office assembly')
             ->where('announcements.0.visible_at', '2026-11-24T05:00:00.000000Z'));
     }
+
+    public function test_active_announcements_appear_once_in_each_recipients_bell_and_can_be_read(): void
+    {
+        $this->withoutVite();
+        $this->travelTo(Date::parse('2026-11-25 00:00:00 UTC'));
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $note = Announcement::create([
+            'title' => 'Scheduled office notice',
+            'content' => 'See the dashboard.',
+            'starts_at' => now()->addHour(),
+            'ends_at' => now()->addHours(2),
+            'is_published' => true,
+        ]);
+
+        $this->actingAs($first)->get(route('dashboard'))
+            ->assertInertia(fn ($page) => $page->where('notifications.unreadCount', 0));
+
+        $this->travel(1)->hour();
+        $this->get(route('dashboard'))->assertInertia(fn ($page) => $page
+            ->where('notifications.unreadCount', 1)
+            ->where('notifications.items.0.title', $note->title)
+            ->where('notifications.items.0.type', 'announcement')
+            ->where('notifications.items.0.createdAt', '2026-11-25T01:00:00+00:00'));
+
+        $notification = $first->notifications()->sole();
+        $this->post(route('notifications.read', $notification))->assertStatus(303);
+        $this->get(route('dashboard'))->assertInertia(fn ($page) => $page
+            ->where('notifications.unreadCount', 0)
+            ->where('notifications.items.0.isRead', true));
+        $this->assertDatabaseCount('notifications', 1);
+
+        $this->actingAs($second)->get(route('dashboard'))
+            ->assertInertia(fn ($page) => $page->where('notifications.unreadCount', 1));
+        $this->travel(1)->hour();
+        $this->get(route('dashboard'))->assertInertia(fn ($page) => $page
+            ->where('notifications.unreadCount', 0)
+            ->has('notifications.items', 0));
+    }
 }

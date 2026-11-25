@@ -3,10 +3,12 @@ import {
     Bell,
     CheckCheck,
     LayoutDashboard,
+    Megaphone,
     Search,
     Settings2,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import AppearanceToggle from '@/components/appearance-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -47,6 +49,23 @@ export function AppSidebarHeader() {
     const [updating, setUpdating] = useState(false);
     const initials = useInitials();
     const feed = notifications ?? { unreadCount: 0, items: [] };
+    const latestAnnouncement = notifications?.items.find(
+        (item) => item.type === 'announcement' && !item.isRead,
+    );
+    const announced = useRef(new Set<number>());
+
+    useEffect(() => {
+        if (!latestAnnouncement || announced.current.has(latestAnnouncement.id)) {
+            return;
+        }
+
+        announced.current.add(latestAnnouncement.id);
+        toast.info('New announcement', {
+            id: `announcement-${latestAnnouncement.id}`,
+            description: latestAnnouncement.title,
+        });
+    }, [latestAnnouncement]);
+
     const destinations: Destination[] = [
         { title: 'Dashboard', href: '/dashboard' },
         ...(hrisNavigation ?? []),
@@ -70,7 +89,7 @@ export function AppSidebarHeader() {
         setSearchOpen(false);
         router.visit(href);
     };
-    const markRead = (id?: number) => {
+    const markRead = (id?: number, onSuccess?: () => void) => {
         if (updating) return;
         setUpdating(true);
         router.post(
@@ -79,6 +98,7 @@ export function AppSidebarHeader() {
             {
                 preserveScroll: true,
                 onFinish: () => setUpdating(false),
+                onSuccess,
             },
         );
     };
@@ -162,14 +182,28 @@ export function AppSidebarHeader() {
                                         className="items-start gap-3 rounded-lg px-3 py-3"
                                         onSelect={(event) => {
                                             event.preventDefault();
-                                            if (!item.isRead) markRead(item.id);
+                                            if (item.type === 'announcement') {
+                                                const openAnnouncement = () =>
+                                                    visit('/dashboard#dashboard-announcements');
+                                                if (item.isRead) openAnnouncement();
+                                                else markRead(item.id, openAnnouncement);
+                                            } else if (!item.isRead) {
+                                                markRead(item.id);
+                                            }
                                         }}
                                     >
-                                        <span
-                                            className={`mt-1.5 size-2 shrink-0 rounded-full ${item.isRead ? 'bg-muted-foreground/25' : 'bg-[#69b518]'}`}
-                                            aria-hidden="true"
-                                        />
-                                        <div className="min-w-0 space-y-1">
+                                        {item.type === 'announcement' ? (
+                                            <Megaphone
+                                                className={`mt-0.5 size-4 shrink-0 ${item.isRead ? 'text-muted-foreground' : 'text-accent-foreground'}`}
+                                                aria-hidden="true"
+                                            />
+                                        ) : (
+                                            <span
+                                                className={`mt-1.5 size-2 shrink-0 rounded-full ${item.isRead ? 'bg-muted-foreground/25' : 'bg-[#69b518]'}`}
+                                                aria-hidden="true"
+                                            />
+                                        )}
+                                        <div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
                                             <p
                                                 className={`text-xs ${item.isRead ? 'font-medium' : 'font-semibold'}`}
                                             >
@@ -197,7 +231,9 @@ export function AppSidebarHeader() {
                                             )}
                                             {!item.isRead && (
                                                 <span className="sr-only">
-                                                    Select to mark as read
+                                                    {item.type === 'announcement'
+                                                        ? 'Select to open announcements and mark as read'
+                                                        : 'Select to mark as read'}
                                                 </span>
                                             )}
                                         </div>
