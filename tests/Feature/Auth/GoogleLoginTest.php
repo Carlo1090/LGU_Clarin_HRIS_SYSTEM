@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -25,13 +26,29 @@ beforeEach(function () {
 });
 
 test('google signs in an existing verified account with matching callback state', function () {
-    $user = User::factory()->create(['email' => 'employee@gmail.com']);
+    $user = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create(['email' => 'employee@gmail.com']);
     $this->get(route('google.redirect'))->assertRedirect();
     $state = session('google_login.state');
     $this->get(route('google.callback', ['state' => $state, 'code' => 'google-code']))
         ->assertRedirect(route('dashboard'));
     $this->assertAuthenticatedAs($user);
 });
+
+test('google rejects both pending and active employees with verified email', function (bool $pending) {
+    $factory = User::factory()->for(Role::factory()->state(['name' => 'Employee']));
+    if ($pending) {
+        $factory = $factory->state(['password' => null]);
+    }
+    $user = $factory->create(['email' => 'employee@gmail.com']);
+
+    $this->get(route('google.redirect'))->assertRedirect();
+    $this->get(route('google.callback', ['state' => session('google_login.state'), 'code' => 'google-code']))
+        ->assertRedirect(route('login'))->assertSessionHasErrors('google');
+    $this->assertGuest();
+    if ($pending) {
+        expect($user->fresh()->password)->toBeNull();
+    }
+})->with([true, false]);
 
 test('google does not exchange a code with mismatched state or create accounts', function () {
     $this->get(route('google.redirect'))->assertRedirect();
@@ -48,7 +65,7 @@ test('google does not exchange a code with mismatched state or create accounts',
 
 test('google preserves the existing authenticator code challenge', function () {
     config()->set('fortify.features', [Features::twoFactorAuthentication(['confirm' => true])]);
-    $user = User::factory()->withTwoFactor()->create(['email' => 'employee@gmail.com']);
+    $user = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->withTwoFactor()->create(['email' => 'employee@gmail.com']);
     $this->get(route('google.redirect'))->assertRedirect();
     $this->get(route('google.callback', ['state' => session('google_login.state'), 'code' => 'google-code']))
         ->assertRedirect(route('two-factor.login'))->assertSessionHas('login.id', $user->id);

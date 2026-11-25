@@ -1,3 +1,4 @@
+import { downloadEmployeeImportErrors } from '@/lib/employee-import-errors';
 import { useTableSearch } from '@/components/table-search';
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -22,48 +23,22 @@ type PreviewRow = {
     profile_action: string;
     account_action: string;
     username: string;
-    temporary_password: string | null;
     valid: boolean;
     errors: string[];
-};
-type Credential = {
-    employee_number: string;
-    reference_code: string;
-    username: string;
-    name: string;
-    avatar?: string | null;
-    temporary_password: string;
-};
-type Result = {
-    createdProfiles: number;
-    updatedProfiles: number;
-    createdAccounts: number;
-    emailSetupSent: number;
-    emailSetupFailed: number;
 };
 type TemplateColumn = { key: string; label: string };
 
 export default function ImportEmployees({
     rows = [],
     token,
-    result,
-    credentials = [],
     statusOptions = ['active', 'on leave', 'inactive', 'terminated'],
     columns = [],
 }: {
     rows?: PreviewRow[];
     token?: string;
-    result?: Result;
-    credentials?: Credential[];
     statusOptions?: string[];
     columns?: TemplateColumn[];
 }) {
-    const credentialSearch = useTableSearch(
-        credentials,
-        ['Employee number', 'Name', 'Username'],
-        (row) => [row.employee_number, row.name, row.username],
-        'Search created accounts',
-    );
     const previewSearch = useTableSearch(
         rows,
         [
@@ -89,7 +64,11 @@ export default function ImportEmployees({
     const [previewed, setPreviewed] = useState(Boolean(token));
     const [editTemplate, setEditTemplate] = useState(false);
     const upload = useForm<{ file: File | null }>({ file: null });
-    const apply = useForm({ token: token ?? '' });
+    const apply = useForm({
+        token: token ?? '',
+        expiry_days: '14',
+        password: '',
+    });
     const templateForm = useForm({ columns, status_options: statusOptions });
     const [newColumn, setNewColumn] = useState('');
     const requiredColumns = [
@@ -111,7 +90,9 @@ export default function ImportEmployees({
     function commit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         apply.transform((data) => ({ ...data, token: token ?? '' }));
-        apply.post('/hris/employees/import');
+        apply.post('/hris/employees/import', {
+            onFinish: () => apply.reset('password'),
+        });
     }
 
     return (
@@ -135,281 +116,153 @@ export default function ImportEmployees({
                     </Button>
                 </WorkspaceHeader>
 
-                {result ? (
-                    <section className="workspace-panel space-y-4 p-5">
-                        <h2 className="text-lg font-semibold">
-                            Import complete
+                <section className="workspace-panel flex flex-wrap items-center justify-between gap-4 p-4">
+                    <div>
+                        <h2 className="font-medium">
+                            Employee import template
                         </h2>
-                        <p className="text-sm">
-                            Employee records created: {result.createdProfiles};
-                            updated: {result.updatedProfiles}. Login accounts
-                            created: {result.createdAccounts}.
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            The required columns are Employee Number, First
+                            Name, Last Name, Department, and Employment Status.
+                            Other fields and Email are optional.
                         </p>
-                        {credentials.length > 0 && (
-                            <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
-                                <h3 className="font-medium">
-                                    One-time temporary credentials
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Copy these one-time credentials now and
-                                    share them privately. Email recipients also
-                                    receive a setup link. Each employee must
-                                    change the temporary password and set up
-                                    two-factor authentication at first sign-in.
-                                    These passwords are not saved for later
-                                    viewing.
-                                </p>
-                                {credentialSearch.toolbar}
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm">
-                                        <thead>
-                                            <tr>
-                                                <th className="p-2">
-                                                    Employee Number
-                                                </th>
-                                                <th className="p-2">
-                                                    Reference Code
-                                                </th>
-                                                <th className="p-2">
-                                                    Username
-                                                </th>
-                                                <th className="p-2">Name</th>
-                                                <th className="p-2">
-                                                    Temporary Password
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {credentialSearch.rows.map(
-                                                (credential) => (
-                                                    <tr
-                                                        key={
-                                                            credential.employee_number
-                                                        }
-                                                        className="border-t"
-                                                    >
-                                                        <td className="p-2">
-                                                            {
-                                                                credential.employee_number
-                                                            }
-                                                        </td>
-                                                        <td className="p-2">
-                                                            {
-                                                                credential.reference_code
-                                                            }
-                                                        </td>
-                                                        <td className="p-2">
-                                                            {
-                                                                credential.username
-                                                            }
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <span className="inline-flex items-center gap-2">
-                                                                <PersonAvatar
-                                                                    name={
-                                                                        credential.name
-                                                                    }
-                                                                    src={
-                                                                        credential.avatar
-                                                                    }
-                                                                />
-                                                                {
-                                                                    credential.name
-                                                                }
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-2 font-mono">
-                                                            {
-                                                                credential.temporary_password
-                                                            }
-                                                        </td>
-                                                    </tr>
-                                                ),
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-                        <p className="text-sm text-muted-foreground">
-                            Account setup links sent by email:{' '}
-                            {result.emailSetupSent}. Delivery failures:{' '}
-                            {result.emailSetupFailed}.
-                        </p>
-                    </section>
-                ) : (
-                    <>
-                        <section className="workspace-panel flex flex-wrap items-center justify-between gap-4 p-4">
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                templateForm.setData({
+                                    columns,
+                                    status_options: statusOptions,
+                                });
+                                setNewColumn('');
+                                setEditTemplate(true);
+                            }}
+                        >
+                            Edit template
+                        </Button>
+                        <a
+                            href="/hris/employees/import/template"
+                            className="inline-flex h-9 items-center rounded-md border px-4 text-sm font-medium hover:bg-accent"
+                        >
+                            Download Excel template
+                        </a>
+                    </div>
+                </section>
+                <section className="workspace-panel space-y-2 p-4 text-sm">
+                    <h2 className="font-medium">
+                        Required spreadsheet columns
+                    </h2>
+                    <p className="text-muted-foreground">
+                        Enter account setup details only. Plantilla and other
+                        profile information can be added later. Keep employee
+                        numbers as text.
+                    </p>
+                </section>
+                {editTemplate && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                        role="presentation"
+                        onMouseDown={(event) => {
+                            if (event.target === event.currentTarget)
+                                setEditTemplate(false);
+                        }}
+                    >
+                        <section
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="template-editor-title"
+                            className="w-full max-w-2xl space-y-4 rounded-xl border bg-background p-6 shadow-xl"
+                        >
                             <div>
-                                <h2 className="font-medium">
-                                    Employee import template
+                                <h2
+                                    id="template-editor-title"
+                                    className="text-lg font-semibold"
+                                >
+                                    Edit employee spreadsheet columns
                                 </h2>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    The required columns are Employee Number,
-                                    First Name, Last Name, Department, and
-                                    Employment Status. Other fields and Email
-                                    are optional.
+                                    Rename, add, or remove columns. Required
+                                    columns cannot be removed. Changes apply to
+                                    future downloads and imports.
                                 </p>
                             </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        templateForm.setData({
-                                            columns,
-                                            status_options: statusOptions,
-                                        });
-                                        setNewColumn('');
-                                        setEditTemplate(true);
-                                    }}
-                                >
-                                    Edit template
-                                </Button>
-                                <a
-                                    href="/hris/employees/import/template"
-                                    className="inline-flex h-9 items-center rounded-md border px-4 text-sm font-medium hover:bg-accent"
-                                >
-                                    Download Excel template
-                                </a>
-                            </div>
-                        </section>
-                        <section className="workspace-panel space-y-2 p-4 text-sm">
-                            <h2 className="font-medium">
-                                Required spreadsheet columns
-                            </h2>
-                            <p className="text-muted-foreground">
-                                Enter account setup details only. Plantilla and
-                                other profile information can be added later.
-                                Keep employee numbers as text.
-                            </p>
-                        </section>
-                        {editTemplate && (
-                            <div
-                                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-                                role="presentation"
-                                onMouseDown={(event) => {
-                                    if (event.target === event.currentTarget)
-                                        setEditTemplate(false);
-                                }}
-                            >
-                                <section
-                                    role="dialog"
-                                    aria-modal="true"
-                                    aria-labelledby="template-editor-title"
-                                    className="w-full max-w-2xl space-y-4 rounded-xl border bg-background p-6 shadow-xl"
-                                >
-                                    <div>
-                                        <h2
-                                            id="template-editor-title"
-                                            className="text-lg font-semibold"
+                            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                                {templateForm.data.columns.map(
+                                    (column, index) => (
+                                        <div
+                                            key={`${column.key}-${index}`}
+                                            className="flex items-center gap-2"
                                         >
-                                            Edit employee spreadsheet columns
-                                        </h2>
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                            Rename, add, or remove columns.
-                                            Required columns cannot be removed.
-                                            Changes apply to future downloads
-                                            and imports.
-                                        </p>
-                                    </div>
-                                    <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                                        {templateForm.data.columns.map(
-                                            (column, index) => (
-                                                <div
-                                                    key={`${column.key}-${index}`}
-                                                    className="flex items-center gap-2"
-                                                >
-                                                    <Input
-                                                        aria-label={`Column ${index + 1} name`}
-                                                        value={column.label}
-                                                        onChange={(event) =>
-                                                            templateForm.setData(
-                                                                'columns',
-                                                                templateForm.data.columns.map(
-                                                                    (
-                                                                        item,
-                                                                        itemIndex,
-                                                                    ) =>
-                                                                        itemIndex ===
-                                                                        index
-                                                                            ? {
-                                                                                  ...item,
-                                                                                  label: event
-                                                                                      .target
-                                                                                      .value,
-                                                                              }
-                                                                            : item,
-                                                                ),
-                                                            )
-                                                        }
-                                                    />
-                                                    {requiredColumns.includes(
-                                                        column.key,
-                                                    ) ? (
-                                                        <span className="text-xs text-muted-foreground">
-                                                            Required
-                                                        </span>
-                                                    ) : (
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                templateForm.setData(
-                                                                    'columns',
-                                                                    templateForm.data.columns.filter(
-                                                                        (
-                                                                            _,
-                                                                            itemIndex,
-                                                                        ) =>
-                                                                            itemIndex !==
-                                                                            index,
-                                                                    ),
-                                                                )
-                                                            }
-                                                        >
-                                                            Remove
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            ),
-                                        )}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            aria-label="New column name"
-                                            placeholder="Add a column"
-                                            value={newColumn}
-                                            onChange={(event) =>
-                                                setNewColumn(event.target.value)
-                                            }
-                                            onKeyDown={(event) => {
-                                                if (event.key === 'Enter') {
-                                                    event.preventDefault();
-                                                    if (newColumn.trim()) {
+                                            <Input
+                                                aria-label={`Column ${index + 1} name`}
+                                                value={column.label}
+                                                onChange={(event) =>
+                                                    templateForm.setData(
+                                                        'columns',
+                                                        templateForm.data.columns.map(
+                                                            (
+                                                                item,
+                                                                itemIndex,
+                                                            ) =>
+                                                                itemIndex ===
+                                                                index
+                                                                    ? {
+                                                                          ...item,
+                                                                          label: event
+                                                                              .target
+                                                                              .value,
+                                                                      }
+                                                                    : item,
+                                                        ),
+                                                    )
+                                                }
+                                            />
+                                            {requiredColumns.includes(
+                                                column.key,
+                                            ) ? (
+                                                <span className="text-xs text-muted-foreground">
+                                                    Required
+                                                </span>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
                                                         templateForm.setData(
                                                             'columns',
-                                                            [
-                                                                ...templateForm
-                                                                    .data
-                                                                    .columns,
-                                                                {
-                                                                    key: '',
-                                                                    label: newColumn.trim(),
-                                                                },
-                                                            ],
-                                                        );
-                                                        setNewColumn('');
+                                                            templateForm.data.columns.filter(
+                                                                (
+                                                                    _,
+                                                                    itemIndex,
+                                                                ) =>
+                                                                    itemIndex !==
+                                                                    index,
+                                                            ),
+                                                        )
                                                     }
-                                                }
-                                            }}
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            disabled={!newColumn.trim()}
-                                            onClick={() => {
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ),
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <Input
+                                    aria-label="New column name"
+                                    placeholder="Add a column"
+                                    value={newColumn}
+                                    onChange={(event) =>
+                                        setNewColumn(event.target.value)
+                                    }
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                            event.preventDefault();
+                                            if (newColumn.trim()) {
                                                 templateForm.setData(
                                                     'columns',
                                                     [
@@ -422,292 +275,318 @@ export default function ImportEmployees({
                                                     ],
                                                 );
                                                 setNewColumn('');
-                                            }}
-                                        >
-                                            Add column
-                                        </Button>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="status-options">
-                                            Employment Status choices
-                                        </Label>
-                                        <textarea
-                                            id="status-options"
-                                            value={templateForm.data.status_options.join(
-                                                '\n',
-                                            )}
-                                            onChange={(event) =>
-                                                templateForm.setData(
-                                                    'status_options',
-                                                    event.target.value
-                                                        .split(/\r?\n/)
-                                                        .map((item) =>
-                                                            item.trim(),
-                                                        )
-                                                        .filter(Boolean),
-                                                )
                                             }
-                                            className="min-h-20 w-full rounded-md border bg-background p-3 text-sm"
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            One choice per line; up to 8
-                                            choices, 30 characters each.
-                                        </p>
-                                    </div>
-                                    <InputError
-                                        message={
-                                            templateForm.errors.columns as
-                                                | string
-                                                | undefined
                                         }
-                                    />
-                                    <div className="flex justify-end gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() =>
-                                                setEditTemplate(false)
-                                            }
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            disabled={templateForm.processing}
-                                            onClick={() =>
-                                                templateForm.put(
-                                                    '/hris/employees/import/template',
-                                                    {
-                                                        onSuccess: () =>
-                                                            setEditTemplate(
-                                                                false,
-                                                            ),
-                                                    },
-                                                )
-                                            }
-                                        >
-                                            Save template
-                                        </Button>
-                                    </div>
-                                </section>
-                            </div>
-                        )}
-                        <form
-                            onSubmit={preview}
-                            className="workspace-panel space-y-4 p-4"
-                        >
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="employee-file">
-                                        Employee workbook (.xlsx)
-                                    </Label>
-                                    <Input
-                                        id="employee-file"
-                                        type="file"
-                                        accept=".xlsx"
-                                        required
-                                        onChange={(event) => {
-                                            setPreviewed(false);
-                                            upload.setData(
-                                                'file',
-                                                event.target.files?.[0] ?? null,
-                                            );
-                                        }}
-                                    />
-                                    {upload.data.file && (
-                                        <div className="flex items-center gap-3 text-sm">
-                                            <span className="truncate">
-                                                {upload.data.file.name}
-                                            </span>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                    setPreviewed(false);
-                                                    upload.setData(
-                                                        'file',
-                                                        null,
-                                                    );
-                                                    const input =
-                                                        document.getElementById(
-                                                            'employee-file',
-                                                        ) as HTMLInputElement | null;
-                                                    if (input) input.value = '';
-                                                }}
-                                            >
-                                                Remove file
-                                            </Button>
-                                        </div>
-                                    )}
-                                    <InputError message={upload.errors.file} />
-                                </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                Add one employee per row under the headers on
-                                the EMPLOYEES sheet. Keep employee numbers,
-                                TINs, and other ID fields as text to preserve
-                                leading zeros.
-                            </p>
-                            <Button disabled={upload.processing}>
-                                {upload.processing
-                                    ? 'Checking workbookâ€¦'
-                                    : 'Preview import'}
-                            </Button>
-                        </form>
-                        {previewed && token && (
-                            <>
-                                <section className="space-y-3">
-                                    <div>
-                                        <h2 className="text-lg font-semibold">
-                                            Review {rows.length} rows
-                                        </h2>
-                                        <p className="text-sm text-muted-foreground">
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={!newColumn.trim()}
+                                    onClick={() => {
+                                        templateForm.setData('columns', [
+                                            ...templateForm.data.columns,
                                             {
-                                                rows.filter(
-                                                    (row) =>
-                                                        row.valid &&
-                                                        row.account_action ===
-                                                            'Create account',
-                                                ).length
-                                            }{' '}
-                                            accounts ready to create;{' '}
-                                            {
-                                                rows.filter((row) => !row.valid)
-                                                    .length
-                                            }{' '}
-                                            rows need correction. No records
-                                            change until you continue.
-                                        </p>
-                                    </div>
-                                    {previewSearch.toolbar}
-                                    <div className="overflow-x-auto rounded-xl border">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="workspace-table-head">
-                                                <tr>
-                                                    {[
-                                                        'Excel row',
-                                                        'Employee Number',
-                                                        'Name',
-                                                        'Department',
-                                                        'Position',
-                                                        'Employment Status',
-                                                        'Employee profile',
-                                                        'Login account',
-                                                        'Username',
-                                                        'Temporary password',
-                                                        'Validation',
-                                                    ].map((heading) => (
-                                                        <th
-                                                            key={heading}
-                                                            className="p-3"
-                                                        >
-                                                            {heading}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {previewSearch.rows.map(
-                                                    (row) => (
-                                                        <tr
-                                                            key={row.row}
-                                                            className="border-t align-top"
-                                                        >
-                                                            <td className="p-3">
-                                                                {row.row}
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {
-                                                                    row.employee_number
-                                                                }
-                                                            </td>
-                                                            <td className="p-3">
-                                                                <span className="inline-flex items-center gap-2">
-                                                                    <PersonAvatar
-                                                                        name={
-                                                                            row.name
-                                                                        }
-                                                                        src={
-                                                                            row.avatar
-                                                                        }
-                                                                    />
-                                                                    {row.name}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {row.department}
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {row.position}
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {row.status}
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {
-                                                                    row.profile_action
-                                                                }
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {
-                                                                    row.account_action
-                                                                }
-                                                            </td>
-                                                            <td className="p-3 font-mono">
-                                                                {row.username}
-                                                            </td>
-                                                            <td className="p-3 font-mono">
-                                                                {row.temporary_password ??
-                                                                    (row.valid
-                                                                        ? 'Account already exists'
-                                                                        : '—')}
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {row.valid
-                                                                    ? 'Ready'
-                                                                    : row.errors.join(
-                                                                          ' ',
-                                                                      )}
-                                                            </td>
-                                                        </tr>
-                                                    ),
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </section>
-                                <form
-                                    onSubmit={commit}
-                                    className="workspace-panel flex flex-wrap items-end gap-3 p-4"
+                                                key: '',
+                                                label: newColumn.trim(),
+                                            },
+                                        ]);
+                                        setNewColumn('');
+                                    }}
                                 >
-                                    <input
-                                        type="hidden"
-                                        value={token}
-                                        readOnly
-                                    />
-                                    <InputError message={apply.errors.token} />
+                                    Add column
+                                </Button>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="status-options">
+                                    Employment Status choices
+                                </Label>
+                                <textarea
+                                    id="status-options"
+                                    value={templateForm.data.status_options.join(
+                                        '\n',
+                                    )}
+                                    onChange={(event) =>
+                                        templateForm.setData(
+                                            'status_options',
+                                            event.target.value
+                                                .split(/\r?\n/)
+                                                .map((item) => item.trim())
+                                                .filter(Boolean),
+                                        )
+                                    }
+                                    className="min-h-20 w-full rounded-md border bg-background p-3 text-sm"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    One choice per line; up to 8 choices, 30
+                                    characters each.
+                                </p>
+                            </div>
+                            <InputError
+                                message={
+                                    templateForm.errors.columns as
+                                        | string
+                                        | undefined
+                                }
+                            />
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setEditTemplate(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    disabled={templateForm.processing}
+                                    onClick={() =>
+                                        templateForm.put(
+                                            '/hris/employees/import/template',
+                                            {
+                                                onSuccess: () =>
+                                                    setEditTemplate(false),
+                                            },
+                                        )
+                                    }
+                                >
+                                    Save template
+                                </Button>
+                            </div>
+                        </section>
+                    </div>
+                )}
+                <form
+                    onSubmit={preview}
+                    className="workspace-panel space-y-4 p-4"
+                >
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="employee-file">
+                                Employee workbook (.xlsx)
+                            </Label>
+                            <Input
+                                id="employee-file"
+                                type="file"
+                                accept=".xlsx"
+                                required
+                                onChange={(event) => {
+                                    setPreviewed(false);
+                                    upload.setData(
+                                        'file',
+                                        event.target.files?.[0] ?? null,
+                                    );
+                                }}
+                            />
+                            {upload.data.file && (
+                                <div className="flex items-center gap-3 text-sm">
+                                    <span className="truncate">
+                                        {upload.data.file.name}
+                                    </span>
                                     <Button
-                                        disabled={
-                                            apply.processing ||
-                                            rows.length === 0 ||
-                                            rows.some((row) => !row.valid)
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setPreviewed(false);
+                                            upload.setData('file', null);
+                                            const input =
+                                                document.getElementById(
+                                                    'employee-file',
+                                                ) as HTMLInputElement | null;
+                                            if (input) input.value = '';
+                                        }}
+                                    >
+                                        Remove file
+                                    </Button>
+                                </div>
+                            )}
+                            <InputError message={upload.errors.file} />
+                        </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Add one employee per row under the headers on the
+                        EMPLOYEES sheet. Keep employee numbers, TINs, and other
+                        ID fields as text to preserve leading zeros.
+                    </p>
+                    <Button disabled={upload.processing}>
+                        {upload.processing
+                            ? 'Checking workbookâ€¦'
+                            : 'Preview import'}
+                    </Button>
+                </form>
+                {previewed && token && (
+                    <>
+                        <section className="space-y-3">
+                            <div>
+                                <h2 className="text-lg font-semibold">
+                                    Review {rows.length} rows
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    {
+                                        rows.filter(
+                                            (row) =>
+                                                row.valid &&
+                                                row.account_action ===
+                                                    'Create account',
+                                        ).length
+                                    }{' '}
+                                    accounts ready to create;{' '}
+                                    {rows.filter((row) => !row.valid).length}{' '}
+                                    rows need correction. No records change
+                                    until you continue.
+                                </p>
+                            </div>
+                            {previewSearch.toolbar}
+                            <div className="overflow-x-auto rounded-xl border">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="workspace-table-head">
+                                        <tr>
+                                            {[
+                                                'Excel row',
+                                                'Employee Number',
+                                                'Name',
+                                                'Department',
+                                                'Position',
+                                                'Employment Status',
+                                                'Employee profile',
+                                                'Login account',
+                                                'Username',
+                                                'Validation',
+                                            ].map((heading) => (
+                                                <th
+                                                    key={heading}
+                                                    className="p-3"
+                                                >
+                                                    {heading}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {previewSearch.rows.map((row) => (
+                                            <tr
+                                                key={row.row}
+                                                className="border-t align-top"
+                                            >
+                                                <td className="p-3">
+                                                    {row.row}
+                                                </td>
+                                                <td className="p-3">
+                                                    {row.employee_number}
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className="inline-flex items-center gap-2">
+                                                        <PersonAvatar
+                                                            name={row.name}
+                                                            src={row.avatar}
+                                                        />
+                                                        {row.name}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3">
+                                                    {row.department}
+                                                </td>
+                                                <td className="p-3">
+                                                    {row.position}
+                                                </td>
+                                                <td className="p-3">
+                                                    {row.status}
+                                                </td>
+                                                <td className="p-3">
+                                                    {row.profile_action}
+                                                </td>
+                                                <td className="p-3">
+                                                    {row.account_action}
+                                                </td>
+                                                <td className="p-3 font-mono">
+                                                    {row.username}
+                                                </td>
+                                                <td className="p-3">
+                                                    {row.valid
+                                                        ? 'Ready'
+                                                        : row.errors.join(' ')}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                        <form
+                            onSubmit={commit}
+                            className="workspace-panel flex flex-wrap items-end gap-3 p-4"
+                        >
+                            <input type="hidden" value={token} readOnly />
+                            <label className="space-y-1 text-sm">
+                                <span>Activation code expiry in days</span>
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    required
+                                    value={apply.data.expiry_days}
+                                    onChange={(event) =>
+                                        apply.setData(
+                                            'expiry_days',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                                <InputError
+                                    message={apply.errors.expiry_days}
+                                />
+                            </label>
+                            <InputError message={apply.errors.token} />
+                            <label className="space-y-1 text-sm">
+                                <span>
+                                    Current password, if not recently confirmed
+                                </span>
+                                <Input
+                                    type="password"
+                                    autoComplete="current-password"
+                                    value={apply.data.password}
+                                    onChange={(event) =>
+                                        apply.setData(
+                                            'password',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                                <InputError message={apply.errors.password} />
+                            </label>
+                            <Button
+                                disabled={
+                                    apply.processing ||
+                                    !rows.some((row) => row.valid)
+                                }
+                            >
+                                {apply.processing
+                                    ? 'Creating accounts...'
+                                    : 'Create accounts'}
+                            </Button>
+                            {rows.some((row) => !row.valid) && (
+                                <>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            downloadEmployeeImportErrors(
+                                                rows.filter(
+                                                    (row) => !row.valid,
+                                                ),
+                                            )
                                         }
                                     >
-                                        {apply.processing
-                                            ? 'Applyingâ€¦'
-                                            : 'Create accounts'}
+                                        Download errors
                                     </Button>
-                                    {rows.some((row) => !row.valid) && (
-                                        <p className="w-full text-sm text-destructive">
-                                            Fix all row errors, then upload the
-                                            corrected workbook and preview
-                                            again.
-                                        </p>
-                                    )}
-                                </form>
-                            </>
-                        )}
+                                    <p className="w-full text-sm text-destructive">
+                                        Rows with errors will be held back.
+                                        Correct them and upload the workbook
+                                        again.
+                                    </p>
+                                </>
+                            )}
+                        </form>
                     </>
                 )}
             </main>

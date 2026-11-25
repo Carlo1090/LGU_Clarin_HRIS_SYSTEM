@@ -122,7 +122,34 @@ class DashboardController extends Controller
             'office' => $employee?->department?->name,
             'cards' => $cards,
             'analytics' => $insights->for($user, $months),
+            'employeeLockouts' => in_array($role, ['HR Officer', 'HRMO Head'], true) ? $this->employeeLockouts() : [],
         ]);
+    }
+
+    /** @return list<array{employeeNumber: string, name: string, kind: string, expiresAt: string}> */
+    private function employeeLockouts(): array
+    {
+        $events = AuditLog::query()->where('model_type', User::class)
+            ->whereIn('action', ['employee.login_locked', 'employee.activation_locked'])
+            ->where('created_at', '>', now()->subMinutes(15))
+            ->latest('id')->get(['id', 'action', 'model_id', 'metadata'])
+            ->unique(fn (AuditLog $event) => $event->action.':'.$event->model_id);
+        $accounts = User::query()->with('employee:id,employee_number')->whereHas('role', fn ($role) => $role->where('name', 'Employee'))
+            ->whereKey($events->pluck('model_id')->all())->where('is_active', true)->get(['id', 'name', 'employee_id'])->keyBy('id');
+
+        return $events->map(function (AuditLog $event) use ($accounts): ?array {
+            $account = $accounts->get($event->model_id);
+            $expiresAt = (json_decode($event->metadata ?? '{}', true) ?: [])['expires_at'] ?? null;
+            if ($account?->employee === null || ! is_string($expiresAt) || strtotime($expiresAt) <= now()->timestamp) {
+                return null;
+            }
+
+            return [
+                'employeeNumber' => $account->employee->employee_number, 'name' => $account->name,
+                'kind' => $event->action === 'employee.login_locked' ? 'Sign-in' : 'Activation',
+                'expiresAt' => $expiresAt,
+            ];
+        })->filter()->values()->all();
     }
 
     /** @return array{label: string, value: string} */

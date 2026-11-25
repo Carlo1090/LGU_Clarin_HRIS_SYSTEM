@@ -233,6 +233,21 @@
 }
 
 @media print {
+    body:has([data-activation-slip-sheet]) * {
+        visibility: hidden;
+    }
+
+    [data-activation-slip-sheet],
+    [data-activation-slip-sheet] * {
+        visibility: visible !important;
+    }
+
+    [data-activation-slip-sheet] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+    }
+
     body:has(> [data-print-preview][data-state='open'])
         > :not([data-print-preview]) {
         display: none !important;

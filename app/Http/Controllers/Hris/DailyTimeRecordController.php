@@ -90,7 +90,7 @@ class DailyTimeRecordController extends Controller
         ]);
 
         $attendance = $employee->attendanceRecords();
-        $punches = $employee->attendancePunches();
+        $punches = AttendancePunch::query()->ownedBy($employee->id);
         $month = $filters['month'] ?? null;
         $period = $filters['period'] ?? 'full';
         $latestDate = null;

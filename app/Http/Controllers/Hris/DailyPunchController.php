@@ -57,7 +57,7 @@ class DailyPunchController
 
     private function linkedEmployee(?AttendancePunch $punch): ?Employee
     {
-        $employee = $punch?->getRelationValue('employee');
+        $employee = $punch?->getRelationValue('effectiveEmployee');
 
         return $employee instanceof Employee ? $employee : null;
     }
@@ -106,11 +106,12 @@ class DailyPunchController
         $headDepartment = $user->role?->name === 'Department Head' ? $user->employee?->department_id : null;
         abort_if($user->role?->name === 'Department Head' && $headDepartment === null, 403);
 
-        $query = AttendancePunch::query()
-            ->with(['employee.department'])
-            ->when(isset($input['employee']), fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->whereKey($input['employee'])))
-            ->when(isset($input['department']), fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->where('department_id', $input['department'])))
-            ->when($headDepartment !== null, fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->where('department_id', $headDepartment)))
+        $owner = DB::raw(AttendancePunch::employeeIdSql());
+        $query = AttendancePunch::query()->withEffectiveEmployee()
+            ->with('effectiveEmployee.department')
+            ->when(isset($input['employee']), fn (Builder $builder) => $builder->ownedBy((int) $input['employee']))
+            ->when(isset($input['department']), fn (Builder $builder) => $builder->whereIn($owner, Employee::query()->select('id')->where('department_id', $input['department'])))
+            ->when($headDepartment !== null, fn (Builder $builder) => $builder->whereIn($owner, Employee::query()->select('id')->where('department_id', $headDepartment)))
             ->orderBy('machine_user_id')->orderBy('punched_at')->orderBy('id');
 
         $windows = [];
@@ -136,7 +137,9 @@ class DailyPunchController
             Date::parse($startDate)->subDays($attendance->earlyDays())->startOfDay(),
             Date::parse($endDate)->addDays($attendance->lateDays())->endOfDay(),
         ])->get()
-            ->groupBy(fn (AttendancePunch $punch): string => $punch->machine_user_id.'|'.$workDateFor($punch))
+            ->groupBy(fn (AttendancePunch $punch): string => ($this->linkedEmployee($punch) === null
+                ? 'machine-'.$punch->machine_user_id
+                : 'employee-'.$this->linkedEmployee($punch)->id).'|'.$workDateFor($punch))
             ->filter(fn ($group, string $key): bool => $this->dateFromGroupKey($key) >= $startDate && $this->dateFromGroupKey($key) <= $endDate);
         $calendar = $this->calendarContext($groups);
         $absent = AttendanceDaily::query()
@@ -154,7 +157,7 @@ class DailyPunchController
             if ($employee === null) {
                 continue;
             }
-            $key = ($employee->biometric_id ?? 'employee-'.$employee->id).'|'.$entry->work_date->toDateString();
+            $key = 'employee-'.$employee->id.'|'.$entry->work_date->toDateString();
             if (! $groups->has($key)) {
                 $groups->put($key, collect());
                 $absentEmployees[$key] = $employee;
@@ -162,8 +165,9 @@ class DailyPunchController
         }
 
         $rows = $groups->map(function (Collection $dayPunches, string $key) use ($calendar, $attendance, $absentEmployees): array {
-            [$machineUserId, $date] = explode('|', $key, 2);
+            $date = $this->dateFromGroupKey($key);
             $employee = $absentEmployees[$key] ?? $this->linkedEmployee($dayPunches->first());
+            $machineUserId = $dayPunches->first()?->machine_user_id ?? $employee?->biometric_id;
             $day = $employee === null ? null : $attendance->employeeDay($employee->id, $date);
             $slots = array_fill_keys(self::SLOT_NAMES, []);
             $missing = [];
@@ -220,7 +224,7 @@ class DailyPunchController
             }
 
             return [
-                'key' => $machineUserId.'-'.$date,
+                'key' => $key,
                 'machine_user_id' => (int) $machineUserId,
                 'date' => $date,
                 'employee_id' => $employee?->id,

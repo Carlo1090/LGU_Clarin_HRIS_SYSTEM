@@ -19,9 +19,13 @@ type PageProps = {
 export default function Profile({
     mustVerifyEmail,
     status,
+    showLastLogin = false,
+    lastLoginAt = null,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
+    showLastLogin?: boolean;
+    lastLoginAt?: string | null;
 }) {
     const { auth } = usePage<PageProps>().props;
 
@@ -37,6 +41,16 @@ export default function Profile({
                     title="Profile"
                     description="Update your name and email address"
                 />
+                {showLastLogin && (
+                    <p className="text-sm text-muted-foreground">
+                        Last sign-in{' '}
+                        {lastLoginAt
+                            ? new Date(lastLoginAt).toLocaleString('en-PH', {
+                                  timeZone: 'Asia/Manila',
+                              })
+                            : 'not recorded'}
+                    </p>
+                )}
 
                 <Form
                     {...ProfileController.uploadPhoto.form()}

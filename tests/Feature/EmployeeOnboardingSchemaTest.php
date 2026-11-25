@@ -11,6 +11,29 @@ use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
 
+test('a pending account can have no password and prevents a lossy schema rollback', function () {
+    $pending = User::factory()->create(['password' => null])->refresh();
+
+    expect($pending->password)->toBeNull();
+
+    $migration = require database_path('migrations/2026_11_24_000011_allow_pending_employee_passwords.php');
+
+    expect(fn () => $migration->down())->toThrow(RuntimeException::class, 'Accounts without passwords exist.');
+    expect($pending->refresh()->password)->toBeNull();
+});
+
+test('a pending account cannot sign in with its employee number and a password', function () {
+    $employee = Employee::factory()->create();
+    User::factory()->for($employee)->create(['email' => null, 'password' => null]);
+
+    $this->post(route('login.store'), [
+        'email' => $employee->employee_number,
+        'password' => 'a password guess',
+    ])->assertSessionHasErrors('email');
+
+    $this->assertGuest();
+});
+
 test('activation codes keep the issuer and hide the stored hash from serialization', function () {
     $employeeAccount = User::factory()->create();
     $issuer = User::factory()->create();

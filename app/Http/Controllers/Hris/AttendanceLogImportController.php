@@ -121,7 +121,7 @@ class AttendanceLogImportController
 
         $punchQuery = AttendancePunch::query()
             ->when($unassigned, fn ($query) => $query->unassigned())
-            ->when($assigned, fn ($query) => $query->whereHas('employee'))
+            ->when($assigned, fn ($query) => $query->whereNot(fn ($unlinked) => $unlinked->unassigned()))
             ->when($month !== null, fn ($query) => $query->whereBetween('punched_at', [
                 $month.'-01 00:00:00', Date::parse($month.'-01')->endOfMonth()->toDateString().' 23:59:59',
             ]));
@@ -133,38 +133,49 @@ class AttendanceLogImportController
             ->withQueryString();
 
         $ids = $groupIds->getCollection()->pluck('machine_user_id')->filter()->unique()->values();
+        $ownerSql = AttendancePunch::employeeIdSql();
         $stats = $ids->isEmpty()
             ? collect()
             : (clone $punchQuery)
                 ->whereIn('machine_user_id', $ids)
                 ->selectRaw('machine_user_id, COUNT(*) as punch_count, MIN(punched_at) as first_punch, MAX(punched_at) as last_punch')
+                ->selectRaw('MIN('.$ownerSql.') as owner_id, COUNT(DISTINCT '.$ownerSql.') as owner_count, COUNT(*) - COUNT('.$ownerSql.') as unlinked_count')
                 ->groupBy('machine_user_id')
                 ->get()
                 ->keyBy('machine_user_id');
-        $employees = $ids->isEmpty()
+        $employees = $ids->isEmpty() || $unassigned
             ? collect()
             : Employee::query()
-                ->whereIn('biometric_id', $ids)
-                ->select(['id', 'user_id', 'employee_number', 'first_name', 'last_name', 'biometric_id'])
+                ->whereKey($stats->pluck('owner_id')->filter()->values()->all())
+                ->select(['id', 'user_id', 'employee_number', 'first_name', 'last_name'])
                 ->addSelect(['avatar' => Employee::accountAvatarQuery()])
                 ->get()
-                ->keyBy('biometric_id');
+                ->keyBy('id');
 
-        $groups = $groupIds->through(fn (object $row) => [
-            'biometric_id' => (int) $row->machine_user_id,
-            'employee_number' => $employees->get((int) $row->machine_user_id)?->employee_number,
-            'first_name' => $employees->get((int) $row->machine_user_id)?->first_name,
-            'last_name' => $employees->get((int) $row->machine_user_id)?->last_name,
-            'avatar' => $employees->get((int) $row->machine_user_id)?->avatar,
-            'punch_count' => (int) data_get($stats->get((int) $row->machine_user_id), 'punch_count', 0),
-            'first_punch' => data_get($stats->get((int) $row->machine_user_id), 'first_punch'),
-            'last_punch' => data_get($stats->get((int) $row->machine_user_id), 'last_punch'),
-        ]);
+        $groups = $groupIds->through(function (object $row) use ($stats, $employees): array {
+            $group = $stats->get((int) $row->machine_user_id);
+            $multipleOwners = (int) data_get($group, 'owner_count', 0) > 1;
+            $employee = $multipleOwners ? null : $employees->get((int) data_get($group, 'owner_id'));
+
+            return [
+                'biometric_id' => (int) $row->machine_user_id,
+                'employee_number' => $employee?->employee_number,
+                'first_name' => $employee?->first_name,
+                'last_name' => $employee?->last_name,
+                'avatar' => $employee?->avatar,
+                'multiple_owners' => $multipleOwners,
+                'unlinked_count' => (int) data_get($group, 'unlinked_count', 0),
+                'punch_count' => (int) data_get($group, 'punch_count', 0),
+                'first_punch' => data_get($group, 'first_punch'),
+                'last_punch' => data_get($group, 'last_punch'),
+            ];
+        });
 
         return [
             'batch' => $batch ? $batch->only(['id', 'file_name', 'status', 'error_message', 'total_lines', 'inserted_count', 'duplicate_count', 'invalid_count', 'recompute_summary'])
                 + ['invalid_lines' => $batch->invalid_lines ?? []] : null,
             'groups' => $groups,
+            'canLink' => in_array($request->user()->role?->name, ['HR Officer', 'HRMO Head'], true),
             'unassigned' => $unassigned,
             'assigned' => $assigned,
             'month' => $month,

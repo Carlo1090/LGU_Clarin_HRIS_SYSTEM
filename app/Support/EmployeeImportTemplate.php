@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Department;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use ZipArchive;
@@ -13,9 +14,11 @@ class EmployeeImportTemplate
     private const DEFAULT_COLUMNS = [
         ['key' => 'employee_number', 'label' => 'Employee Number'], ['key' => 'first_name', 'label' => 'First Name'],
         ['key' => 'middle_name', 'label' => 'Middle Name'], ['key' => 'last_name', 'label' => 'Last Name'],
-        ['key' => 'suffix', 'label' => 'Suffix'], ['key' => 'department', 'label' => 'Department'],
+        ['key' => 'suffix', 'label' => 'Suffix'], ['key' => 'gender', 'label' => 'Gender'],
+        ['key' => 'department', 'label' => 'Department'],
         ['key' => 'position', 'label' => 'Position'], ['key' => 'employment_status', 'label' => 'Employment Status'],
-        ['key' => 'email', 'label' => 'Email Address'],
+        ['key' => 'date_hired', 'label' => 'Date Hired'], ['key' => 'email', 'label' => 'Email Address'],
+        ['key' => 'biometric_id', 'label' => 'Bio ID'],
     ];
 
     private function path(): string
@@ -108,14 +111,23 @@ class EmployeeImportTemplate
     public function download(string $path, array $statuses): void
     {
         $columns = $this->columns();
+        $departments = Department::query()->orderBy('name')->pluck('name')->unique()->values();
+        $departmentRows = '<x:row r="1"><x:c r="A1" t="inlineStr"><x:is><x:t>Department</x:t></x:is></x:c></x:row>';
+        foreach ($departments as $index => $name) {
+            $row = $index + 2;
+            $escaped = htmlspecialchars($name, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+            $departmentRows .= '<x:row r="'.$row.'"><x:c r="A'.$row.'" t="inlineStr"><x:is><x:t>'.$escaped.'</x:t></x:is></x:c></x:row>';
+        }
         $zip = new ZipArchive;
         if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new \RuntimeException('Unable to create the employee workbook.');
         }
-        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
         $zip->addFromString('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
-        $zip->addFromString('xl/workbook.xml', '<?xml version="1.0"?><x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><x:sheets><x:sheet name="EMPLOYEES" sheetId="1" r:id="rId1"/></x:sheets></x:workbook>');
-        $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+        $departmentRange = $departments->isEmpty() ? '' : '<x:definedNames><x:definedName name="DepartmentOptions">Departments!$A$2:$A$'.($departments->count() + 1).'</x:definedName></x:definedNames>';
+        $zip->addFromString('xl/workbook.xml', '<?xml version="1.0"?><x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><x:sheets><x:sheet name="EMPLOYEES" sheetId="1" r:id="rId1"/><x:sheet name="Departments" sheetId="2" r:id="rId3"/></x:sheets>'.$departmentRange.'</x:workbook>');
+        $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>');
+        $zip->addFromString('xl/worksheets/sheet2.xml', '<?xml version="1.0"?><x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheetData>'.$departmentRows.'</x:sheetData></x:worksheet>');
 
         $widths = [20, 18, 18, 18, 14, 28, 22, 22, 30];
         $cols = $header = '';
@@ -131,6 +143,9 @@ class EmployeeImportTemplate
             $letter = $this->columnName($index + 1);
             if ($column['key'] === 'employment_status') {
                 $validations .= '<x:dataValidation type="list" allowBlank="1" sqref="'.$letter.'2:'.$letter.'5001"><x:formula1>"'.htmlspecialchars(implode(',', $statuses), ENT_XML1 | ENT_QUOTES, 'UTF-8').'"</x:formula1></x:dataValidation>';
+            }
+            if ($column['key'] === 'department' && $departments->isNotEmpty()) {
+                $validations .= '<x:dataValidation type="list" showErrorMessage="1" sqref="'.$letter.'2:'.$letter.'5001"><x:formula1>DepartmentOptions</x:formula1></x:dataValidation>';
             }
         }
         $zip->addFromString('xl/worksheets/sheet1.xml', '<?xml version="1.0"?><x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:dimension ref="A1:'.$last.'5001"/><x:sheetViews><x:sheetView workbookViewId="0"><x:pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></x:sheetView></x:sheetViews><x:cols>'.$cols.'</x:cols><x:sheetData><x:row r="1" ht="56" customHeight="1">'.$header.'</x:row></x:sheetData><x:dataValidations count="'.substr_count($validations, '<x:dataValidation ').'">'.$validations.'</x:dataValidations></x:worksheet>');

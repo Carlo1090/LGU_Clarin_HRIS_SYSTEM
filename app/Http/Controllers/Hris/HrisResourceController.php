@@ -6,14 +6,17 @@ use App\Attendance\Models\AttendanceDaily;
 use App\Attendance\Models\DepartmentSchedule;
 use App\Attendance\Services\AttendanceRecomputer;
 use App\Attendance\Services\ScheduleResolver;
+use App\Casts\EmployeeIdentifier;
+use App\Http\Responses\EmployeeActivationSlips;
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Models\Applicant;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
-use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\EmployeeProfileDraft;
+use App\Models\EmployeeProfileRevision;
 use App\Models\EvaluationPeriod;
 use App\Models\LeaveApplication;
 use App\Models\LeaveType;
@@ -28,7 +31,7 @@ use App\Models\Role;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Vacancy;
-use App\Notifications\HrisAccountSetup;
+use App\Services\EmployeeAccountCreator;
 use App\Support\EmployeeImportTemplate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +40,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
@@ -45,6 +47,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class HrisResourceController extends Controller
 {
@@ -402,7 +405,7 @@ class HrisResourceController extends Controller
         $departmentHead = $request->user()->role?->name === 'Department Head';
         $departmentId = $request->user()->employee?->department_id;
         $canManageAttendance = in_array($resource, ['attendance', 'employees'], true) && Gate::allows('manage-hris-resource', 'attendance');
-        $canLinkBiometricIds = $resource === 'employees' && $canManageAttendance;
+        $canLinkBiometricIds = $resource === 'employees' && in_array($request->user()->role?->name, ['HR Officer', 'HRMO Head'], true);
         if ($resource === 'attendance' && $request->query('view') !== 'entries') {
             $filters = $request->validate([
                 'month' => ['sometimes', 'required', 'date_format:Y-m', 'regex:/^[1-9][0-9]{3}-/'],
@@ -483,12 +486,6 @@ class HrisResourceController extends Controller
                 'canManage' => in_array($department->code, array_keys(Department::PLANTILLA_OFFICES), true),
                 'work_schedule' => $schedules->has($department->id) ? $this->scheduleHours($schedules->get($department->id)) : null,
             ]);
-            $codes = $records->pluck('code');
-            $records = $records->concat(collect(Department::PLANTILLA_OFFICES)
-                ->reject(fn ($name, $code) => $codes->contains($code))
-                ->map(fn ($name, $code) => ['id' => $code, 'name' => $name, 'code' => $code, 'parent_department_id' => null, 'description' => null, 'canManage' => false, 'work_schedule' => null])
-                ->values())->values();
-
             $officeNames = $records->pluck('name', 'id');
             $fields = array_map(fn ($field) => $field['name'] === 'parent_department_id'
                 ? array_merge($field, ['options' => $officeNames->map(fn ($label, $value) => compact('label', 'value'))->values()])
@@ -560,8 +557,9 @@ class HrisResourceController extends Controller
 
         $canManage = $resource !== 'leave-applications' && Gate::allows('manage-hris-resource', $resource);
         $canEditEmployeeEmail = $resource === 'employees' && $canManage;
+        $canIssueCodes = $resource === 'employees' && in_array($request->user()->role?->name, ['HR Officer', 'HRMO Head'], true);
         if ($canEditEmployeeEmail) {
-            $query->with('user:id,email,role_id', 'user.role:id,name');
+            $query->with('user:id,email,role_id,password,is_active', 'user.role:id,name');
         }
 
         $records = ($resource === 'employees' ? $query : $query->latest('id'))->paginate(20)->withQueryString();
@@ -587,6 +585,7 @@ class HrisResourceController extends Controller
             'resource' => $resource,
             'title' => $config['title'],
             'canManage' => $canManage,
+            'canReviewEmployeeProfiles' => $resource === 'employees' && $request->user()->role?->name === 'HRMO Head',
             'leaveReviewStage' => $resource === 'leave-applications' ? LeaveReviewController::stage($request->user()) : null,
             'canCreateLeaveOnBehalf' => $resource === 'leave-applications' && $request->user()->role?->name === 'HRMO Head',
             'canImport' => $resource === 'employees' && $request->user()->role?->name === 'HRMO Head',
@@ -594,14 +593,17 @@ class HrisResourceController extends Controller
             'canManageSchedules' => $resource === 'employees' && Gate::allows('manage-attendance-schedules'),
             'canLinkBiometricIds' => $canLinkBiometricIds,
             'statusSummary' => $statusSummary,
-            'createdAccountCredentials' => $resource === 'employees' ? $request->session()->get('createdAccountCredentials') : null,
-            'accountSetupEmailSent' => $resource === 'employees' ? $request->session()->get('accountSetupEmailSent') : null,
             'assignBiometricId' => $resource === 'employees' ? $assignBiometricId : null,
             'fields' => $fields,
             'records' => $records->through(fn (Model $record) => ['id' => $record->getKey(), 'avatar' => $avatars->get($resource === 'employees' ? $record->getKey() : $record->employee_id)]
                 + collect($accountFields)->mapWithKeys(fn ($field) => [$field.'_avatar' => $accountAvatars->get($record->getAttribute($field))])->all()
                 + ($canLinkBiometricIds ? $record->only(['biometric_id', 'biometric_status', 'biometric_note', 'biometric_locked']) : [])
                 + ($canEditEmployeeEmail && $record->user?->role?->name === 'Employee' ? ['account_email' => $record->user->email] : [])
+                + ($canIssueCodes && $record->user?->role?->name === 'Employee' && $record->user->is_active ? [
+                    'can_reissue_activation' => true,
+                    'can_revoke_activation_sessions' => $request->user()->role?->name === 'HRMO Head',
+                    'can_deactivate_account' => $request->user()->role?->name === 'HRMO Head',
+                ] : [])
                 + ($resource === 'employees' ? ['work_schedule' => $scheduleLabels->get($record->getKey())] : [])
                 + collect($config['fields'])->mapWithKeys(fn (array $field) => [$field['name'] => $record->getAttribute($field['name'])])->all()),
             'editing' => $request->integer('edit') ?: null,
@@ -622,8 +624,21 @@ class HrisResourceController extends Controller
         abort_unless($employee !== null, 404);
         $employee->load(['department', 'plantillaItem.department']);
         $item = $employee->plantillaItem;
+        $draft = $request->user()->role?->name === 'Employee'
+            ? (EmployeeProfileDraft::query()->find($employee->id)?->values ?? [])
+            : null;
+        $privateDraftFields = ['tin', 'gsis_bp_number', 'pwd_id_number', 'solo_parent_id_number'];
 
         return Inertia::render('hris/my-profile', [
+            'identifierRevealEmployeeId' => $request->user()->role?->name === 'Employee' ? $employee->id : null,
+            'draft' => $draft === null ? null : collect($draft)->except($privateDraftFields)->all(),
+            'savedPrivateDraftFields' => $draft === null ? [] : collect($draft)->only($privateDraftFields)->filter()->keys()->all(),
+            'reviewFields' => $draft === null ? [] : EmployeeProfileRevision::query()->where('employee_id', $employee->id)
+                ->latest('id')->get(['id', 'field', 'status', 'reason'])->unique('field')->keyBy('field'),
+            'eligibilities' => $draft === null ? [] : config('employee_eligibilities'),
+            'naFields' => $draft === null ? [] : EmployeeProfileReviewController::naFields($employee),
+            'privacyNotice' => $draft === null ? null : (SystemSetting::query()->where('key', 'employee_profile.privacy_notice')
+                ->where('is_active', true)->value('value') ?? 'HRMO uses these details to maintain your personnel record. Contact HRMO with questions about access or corrections.'),
             'employee' => [
                 'employee_number' => $employee->employee_number,
                 'first_name' => $employee->first_name,
@@ -635,7 +650,7 @@ class HrisResourceController extends Controller
                 'date_hired' => $employee->date_hired?->format('Y-m-d'),
                 'date_regularized' => $employee->date_regularized?->format('Y-m-d'),
                 'age' => $employee->age,
-                'tin' => $employee->tin,
+                'tin' => EmployeeIdentifier::mask($employee->tin),
                 'date_of_original_appointment' => $employee->date_of_original_appointment?->format('Y-m-d'),
                 'date_of_last_promotion_appointment' => $employee->date_of_last_promotion_appointment?->format('Y-m-d'),
                 'appointment_status' => $employee->appointment_status,
@@ -645,7 +660,7 @@ class HrisResourceController extends Controller
                 'pwd' => $employee->pwd,
                 'indigenous_people' => $employee->indigenous_people,
                 'solo_parent_id_number' => $employee->solo_parent_id_number,
-                'gsis_bp_number' => $employee->gsis_bp_number,
+                'gsis_bp_number' => EmployeeIdentifier::mask($employee->gsis_bp_number),
                 'department' => $item->department_name ?? $item->department->name ?? $employee->department?->name,
                 'organizational_unit' => $item?->organizational_unit,
                 'item_number' => $item?->item_number,
@@ -677,7 +692,7 @@ class HrisResourceController extends Controller
         return response()->download($path, 'TEMPLATE_HRMO-AND-PLANTILLA-IMPORT.xlsx');
     }
 
-    public function store(Request $request, string $resource): RedirectResponse
+    public function store(Request $request, string $resource, EmployeeAccountCreator $accounts): HttpResponse
     {
         abort_if($resource === 'leave-applications', 403);
         Gate::authorize('manage-hris-resource', $resource);
@@ -696,58 +711,19 @@ class HrisResourceController extends Controller
             return to_route('hris.resources.index', ['resource' => $resource]);
         }
         if ($resource === 'employees') {
+            $bioId = $request->input('biometric_id');
+            if (is_string($bioId) && ctype_digit($bioId)) {
+                $request->merge(['biometric_id' => ltrim($bioId, '0') ?: '0']);
+            }
             $input = $request->validate($this->validationRules($this->resourceConfig($resource)) + [
                 'account_email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')],
+                'biometric_id' => ['nullable', 'integer', 'between:1,4294967295'],
             ]);
+            \App\Support\HrisPasswordConfirmation::require($request);
             $email = filled($input['account_email'] ?? null) ? Str::lower($input['account_email']) : null;
             unset($input['account_email']);
-            $temporaryPassword = Str::password(18);
-            $employee = DB::transaction(function () use ($input, $request, $temporaryPassword, $email): Employee {
-                $employee = Employee::query()->create($input);
-                $role = Role::query()->where('name', 'Employee')->where('guard_name', 'web')->firstOrFail();
-                $account = new User([
-                    'name' => trim($employee->first_name.' '.$employee->last_name),
-                    'email' => $email,
-                    'password' => $temporaryPassword,
-                ]);
-                $account->forceFill([
-                    'employee_id' => $employee->id,
-                    'role_id' => $role->id,
-                    'requires_mfa' => true,
-                    'must_change_password' => true,
-                ])->save();
-                $employee->forceFill(['user_id' => $account->id])->save();
-                AuditLog::create([
-                    'user_id' => $request->user()->id,
-                    'action' => 'employee.account_created',
-                    'model_type' => Employee::class,
-                    'model_id' => $employee->id,
-                    'metadata' => json_encode(['employee_number' => $employee->employee_number], JSON_THROW_ON_ERROR),
-                ]);
 
-                return $employee;
-            });
-            $emailSetupSent = false;
-            if ($email) {
-                try {
-                    $emailSetupSent = HrisAccountSetup::sendTo($email) === Password::RESET_LINK_SENT;
-                } catch (\Throwable $exception) {
-                    report($exception);
-                }
-            }
-            Inertia::flash('toast', ['type' => 'success', 'message' => 'Employee account created.']);
-
-            return to_route('hris.resources.index', ['resource' => $resource])->with([
-                'createdAccountCredentials' => [
-                    'employee_number' => $employee->employee_number,
-                    'reference_code' => $employee->referenceCode(),
-                    'username' => $employee->employee_number,
-                    'name' => trim($employee->first_name.' '.$employee->last_name),
-                    'temporary_password' => $temporaryPassword,
-                    'email' => $email,
-                ],
-                'accountSetupEmailSent' => $email ? (bool) $emailSetupSent : null,
-            ]);
+            return EmployeeActivationSlips::respond($request, [$accounts->create($input, $email, $request->user())]);
         }
         $config = $this->resourceConfig($resource);
         $model = $config['model'];
@@ -857,7 +833,7 @@ class HrisResourceController extends Controller
 
         $stored = $daily->keyBy(fn (AttendanceDaily $day): string => $day->work_date->toDateString());
         $workDates = array_unique([
-            ...$attendance->recordedWorkDates($employee->id, $employee->biometric_id, $from, $to),
+            ...$attendance->recordedWorkDates($employee->id, $from, $to),
             ...$stored->where('status', 'absent')->keys()->all(),
         ]);
         foreach ($workDates as $date) {
@@ -973,7 +949,6 @@ class HrisResourceController extends Controller
             'gender' => $input['sex'] ?? null,
             'birth_date' => $input['date_of_birth'] ?? null,
             'age' => $input['age'] ?? null,
-            'tin' => $input['tin'] ?? null,
             'date_of_original_appointment' => $input['date_of_original_appointment'] ?? null,
             'date_of_last_promotion_appointment' => $input['date_of_last_promotion_appointment'] ?? null,
             'appointment_status' => $input['appointment_status'] ?? null,
@@ -982,8 +957,14 @@ class HrisResourceController extends Controller
             'pwd' => $input['pwd'] ?? null,
             'indigenous_people' => $input['indigenous_people'] ?? null,
             'solo_parent_id_number' => $input['solo_parent_id_number'] ?? null,
-            'gsis_bp_number' => $input['gsis_bp_number'] ?? null,
-        ])->save();
+        ]);
+        foreach (['tin', 'gsis_bp_number'] as $field) {
+            $value = $input[$field] ?? null;
+            if (is_string($value) && $value !== '' && ! str_starts_with($value, '••••')) {
+                $employee->setAttribute($field, $value);
+            }
+        }
+        $employee->save();
     }
 
     private function plantillaValue(PlantillaItem $record, string $field): mixed
@@ -995,7 +976,8 @@ class HrisResourceController extends Controller
             'middle_name' => $record->employee?->middle_name,
             'sex' => $record->employee?->gender,
             'date_of_birth' => $record->employee?->birth_date?->format('Y-m-d'),
-            'age', 'tin', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status', 'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number', 'gsis_bp_number' => $record->employee?->getAttribute($field),
+            'tin', 'gsis_bp_number' => EmployeeIdentifier::mask($record->employee?->getAttribute($field)),
+            'age', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status', 'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number' => $record->employee?->getAttribute($field),
             default => $record->getAttribute($field),
         };
     }

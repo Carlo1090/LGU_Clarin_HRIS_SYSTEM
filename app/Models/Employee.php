@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Attendance\Models\BiometricLink;
 use App\Attendance\Models\DepartmentAssignment;
+use App\Casts\EmployeeIdentifier;
 use Database\Factories\EmployeeFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,11 +27,13 @@ class Employee extends Model
     /** @use HasFactory<EmployeeFactory> */
     use HasFactory;
 
+    protected $hidden = ['tin', 'gsis_bp_number'];
+
     protected $fillable = ['user_id', 'department_id', 'position_id', 'employee_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'gender', 'birth_date', 'employment_status', 'date_hired', 'date_regularized', 'photo_path', 'age', 'tin', 'date_of_original_appointment', 'date_of_last_promotion_appointment', 'appointment_status', 'civil_service_eligibility', 'comment_annotation', 'pwd', 'indigenous_people', 'solo_parent_id_number', 'gsis_bp_number', 'custom_fields'];
 
     protected function casts(): array
     {
-        return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'biometric_id' => 'integer', 'biometric_locked' => 'boolean', 'custom_fields' => 'array'];
+        return ['birth_date' => 'date:Y-m-d', 'date_hired' => 'date:Y-m-d', 'date_regularized' => 'date:Y-m-d', 'date_of_original_appointment' => 'date:Y-m-d', 'date_of_last_promotion_appointment' => 'date:Y-m-d', 'age' => 'integer', 'biometric_id' => 'integer', 'biometric_locked' => 'boolean', 'custom_fields' => 'array', 'tin' => EmployeeIdentifier::class, 'gsis_bp_number' => EmployeeIdentifier::class];
     }
 
     /** Resolve both account links used by existing employee records. */

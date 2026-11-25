@@ -86,12 +86,15 @@ class MonthlyAttendanceReportController
     /** @param array{string, string} $range */
     private function dailyEntries(array $range): Builder
     {
-        $punches = AttendancePunch::query()->whereBetween('punched_at', $range)->toBase()
-            ->selectRaw('biometric_id, DATE(punched_at) AS work_date, COUNT(*) AS punch_count, MIN(punched_at) AS first_punch, MAX(punched_at) AS last_punch')
-            ->groupBy('biometric_id')->groupByRaw('DATE(punched_at)');
+        $matched = AttendancePunch::query()->whereBetween('punched_at', $range)->toBase()
+            ->selectRaw(AttendancePunch::employeeIdSql().' AS employee_id, punched_at');
+        $punches = DB::query()->fromSub($matched, 'matched')
+            ->whereNotNull('employee_id')
+            ->selectRaw('employee_id, DATE(punched_at) AS work_date, COUNT(*) AS punch_count, MIN(punched_at) AS first_punch, MAX(punched_at) AS last_punch')
+            ->groupBy('employee_id')->groupByRaw('DATE(punched_at)');
 
         return DB::query()->fromSub($punches, 'punches')
-            ->join('employees', 'employees.biometric_id', '=', 'punches.biometric_id')
+            ->join('employees', 'employees.id', '=', 'punches.employee_id')
             ->leftJoin('attendance_clock_in_rules as schedule_rule', function (JoinClause $join): void {
                 $join->on('schedule_rule.employee_id', '=', 'employees.id')
                     ->where('schedule_rule.effective_from', '=', fn (Builder $query) => $query

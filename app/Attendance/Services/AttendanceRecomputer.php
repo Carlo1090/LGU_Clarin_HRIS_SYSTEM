@@ -4,8 +4,9 @@ namespace App\Attendance\Services;
 
 use App\Attendance\Contracts\EmployeeDirectory;
 use App\Attendance\Models\AttendanceDaily;
+use App\Attendance\Models\BiometricLink;
 use App\Models\AttendancePunch;
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\Employee;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 
@@ -32,7 +33,7 @@ class AttendanceRecomputer
                 ->when($from !== null, fn ($query) => $query->where('work_date', '>=', $from))
                 ->when($to !== null, fn ($query) => $query->where('work_date', '<=', $to))
                 ->pluck('work_date')->map(fn ($date) => $date->toDateString())->all();
-            $dates = [...$dates, ...$this->recordedWorkDates($employee['id'], $employee['biometric_id'], $from, $to)];
+            $dates = [...$dates, ...$this->recordedWorkDates($employee['id'], $from, $to)];
 
             if ($from !== null && $to !== null) {
                 $current = Carbon::parse($from)->startOfDay();
@@ -50,39 +51,56 @@ class AttendanceRecomputer
         }
 
         return [
-            'employee_ids' => array_values(array_column($employees, 'id')),
+            'employee_ids' => array_column($employees, 'id'),
             'work_dates' => array_values($workDates),
         ];
     }
 
     /**
+     * @param list<array{machine_user_id: int, punched_at: string}> $rows
      * @return array{employee_ids:list<int>,work_dates:list<string>,machine_ids:list<int>,unlinked_machine_ids:list<int>}
      */
     public function recomputeImport(array $rows): array
     {
         $byMachine = collect($rows)->groupBy('machine_user_id');
         $machineIds = $byMachine->keys()->map(fn ($id): int => (int) $id);
-        $employees = $this->employees->list($machineIds->all());
+        $employees = collect($this->employees->list($machineIds->all()))->keyBy('biometric_id');
+        $history = BiometricLink::historyAvailable()
+            ? BiometricLink::query()->whereIntegerInRaw('biometric_id', $machineIds->all())->get()->groupBy('biometric_id')
+            : collect();
         $workDates = [];
+        $employeeDays = $unlinked = $windows = [];
 
-        foreach ($employees as $employee) {
-            $windows = [];
-            $dates = [];
-            foreach ($byMachine[$employee['biometric_id']] as $punch) {
-                $date = $this->workDateFor($employee['id'], $punch['punched_at'], $windows);
-                $dates[$date] = $date;
+        foreach ($byMachine as $machineId => $punches) {
+            $links = $history->get($machineId);
+            foreach ($punches as $punch) {
+                $timestamp = $punch['punched_at'];
+                $employeeId = $links === null
+                    ? ($employees->get($machineId)['id'] ?? null)
+                    : $links->first(fn (BiometricLink $link) => ($link->effective_from?->toDateTimeString() ?? '') <= $timestamp
+                        && ($link->effective_to === null || $link->effective_to->toDateTimeString() > $timestamp))?->employee_id;
+                if ($employeeId === null) {
+                    $unlinked[$machineId] = (int) $machineId;
+
+                    continue;
+                }
+                $windows[$employeeId] ??= [];
+                $date = $this->workDateFor($employeeId, $timestamp, $windows[$employeeId]);
+                $employeeDays[$employeeId][$date] = $date;
             }
+        }
+        foreach ($employeeDays as $employeeId => $dates) {
             foreach ($dates as $date) {
-                $this->recomputeEmployeeDay($employee['id'], $date);
+                $this->recomputeEmployeeDay($employeeId, $date);
                 $workDates[$date] = $date;
             }
         }
 
         return [
-            'employee_ids' => array_column($employees, 'id'),
+            'employee_ids' => array_keys($employeeDays),
             'work_dates' => array_values($workDates),
-            'machine_ids' => $machineIds->all(),
-            'unlinked_machine_ids' => $machineIds->diff(array_column($employees, 'biometric_id'))->values()->all(),
+            'machine_ids' => array_values($machineIds->all()),
+            'unlinked_machine_ids' => array_values($unlinked),
         ];
     }
 
@@ -98,15 +116,16 @@ class AttendanceRecomputer
 
     public function employeeDay(int $employeeId, string $workDate): array
     {
-        $employee = $this->employees->find($employeeId)
-            ?? throw (new ModelNotFoundException)->setModel('Employee', [$employeeId]);
+        if ($this->employees->find($employeeId) === null) {
+            throw (new ModelNotFoundException)->setModel(Employee::class, [$employeeId]);
+        }
         $schedule = $this->resolver->resolve($employeeId, $workDate);
         $windows = [$workDate => $schedule === null ? null : $this->classifier->boundaries($workDate, $schedule)];
         $bounds = $windows[$workDate];
         $start = Carbon::parse($workDate)->startOfDay();
         $end = $start->copy()->endOfDay();
 
-        $rawPunches = $this->punchesFor($employee['biometric_id'])
+        $rawPunches = AttendancePunch::query()->ownedBy($employeeId)
             ->whereBetween('punched_at', [
                 $start->min($bounds['am_in_window_start'] ?? $start),
                 $end->max($bounds['pm_out_window_end'] ?? $end),
@@ -139,9 +158,9 @@ class AttendanceRecomputer
     }
 
     /** @return list<string> */
-    public function recordedWorkDates(int $employeeId, ?int $machineId, ?string $from, ?string $to): array
+    public function recordedWorkDates(int $employeeId, ?string $from, ?string $to): array
     {
-        $punchQuery = $this->punchesFor($machineId)
+        $punchQuery = AttendancePunch::query()->ownedBy($employeeId)
             ->when($from !== null, fn ($query) => $query->where('punched_at', '>=', Carbon::parse($from)->subDays($this->earlyDays())->startOfDay()))
             ->when($to !== null, fn ($query) => $query->where('punched_at', '<', Carbon::parse($to)->addDays($this->lateDays() + 1)->startOfDay()));
         $windows = [];
@@ -154,19 +173,6 @@ class AttendanceRecomputer
         }
 
         return array_values($dates);
-    }
-
-    private function punchesFor(?int $machineId): Builder
-    {
-        return AttendancePunch::query()->where(function (Builder $query) use ($machineId): void {
-            if ($machineId === null) {
-                $query->whereRaw('1 = 0');
-
-                return;
-            }
-
-            $query->where('machine_id', $machineId)->orWhere('machine_user_id', $machineId);
-        });
     }
 
     public function workDateFor(int $employeeId, string $timestamp, array &$windows): string

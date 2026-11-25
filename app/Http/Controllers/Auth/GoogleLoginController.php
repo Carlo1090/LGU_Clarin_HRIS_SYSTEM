@@ -87,7 +87,7 @@ class GoogleLoginController
 
         $user = User::query()->where('email', Str::lower($email))
             ->whereNotNull('email_verified_at')->where('is_active', true)->first();
-        if (! $user || $user->must_change_password) {
+        if (! $user || $user->role?->name === 'Employee' || $user->password === null || $user->must_change_password) {
             return $this->failed();
         }
 

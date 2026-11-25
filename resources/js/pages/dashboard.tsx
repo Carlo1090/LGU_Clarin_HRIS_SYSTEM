@@ -86,6 +86,12 @@ type Props = {
     office: string | null;
     cards: DashboardMetric[];
     analytics: DashboardAnalytics;
+    employeeLockouts?: {
+        employeeNumber: string;
+        name: string;
+        kind: string;
+        expiresAt: string;
+    }[];
 };
 const number = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 2 });
 const compact = new Intl.NumberFormat('en-PH', {
@@ -301,7 +307,13 @@ const chartColors = [
     'var(--dashboard-chart-6)',
 ];
 
-export default function Dashboard({ role, office, cards, analytics }: Props) {
+export default function Dashboard({
+    role,
+    office,
+    cards,
+    analytics,
+    employeeLockouts = [],
+}: Props) {
     const { auth } = usePage().props;
 
     useEffect(() => {
@@ -465,6 +477,28 @@ export default function Dashboard({ role, office, cards, analytics }: Props) {
                         </Button>
                     </div>
                 </header>
+
+                {employeeLockouts.length > 0 && (
+                    <section className="rounded-lg border bg-card p-4">
+                        <h2 className="font-semibold">
+                            Employee account lockouts
+                        </h2>
+                        <ul className="mt-2 space-y-1 text-sm">
+                            {employeeLockouts.map((lockout) => (
+                                <li
+                                    key={`${lockout.employeeNumber}-${lockout.kind}`}
+                                >
+                                    {lockout.name} ({lockout.employeeNumber}) ·{' '}
+                                    {lockout.kind} · Until{' '}
+                                    {new Date(lockout.expiresAt).toLocaleString(
+                                        'en-PH',
+                                        { timeZone: 'Asia/Manila' },
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
 
                 {cards.length ? (
                     <>

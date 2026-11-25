@@ -14,6 +14,8 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Check, FileUp, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
+import EmployeeCodeReissue from '@/components/employee-code-reissue';
+import EmployeeAccountStatusAction from '@/components/employee-account-status-action';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormPreviewDialog from '@/components/leave-form-preview-dialog';
 import AttendanceDirectory, {
@@ -23,6 +25,7 @@ import RecordPagination, {
     type RecordPageLink,
 } from '@/components/record-pagination';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import WorkScheduleDialog from '@/components/work-schedule-dialog';
 
 type Props = {
@@ -33,6 +36,7 @@ type Props = {
     leaveReviewStage?: [string, string, string] | null;
     canCreateLeaveOnBehalf?: boolean;
     canImport?: boolean;
+    canReviewEmployeeProfiles?: boolean;
     officeDirectory?: boolean;
     attendanceDirectory?: false;
     attendanceMonth?: string;
@@ -41,15 +45,6 @@ type Props = {
     canLinkBiometricIds?: boolean;
     assignBiometricId?: number | null;
     statusSummary?: { status: string; total: number }[];
-    createdAccountCredentials?: {
-        employee_number: string;
-        reference_code: string;
-        username: string;
-        name: string;
-        temporary_password: string;
-        email: string | null;
-    } | null;
-    accountSetupEmailSent?: boolean | null;
     records: {
         data: HrisRow[];
         links: RecordPageLink[];
@@ -89,6 +84,7 @@ function ResourceRecords({
     leaveReviewStage,
     canCreateLeaveOnBehalf = false,
     canImport = false,
+    canReviewEmployeeProfiles = false,
     officeDirectory = false,
     attendanceMonth,
     canManageAttendance = false,
@@ -96,14 +92,16 @@ function ResourceRecords({
     canLinkBiometricIds = false,
     assignBiometricId = null,
     statusSummary = [],
-    createdAccountCredentials = null,
-    accountSetupEmailSent = null,
     records,
 }: Props) {
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
     const isAttendance = resource === 'attendance';
-    const hasActions = canManage || canManageSchedules || Boolean(leaveReviewStage) || isAttendance;
+    const hasActions =
+        canManage ||
+        canManageSchedules ||
+        Boolean(leaveReviewStage) ||
+        isAttendance;
 
     function reviewLeave(id: number, decision: 'advance' | 'reject') {
         if (
@@ -142,11 +140,15 @@ function ResourceRecords({
     );
     const form = useForm<FormData>(initialData);
     const [accountEmail, setAccountEmail] = useState<string | null>('');
+    const [bioId, setBioId] = useState('');
+    const [confirmationPassword, setConfirmationPassword] = useState('');
 
     useEffect(() => {
         form.setData(initialData);
         setEditingId(null);
         setAccountEmail('');
+        setBioId('');
+        setConfirmationPassword('');
     }, [resource]);
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -155,7 +157,14 @@ function ResourceRecords({
 
         form.transform((data) =>
             resource === 'employees' && accountEmail !== null
-                ? { ...data, account_email: accountEmail || null }
+                ? {
+                      ...data,
+                      account_email: accountEmail || null,
+                      ...(!editingId && {
+                          biometric_id: bioId || null,
+                          password: confirmationPassword,
+                      }),
+                  }
                 : data,
         );
         if (editingId) {
@@ -168,6 +177,7 @@ function ResourceRecords({
             });
         } else {
             form.post(url, {
+                onFinish: () => setConfirmationPassword(''),
                 onSuccess: () => {
                     form.reset();
                     setAccountEmail('');
@@ -249,7 +259,12 @@ function ResourceRecords({
                 {canManageSchedules && typeof row.id === 'number' && (
                     <WorkScheduleDialog
                         id={row.id}
-                        name={String(row.name ?? [row.first_name, row.last_name].filter(Boolean).join(' '))}
+                        name={String(
+                            row.name ??
+                                [row.first_name, row.last_name]
+                                    .filter(Boolean)
+                                    .join(' '),
+                        )}
                         override={resource === 'employees'}
                     />
                 )}
@@ -287,6 +302,22 @@ function ResourceRecords({
                         />
                     </span>
                 )}
+                {resource === 'employees' &&
+                    row.can_reissue_activation === true && (
+                        <EmployeeCodeReissue
+                            employeeId={Number(row.id)}
+                            canRevokeNow={
+                                row.can_revoke_activation_sessions === true
+                            }
+                        />
+                    )}
+                {resource === 'employees' &&
+                    row.can_deactivate_account === true && (
+                        <EmployeeAccountStatusAction
+                            employeeId={Number(row.id)}
+                            action="deactivate"
+                        />
+                    )}
                 {canManage && row.canManage !== false && (
                     <>
                         <TableAction
@@ -330,6 +361,13 @@ function ResourceRecords({
                             'Manage HRIS records and their linked data.'
                         }
                     >
+                        {canReviewEmployeeProfiles && (
+                            <Button asChild variant="outline">
+                                <Link href="/hris/profile-review">
+                                    Profile review
+                                </Link>
+                            </Button>
+                        )}
                         {resource === 'employees' && canImport && (
                             <Button asChild className="dashboard-action">
                                 <Link href="/hris/employees/import">
@@ -546,6 +584,49 @@ function ResourceRecords({
                                         )}
                                     </label>
                                 )}
+                            {resource === 'employees' && !editingId && (
+                                <label className="space-y-1 text-sm">
+                                    <span className="block">
+                                        Bio ID (optional)
+                                    </span>
+                                    <Input
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={bioId}
+                                        onChange={(event) =>
+                                            setBioId(event.target.value)
+                                        }
+                                    />
+                                    {form.errors.biometric_id && (
+                                        <span className="block text-sm text-destructive">
+                                            {form.errors.biometric_id}
+                                        </span>
+                                    )}
+                                </label>
+                            )}
+                            {resource === 'employees' && !editingId && (
+                                <label className="space-y-1 text-sm">
+                                    <span>
+                                        Current password, if not recently
+                                        confirmed
+                                    </span>
+                                    <Input
+                                        type="password"
+                                        autoComplete="current-password"
+                                        value={confirmationPassword}
+                                        onChange={(event) =>
+                                            setConfirmationPassword(
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    {form.errors.password && (
+                                        <span className="block text-destructive">
+                                            {form.errors.password}
+                                        </span>
+                                    )}
+                                </label>
+                            )}
                             <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
                                 <Button
                                     type="submit"
@@ -573,52 +654,6 @@ function ResourceRecords({
                             </div>
                         </form>
                     </Editor>
-                )}
-
-                {resource === 'employees' && createdAccountCredentials && (
-                    <section className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-5">
-                        <h2 className="font-semibold">
-                            Employee account created
-                        </h2>
-                        <p>Name: {createdAccountCredentials.name}</p>
-                        <p>
-                            Employee number:{' '}
-                            <span className="font-mono">
-                                {createdAccountCredentials.employee_number}
-                            </span>
-                        </p>
-                        <p>
-                            Reference code:{' '}
-                            <span className="font-mono">
-                                {createdAccountCredentials.reference_code}
-                            </span>
-                        </p>
-                        <p>
-                            Username:{' '}
-                            <span className="font-mono">
-                                {createdAccountCredentials.username}
-                            </span>
-                        </p>
-                        <p>
-                            Temporary password:{' '}
-                            <span className="font-mono">
-                                {createdAccountCredentials.temporary_password}
-                            </span>
-                        </p>
-                        {createdAccountCredentials.email && (
-                            <p>
-                                {accountSetupEmailSent
-                                    ? 'Setup link sent to'
-                                    : 'Setup link could not be sent to'}{' '}
-                                {createdAccountCredentials.email}.
-                            </p>
-                        )}
-                        <p className="text-sm text-muted-foreground">
-                            Share these credentials privately. The employee must
-                            change the temporary password and enroll in
-                            two-factor authentication.
-                        </p>
-                    </section>
                 )}
 
                 {officeDirectory && (
@@ -649,7 +684,9 @@ function ResourceRecords({
                             </p>
                         </div>
                         <Button asChild size="sm" variant="outline">
-                            <Link href="/hris/employees">Clear assignment filter</Link>
+                            <Link href="/hris/employees">
+                                Clear assignment filter
+                            </Link>
                         </Button>
                     </section>
                 )}
@@ -682,7 +719,18 @@ function ResourceRecords({
                         <ResourceDirectory
                             layout={directory}
                             rows={records.data}
-                            fields={resource === 'employees' ? [...fields, { name: 'work_schedule', label: 'Schedule', type: 'text' }] : fields}
+                            fields={
+                                resource === 'employees'
+                                    ? [
+                                          ...fields,
+                                          {
+                                              name: 'work_schedule',
+                                              label: 'Schedule',
+                                              type: 'text',
+                                          },
+                                      ]
+                                    : fields
+                            }
                             canLinkBiometricIds={canLinkBiometricIds}
                             renderValue={displayValue}
                             renderActions={hasActions ? rowActions : undefined}

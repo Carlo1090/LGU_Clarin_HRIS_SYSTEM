@@ -122,7 +122,9 @@ export default function AttendanceDirectory({
                                 className="text-sm underline"
                                 href={`/hris/attendance/logs?month=${attendanceMonth}&unassigned=1`}
                             >
-                                {unlinkedMachineIds} unlinked machine {unlinkedMachineIds === 1 ? 'ID' : 'IDs'} this month
+                                {unlinkedMachineIds} unlinked machine{' '}
+                                {unlinkedMachineIds === 1 ? 'ID' : 'IDs'} this
+                                month
                             </Link>
                         )}
                     </div>

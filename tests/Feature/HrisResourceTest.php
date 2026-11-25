@@ -400,9 +400,11 @@ class HrisResourceTest extends TestCase
         ]);
         $this->assertDatabaseHas('employees', [
             'id' => $employee->id, 'first_name' => 'Test', 'last_name' => 'Employee', 'gender' => 'F',
-            'tin' => '001-002-003', 'appointment_status' => 'P', 'civil_service_eligibility' => 'Custom Eligibility',
-            'solo_parent_id_number' => '0009', 'gsis_bp_number' => '0008',
+            'appointment_status' => 'P', 'civil_service_eligibility' => 'Custom Eligibility',
+            'solo_parent_id_number' => '0009',
         ]);
+        $this->assertSame('001-002-003', $employee->fresh()->tin);
+        $this->assertSame('0008', $employee->fresh()->gsis_bp_number);
 
     }
 
@@ -507,19 +509,32 @@ class HrisResourceTest extends TestCase
         ];
 
         $this->actingAs($user)->post($url, $record)->assertSessionHasErrors(['employment_status', 'appointment_status']);
-        $this->actingAs($user)->post($url, array_merge($record, ['employment_status' => 'active', 'appointment_status' => 'CT']))
-            ->assertRedirect(route('hris.resources.index', ['resource' => 'employees']));
+        $this->actingAs($user)->post($url, array_merge($record, ['employment_status' => 'active', 'appointment_status' => 'CT', 'password' => 'password']))
+            ->assertOk()->assertInertia(fn ($page) => $page->component('hris/employee-onboarding-result')
+                ->hasFlash('activationSlips.0.employee_number', '0042')
+                ->hasFlash('activationSlips.0.activation_code'));
         $employee = Employee::query()->where('employee_number', '0042')->firstOrFail();
         $account = User::query()->where('employee_id', $employee->id)->firstOrFail();
         $this->assertSame('CT', $employee->appointment_status);
         $this->assertNull($account->email);
-        $this->assertTrue($account->must_change_password);
+        $this->assertNull($account->password);
         $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))
+            ->assertOk()->assertInertia(fn ($page) => $page->missingFlash('activationSlips'));
+
+        $initialCode = $account->activationCodes()->firstOrFail();
+        $officer = User::factory()->create(['role_id' => Role::query()->where('name', 'HR Officer')->value('id')]);
+        $this->actingAs($officer)->post(route('hris.employees.activation.reissue', $employee), ['password' => 'password'])
             ->assertOk()->assertInertia(fn ($page) => $page
-            ->where('createdAccountCredentials.username', '0042')
-            ->where('createdAccountCredentials.employee_number', '0042')
-            ->where('createdAccountCredentials.reference_code', 'JO0042')
-            ->has('createdAccountCredentials.temporary_password'));
+                ->where('reissued', true)->hasFlash('activationSlips.0.activation_code'));
+        $this->assertNotNull($initialCode->refresh()->revoked_at);
+        $replacement = $account->activationCodes()->whereNull('revoked_at')->sole();
+        $this->post(route('hris.employees.activation.print'), ['issuances' => [$replacement->id]])->assertNoContent();
+        $this->assertDatabaseHas('audit_logs', ['user_id' => $officer->id, 'action' => 'employee.activation_code_reissued']);
+        $this->assertDatabaseHas('audit_logs', ['user_id' => $officer->id, 'action' => 'employee.activation_slips_print_requested']);
+        $this->post(route('hris.employees.activation.reissue', $employee))->assertOk();
+        $this->travel(5)->minutes();
+        $this->post(route('hris.employees.activation.reissue', $employee))->assertSessionHasErrors('password');
+        $this->actingAs($user)->post(route('hris.employees.activation.print'), ['issuances' => [$replacement->id]])->assertForbidden();
 
         $account->forceFill(['email' => 'old@example.com', 'email_verified_at' => now()])->save();
         $this->actingAs($user)->get(route('hris.resources.index', ['resource' => 'employees']))

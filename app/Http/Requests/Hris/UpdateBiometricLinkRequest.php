@@ -8,7 +8,7 @@ class UpdateBiometricLinkRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('manage-hris-resource', 'attendance');
+        return in_array($this->user()->role?->name, ['HR Officer', 'HRMO Head'], true);
     }
 
     protected function prepareForValidation(): void
@@ -25,6 +25,9 @@ class UpdateBiometricLinkRequest extends FormRequest
         return [
             'biometric_id' => ['present', 'nullable', 'integer', 'between:1,4294967295'],
             'verify_only' => ['sometimes', 'boolean'],
+            'effective_from' => ['nullable', 'date_format:Y-m-d\TH:i'],
+            'effective_to' => ['nullable', 'date_format:Y-m-d\TH:i', ...($this->filled('effective_from') ? ['after:effective_from'] : [])],
+            'previous_effective_to' => ['nullable', 'date_format:Y-m-d\TH:i'],
         ];
     }
 }

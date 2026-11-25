@@ -13,7 +13,8 @@ class BiometricLinkVerifier
 
         Employee::query()->whereNotNull('biometric_id')->where('biometric_status', 'pending')
             ->when($employeeId !== null, fn ($query) => $query->whereKey($employeeId))
-            ->withMin('attendancePunches as first_punch', 'punched_at')->withCount('attendancePunches')
+            ->withMin(['attendancePunches as first_punch' => fn ($punches) => $punches->matchesCurrentOwner()], 'punched_at')
+            ->withCount(['attendancePunches' => fn ($punches) => $punches->matchesCurrentOwner()])
             ->chunkById(100, function ($employees) use ($actor, $minimum): void {
                 foreach ($employees as $employee) {
                     $count = (int) $employee->attendance_punches_count;

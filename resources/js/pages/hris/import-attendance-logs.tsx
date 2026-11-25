@@ -46,6 +46,7 @@ function Paging({
 export default function ImportAttendanceLogs({
     batch,
     groups,
+    canLink,
     unassigned,
     assigned,
     month,
@@ -54,6 +55,7 @@ export default function ImportAttendanceLogs({
 }: {
     batch: ImportBatchSummary | null;
     groups: Page<BiometricPunchGroup>;
+    canLink: boolean;
     unassigned: boolean;
     assigned: boolean;
     month: string | null;
@@ -111,7 +113,8 @@ export default function ImportAttendanceLogs({
 
     function deleteImport() {
         if (!batch) return;
-        if (!window.confirm(`Delete imported logs from "${batch.file_name}"?`)) return;
+        if (!window.confirm(`Delete imported logs from "${batch.file_name}"?`))
+            return;
 
         router.delete(`/hris/attendance/logs/${batch.id}`, {
             preserveScroll: true,
@@ -217,13 +220,19 @@ export default function ImportAttendanceLogs({
                         {batch.file_name}
                     </p>
                     {batch.status === 'processing' && (
-                        <p className="text-sm text-blue-700 dark:text-blue-300" role="status">
+                        <p
+                            className="text-sm text-blue-700 dark:text-blue-300"
+                            role="status"
+                        >
                             Import is processing in the background.
                         </p>
                     )}
                     {batch.status === 'failed' && (
                         <p className="text-sm text-destructive" role="alert">
-                            Import failed{batch.error_message ? `: ${batch.error_message}` : '.'}
+                            Import failed
+                            {batch.error_message
+                                ? `: ${batch.error_message}`
+                                : '.'}
                         </p>
                     )}
                     <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
@@ -291,7 +300,10 @@ export default function ImportAttendanceLogs({
                             {punches.data.map((punch) => (
                                 <li key={punch.id}>
                                     {punch.punched_at} · state{' '}
-                                    {punch.raw_status ?? punch.punch_state ?? 'unknown'} · verify{' '}
+                                    {punch.raw_status ??
+                                        punch.punch_state ??
+                                        'unknown'}{' '}
+                                    · verify{' '}
                                     {punch.verify_mode === 1
                                         ? 'fingerprint'
                                         : punch.verify_mode === 0
@@ -324,7 +336,9 @@ export default function ImportAttendanceLogs({
                         <Button
                             asChild
                             size="sm"
-                            variant={!unassigned && !assigned ? 'default' : 'outline'}
+                            variant={
+                                !unassigned && !assigned ? 'default' : 'outline'
+                            }
                         >
                             <Link href={logsUrl} data={monthFilter}>
                                 Show all IDs
@@ -396,9 +410,24 @@ export default function ImportAttendanceLogs({
                                                 />
                                                 {`${group.last_name}, ${group.first_name} (${group.employee_number})`}
                                             </span>
+                                        ) : group.multiple_owners ? (
+                                            'Multiple holders'
                                         ) : (
                                             'Unassigned'
                                         )}
+                                        {canLink &&
+                                            group.unlinked_count > 0 && (
+                                                <Link
+                                                    href="/hris/employees"
+                                                    data={{
+                                                        assign_biometric_id:
+                                                            group.biometric_id,
+                                                    }}
+                                                    className="mt-1 block underline"
+                                                >
+                                                    Link to employee
+                                                </Link>
+                                            )}
                                     </td>
                                     <td className="p-3 tabular-nums">
                                         {group.punch_count}

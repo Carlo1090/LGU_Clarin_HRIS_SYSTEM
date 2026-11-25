@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Hris;
 
+use App\Http\Responses\EmployeeActivationSlips;
 use App\Imports\EmployeeSpreadsheetImport;
 use App\Models\Employee;
+use App\Services\EmployeeAccountCreator;
 use App\Support\EmployeeImportTemplate;
+use App\Support\HrisPasswordConfirmation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class EmployeeImportController
 {
@@ -91,18 +95,18 @@ class EmployeeImportController
         return redirect()->route('hris.employees.import', ['token' => $token]);
     }
 
-    public function store(Request $request, EmployeeSpreadsheetImport $import): Response
+    public function store(Request $request, EmployeeSpreadsheetImport $import): HttpResponse
     {
         abort_unless($request->user()->role?->name === 'HRMO Head', 403);
-        $input = $request->validate(['token' => ['required', 'string', 'size:64']]);
+        HrisPasswordConfirmation::require($request);
+        $input = $request->validate([
+            'token' => ['required', 'string', 'size:64'],
+            'expiry_days' => ['sometimes', 'required', 'integer', 'min:1'],
+        ]);
         $rows = $request->session()->pull('employee_import.'.$input['token']);
         abort_unless(is_array($rows) && count($rows), 410, 'Import preview expired. Upload the workbook again.');
-        abort_if(collect($rows)->contains(fn ($row) => ! $row['valid']), 422, 'Fix all spreadsheet row errors and preview the corrected workbook.');
-        $result = $import->commit(array_values($rows), $request->user());
+        $result = $import->commit(array_values($rows), $request->user(), (int) ($input['expiry_days'] ?? EmployeeAccountCreator::DEFAULT_EXPIRY_DAYS));
 
-        return Inertia::render('hris/import-employees', [
-            'result' => collect($result)->except('credentials')->all(),
-            'credentials' => $this->withAvatars($result['credentials']),
-        ]);
+        return EmployeeActivationSlips::respond($request, $result['credentials'], $result['rejected'], imported: true);
     }
 }

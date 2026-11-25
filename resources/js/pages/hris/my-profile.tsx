@@ -67,9 +67,23 @@ const sections = [
 export default function MyProfile({
     employee,
     customFields = [],
+    draft,
+    identifierRevealEmployeeId,
+    reviewFields = {},
+    eligibilities = [],
+    naFields = [],
+    privacyNotice = null,
+    savedPrivateDraftFields = [],
 }: {
     employee: EmployeeProfile;
     customFields?: { label: string; value: string | null }[];
+    draft?: Record<string, string | null> | null;
+    identifierRevealEmployeeId?: number | null;
+    reviewFields?: ReviewFields;
+    eligibilities?: string[];
+    naFields?: string[];
+    privacyNotice?: string | null;
+    savedPrivateDraftFields?: string[];
 }) {
     return (
         <>
@@ -79,6 +93,16 @@ export default function MyProfile({
                     title="My HR Profile"
                     description="Employee information maintained by HRMO."
                 />
+                {draft != null && (
+                    <EmployeeProfileDraft
+                        draft={draft}
+                        savedPrivateFields={savedPrivateDraftFields}
+                        reviewFields={reviewFields}
+                        eligibilities={eligibilities}
+                        naFields={naFields}
+                        privacyNotice={privacyNotice}
+                    />
+                )}
                 {sections.map((section) => (
                     <section
                         key={section.title}
@@ -97,6 +121,18 @@ export default function MyProfile({
                                             ? '—'
                                             : String(employee[key])}
                                     </dd>
+                                    {identifierRevealEmployeeId &&
+                                        employee[key] &&
+                                        (key === 'tin' ||
+                                            key === 'gsis_bp_number') && (
+                                            <EmployeeIdentifierReveal
+                                                employeeId={
+                                                    identifierRevealEmployeeId
+                                                }
+                                                field={key}
+                                                label={label}
+                                            />
+                                        )}
                                 </div>
                             ))}
                         </dl>
@@ -125,3 +161,7 @@ export default function MyProfile({
         </>
     );
 }
+import EmployeeProfileDraft, {
+    type ReviewFields,
+} from '@/components/employee-profile-draft';
+import EmployeeIdentifierReveal from '@/components/employee-identifier-reveal';

@@ -8,7 +8,12 @@ use App\Http\Controllers\Hris\AttendanceLogImportController;
 use App\Http\Controllers\Hris\BiometricLinkController;
 use App\Http\Controllers\Hris\DailyPunchController;
 use App\Http\Controllers\Hris\DailyTimeRecordController;
+use App\Http\Controllers\Hris\EmployeeActivationController;
+use App\Http\Controllers\Hris\EmployeeCredentialController;
 use App\Http\Controllers\Hris\EmployeeImportController;
+use App\Http\Controllers\Hris\EmployeeIdentifierRevealController;
+use App\Http\Controllers\Hris\EmployeeProfileDraftController;
+use App\Http\Controllers\Hris\EmployeeProfileReviewController;
 use App\Http\Controllers\Hris\HrisResourceController;
 use App\Http\Controllers\Hris\LeaveApplicationController;
 use App\Http\Controllers\Hris\LeaveReviewController;
@@ -20,16 +25,40 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
+Route::middleware('guest')->group(function () {
+    Route::get('activate', [EmployeeActivationController::class, 'create'])->name('employee.activate');
+    Route::post('activate', [EmployeeActivationController::class, 'store'])->name('employee.activate.store');
+});
+
 Route::middleware(['guest', 'throttle:10,1'])->group(function () {
     Route::get('auth/google', [GoogleLoginController::class, 'redirect'])->name('google.redirect');
     Route::get('auth/google/callback', [GoogleLoginController::class, 'callback'])->name('google.callback');
 });
 
-Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(function () {
+Route::get('hris/my-profile', [HrisResourceController::class, 'myProfile'])
+    ->middleware(['auth', EnsureHrisAccountReady::class.':verify-legacy'])->name('hris.my-profile');
+Route::patch('hris/my-profile/draft', [EmployeeProfileDraftController::class, 'update'])
+    ->middleware(['auth', EnsureHrisAccountReady::class])->name('hris.my-profile.draft');
+Route::post('hris/my-profile/submit', [EmployeeProfileReviewController::class, 'submit'])
+    ->middleware(['auth', EnsureHrisAccountReady::class])->name('hris.my-profile.submit');
+Route::post('hris/employees/{employee}/identifiers/{field}', EmployeeIdentifierRevealController::class)
+    ->whereNumber('employee')->whereIn('field', ['tin', 'gsis_bp_number'])
+    ->middleware(['auth', EnsureHrisAccountReady::class, 'throttle:10,1'])->name('hris.employee.identifier.reveal');
+
+Route::middleware(['auth', EnsureHrisAccountReady::class.':verify-legacy'])->group(function () {
+    Route::get('hris/profile-review', [EmployeeProfileReviewController::class, 'index'])->name('hris.profile-review.index');
+    Route::put('hris/profile-review/settings', [EmployeeProfileReviewController::class, 'updateSettings'])->name('hris.profile-review.settings');
+    Route::post('hris/profile-review/{revision}', [EmployeeProfileReviewController::class, 'decide'])
+        ->whereNumber('revision')->middleware('throttle:20,1')->name('hris.profile-review.decide');
+    Route::post('hris/profile-review/{revision}/reveal', [EmployeeIdentifierRevealController::class, 'submitted'])
+        ->whereNumber('revision')->middleware('throttle:10,1')->name('hris.profile-review.reveal');
+    Route::post('hris/employees/{employee}/deactivate', [EmployeeCredentialController::class, 'deactivate'])
+        ->whereNumber('employee')->middleware('throttle:10,1')->name('hris.employees.deactivate');
+    Route::post('hris/employees/{employee}/reactivate', [EmployeeCredentialController::class, 'reactivate'])
+        ->whereNumber('employee')->middleware('throttle:10,1')->name('hris.employees.reactivate');
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
-    Route::get('hris/my-profile', [HrisResourceController::class, 'myProfile'])->name('hris.my-profile');
     Route::get('hris/plantilla-items/template', [HrisResourceController::class, 'downloadPlantillaWorkbook'])->name('hris.plantilla.template');
 
     Route::get('hris/account-invitations', [AccountInvitationController::class, 'create'])
@@ -41,6 +70,10 @@ Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(fu
     Route::put('hris/employees/import/template', [EmployeeImportController::class, 'updateTemplate'])->name('hris.employees.import.template.update');
     Route::post('hris/employees/import/preview', [EmployeeImportController::class, 'preview'])->name('hris.employees.import.preview');
     Route::post('hris/employees/import', [EmployeeImportController::class, 'store'])->name('hris.employees.import.store');
+    Route::post('hris/employees/{employee}/activation-code', [EmployeeCredentialController::class, 'reissue'])
+        ->middleware('throttle:10,1')->whereNumber('employee')->name('hris.employees.activation.reissue');
+    Route::post('hris/employees/activation-slips/print', [EmployeeCredentialController::class, 'print'])
+        ->name('hris.employees.activation.print');
 
     Route::prefix('hris')->name('hris.')->group(function () {
         require app_path('Attendance/routes.php');

@@ -38,6 +38,8 @@ export type BiometricPunchGroup = {
     employee_number: string | null;
     first_name: string | null;
     last_name: string | null;
+    multiple_owners: boolean;
+    unlinked_count: number;
     punch_count: number;
     first_punch: string;
     last_punch: string;

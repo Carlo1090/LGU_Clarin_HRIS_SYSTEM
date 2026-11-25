@@ -62,7 +62,8 @@ export default function DailyPunches({
                         </h2>
                         <p className="text-sm text-muted-foreground">
                             Device times are shown as recorded in {timezone}.
-                            Slots are assigned using the effective work schedule.
+                            Slots are assigned using the effective work
+                            schedule.
                         </p>
                     </div>
                     <Button asChild variant="outline">
@@ -213,19 +214,38 @@ export default function DailyPunches({
                                                         : undefined
                                                 }
                                             >
-                                                {punches[0]?.time ?? (missing ? 'Missing' : '—')}
+                                                {punches[0]?.time ??
+                                                    (missing ? 'Missing' : '—')}
                                             </td>
                                         );
                                     })}
                                     <td className="min-w-44 space-y-1 p-3 text-xs">
                                         {row.status && (
-                                            <p className="font-semibold capitalize">{row.status.replaceAll('_', ' ')}</p>
+                                            <p className="font-semibold capitalize">
+                                                {row.status.replaceAll(
+                                                    '_',
+                                                    ' ',
+                                                )}
+                                            </p>
                                         )}
                                         {row.schedule_id !== null && (
                                             <>
-                                                <p>{row.schedule_source === 'department' ? 'Department' : 'Override'} schedule #{row.schedule_id}</p>
-                                                <p>Late {row.late_minutes_am} min AM / {row.late_minutes_pm} min PM</p>
-                                                <p>Undertime {row.undertime_minutes} min</p>
+                                                <p>
+                                                    {row.schedule_source ===
+                                                    'department'
+                                                        ? 'Department'
+                                                        : 'Override'}{' '}
+                                                    schedule #{row.schedule_id}
+                                                </p>
+                                                <p>
+                                                    Late {row.late_minutes_am}{' '}
+                                                    min AM /{' '}
+                                                    {row.late_minutes_pm} min PM
+                                                </p>
+                                                <p>
+                                                    Undertime{' '}
+                                                    {row.undertime_minutes} min
+                                                </p>
                                             </>
                                         )}
                                     </td>
@@ -244,12 +264,26 @@ export default function DailyPunches({
                                         <ol className="grid gap-2 text-xs">
                                             {row.punches.map((punch) => (
                                                 <li key={punch.id}>
-                                                    <span className="font-medium tabular-nums">{punch.punched_at}</span>
+                                                    <span className="font-medium tabular-nums">
+                                                        {punch.punched_at}
+                                                    </span>
                                                     <span className="ml-2">
-                                                        {slots.find(({ key }) => key === punch.derived_slot)?.label ?? (punch.is_duplicate ? 'Merged duplicate' : 'Unassigned')}
+                                                        {slots.find(
+                                                            ({ key }) =>
+                                                                key ===
+                                                                punch.derived_slot,
+                                                        )?.label ??
+                                                            (punch.is_duplicate
+                                                                ? 'Merged duplicate'
+                                                                : 'Unassigned')}
                                                     </span>
                                                     <span className="block text-muted-foreground">
-                                                        Device status {punch.punch_state ?? 'unknown'} · {punch.verify_label} · Device {punch.device_id ?? '—'}
+                                                        Device status{' '}
+                                                        {punch.punch_state ??
+                                                            'unknown'}{' '}
+                                                        · {punch.verify_label} ·
+                                                        Device{' '}
+                                                        {punch.device_id ?? '—'}
                                                     </span>
                                                 </li>
                                             ))}

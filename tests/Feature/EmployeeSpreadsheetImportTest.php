@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\EmployeeImportTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -64,7 +65,10 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $worksheet = $zip->getFromName('xl/worksheets/sheet1.xml');
         $this->assertStringContainsString('name="EMPLOYEES"', $workbook);
         $this->assertStringNotContainsString('EligibilityOptions', $workbook);
-        $this->assertStringContainsString('sqref="H2:H5001"', $worksheet);
+        $this->assertStringContainsString('name="Departments"', $workbook);
+        $this->assertStringContainsString('Departments!$A$2:$A$15', $workbook);
+        $this->assertStringContainsString('<x:formula1>DepartmentOptions</x:formula1>', $worksheet);
+        $this->assertStringContainsString('Office of the Municipal Mayor', $zip->getFromName('xl/worksheets/sheet2.xml'));
         $this->assertStringContainsString('<x:formula1>"active,on leave,inactive,terminated"</x:formula1>', $worksheet);
         $this->assertStringContainsString('Employee Number', $worksheet);
         $this->assertStringContainsString('Department', $worksheet);
@@ -119,7 +123,6 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $department = Department::query()->where('code', 'HEALTH')->firstOrFail();
         Position::query()->create(['department_id' => $department->id, 'title' => 'Nurse I', 'code' => 'NURSE-I']);
         $actor = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
-        $previewPassword = null;
         $preview = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
             'Employee Number' => 'EMP-IMPORT-01', 'First Name' => 'Jordan', 'Middle Name' => 'A', 'Last Name' => 'Sample',
             'Department' => $department->name, 'Position' => 'Nurse I', 'Suffix' => 'Jr.', 'Employment Status' => 'active',
@@ -127,21 +130,18 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $token = parse_url($preview->headers->get('Location'), PHP_URL_QUERY);
         parse_str((string) $token, $query);
         $token = $query['token'] ?? null;
-        $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $token]))->assertOk()->assertInertia(function ($page) use (&$token, &$previewPassword): void {
-            $page->component('hris/import-employees')->has('rows', 1)->where('rows.0.valid', true)->where('rows.0.status', 'active')
-                ->where('rows.0.profile_action', 'Create profile')->where('rows.0.account_action', 'Create account')
-                ->where('rows.0.username', 'EMP-IMPORT-01')->has('rows.0.temporary_password');
-            $token = $page->toArray()['props']['token'];
-            $previewPassword = $page->toArray()['props']['rows'][0]['temporary_password'];
-        });
+        $this->get(route('hris.employees.import', ['token' => $token]))->assertOk()->assertInertia(fn ($page) => $page
+            ->component('hris/import-employees')->has('rows', 1)->where('rows.0.valid', true)
+            ->where('rows.0.account_action', 'Create account')->missing('rows.0.temporary_password')
+            ->missingFlash('activationSlips'));
 
-        $password = null;
-        $this->post(route('hris.employees.import.store'), ['token' => $token])
-            ->assertOk()->assertInertia(function ($page) use (&$password): void {
-                $page->where('result.createdProfiles', 1)->where('result.createdAccounts', 1)->has('credentials', 1)
-                    ->where('credentials.0.reference_code', 'JOREMP-IMPORT-01');
-                $password = $page->toArray()['props']['credentials'][0]['temporary_password'];
-            });
+        $this->post(route('hris.employees.import.store'), ['token' => $token])->assertSessionHasErrors('password');
+        $response = $this->withHeader('X-Inertia', 'true')->post(route('hris.employees.import.store'), [
+            'token' => $token, 'expiry_days' => 21, 'password' => 'password',
+        ])->assertOk()->assertJsonPath('props.created', 1)->assertHeader('Cache-Control', 'no-store, private');
+        $slip = $response->json('flash.activationSlips.0');
+        $this->assertSame('EMP-IMPORT-01', $slip['employee_number']);
+        $this->assertMatchesRegularExpression('/^[A-HJ-KM-NP-Z2-9]{4}-[A-HJ-KM-NP-Z2-9]{4}$/', $slip['activation_code']);
         $employee = Employee::query()->where('employee_number', 'EMP-IMPORT-01')->firstOrFail();
         $this->assertSame('active', $employee->employment_status);
         $this->assertNull($employee->tin);
@@ -149,25 +149,21 @@ class EmployeeSpreadsheetImportTest extends TestCase
         $this->assertSame($department->id, $employee->department_id);
         $this->assertSame('NURSE-I', $employee->position->code);
         $this->assertDatabaseCount('plantilla_items', 0);
-        $this->assertSame($previewPassword, $password);
-        $employeeUser = User::query()->where('employee_id', $employee->id)->firstOrFail();
-        auth()->logout();
-        $this->post('/login', ['email' => $employee->employee_number, 'password' => $password])->assertRedirect();
-        $this->assertAuthenticatedAs($employeeUser);
-        $this->get(route('hris.my-profile'))->assertRedirect(route('security.edit'));
-        $employeeUser->forceFill(['must_change_password' => false, 'requires_mfa' => false])->save();
-        $this->actingAs($employeeUser)->get(route('hris.my-profile'))->assertOk()->assertInertia(fn ($page) => $page
-            ->where('employee.department', $department->name)
-            ->where('employee.position_title', 'Nurse I')
-            ->where('employee.employment_status', 'active')
-            ->where('employee.civil_service_eligibility', null));
+        $account = $employee->user;
+        $this->assertNull($account->password);
+        $this->assertSame($employee->employee_number, $account->username);
+        $activation = $account->activationCodes()->firstOrFail();
+        $this->assertTrue(Hash::check(str_replace('-', '', $slip['activation_code']), $activation->code_hash));
+        $this->assertSame(now()->addDays(21)->toDateString(), $activation->expires_at->toDateString());
+        $this->flushHeaders()->get(route('hris.employees.import'))->assertOk()->assertInertia(fn ($page) => $page->missingFlash('activationSlips'));
     }
 
     public function test_employee_workbook_requires_only_core_account_fields(): void
     {
+        $this->withoutVite();
         $this->seed();
         $department = Department::query()->where('code', 'HEALTH')->firstOrFail();
-        $position = Position::query()->create(['department_id' => $department->id, 'title' => 'Nurse I', 'code' => 'NURSE-I']);
+        Position::query()->create(['department_id' => $department->id, 'title' => 'Nurse I', 'code' => 'NURSE-I']);
         $actor = User::factory()->create(['role_id' => Role::query()->where('name', 'HRMO Head')->value('id')]);
         $response = $this->actingAs($actor)->post(route('hris.employees.import.preview'), ['file' => $this->workbook([[
             'Employee Number' => 'EMP-IMPORT-02', 'First Name' => 'Jordan', 'Last Name' => 'Sample',
@@ -182,9 +178,14 @@ class EmployeeSpreadsheetImportTest extends TestCase
             ->assertInertia(fn ($page) => $page->has('rows', 2)
                 ->where('rows.0.valid', true)->where('rows.0.account_action', 'Create account')
                 ->where('rows.1.valid', false)->where('rows.1.errors.0', 'Department is required.'));
+
+        $this->post(route('hris.employees.import.store'), ['token' => $query['token'], 'password' => 'password'])
+            ->assertOk()->assertInertia(fn ($page) => $page->where('created', 1)->where('rejected.0.row', 3));
+        $this->assertDatabaseHas('employees', ['employee_number' => 'EMP-IMPORT-02']);
+        $this->assertDatabaseMissing('employees', ['employee_number' => 'EMP-IMPORT-03']);
     }
 
-    public function test_employee_import_creates_account_for_existing_employee_number(): void
+    public function test_employee_import_skips_an_existing_employee_without_changing_it(): void
     {
         $this->withoutVite();
         $this->seed();
@@ -206,15 +207,14 @@ class EmployeeSpreadsheetImportTest extends TestCase
         ]])])->assertRedirect();
         parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
         $this->actingAs($actor)->get(route('hris.employees.import', ['token' => $query['token']]))->assertOk()
-            ->assertInertia(fn ($page) => $page->where('rows.0.valid', true)
-                ->where('rows.0.profile_action', 'Update profile')->where('rows.0.account_action', 'Create account'));
+            ->assertInertia(fn ($page) => $page->where('rows.0.valid', false)
+                ->where('rows.0.profile_action', 'Already exists')->where('rows.0.account_action', 'Skip'));
         $token = $query['token'];
 
-        $this->actingAs($actor)->post(route('hris.employees.import.store'), ['token' => $token])->assertOk()
-            ->assertInertia(fn ($page) => $page->where('result.createdProfiles', 0)
-                ->where('result.updatedProfiles', 1)->where('result.createdAccounts', 1));
+        $this->actingAs($actor)->post(route('hris.employees.import.store'), ['token' => $token, 'password' => 'password'])->assertOk()
+            ->assertInertia(fn ($page) => $page->where('created', 0)->has('rejected', 1)->where('rejected.0.row', 2));
         $this->assertSame(1, Employee::query()->where('employee_number', $employee->employee_number)->count());
-        $this->assertDatabaseHas('users', ['employee_id' => $employee->id, 'email' => null]);
+        $this->assertDatabaseMissing('users', ['employee_id' => $employee->id]);
     }
 
     private function workbook(array $rows): UploadedFile

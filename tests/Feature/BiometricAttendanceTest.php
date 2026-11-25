@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -16,6 +17,22 @@ uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->withoutVite();
+});
+
+test('attendance uses current Bio IDs before the history table is deployed', function () {
+    $actor = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+    $employee = Employee::factory()->create();
+    $employee->forceFill(['biometric_id' => 15])->save();
+    Schema::shouldReceive('hasTable')->with('attendance_biometric_links')->andReturnFalse();
+
+    $this->actingAs($actor)->post('/hris/attendance/logs', [
+        'file' => UploadedFile::fake()->createWithContent('legacy.dat', "15\t2026-11-10 08:00:00\t1\t0\t1\t0\n17\t2026-11-10 08:00:00\t1\t0\t1\t0\n"),
+    ])->assertSessionHasNoErrors();
+
+    expect(AttendancePunch::query()->ownedBy($employee->id)->count())->toBe(1)
+        ->and(AttendancePunch::query()->unassigned()->count())->toBe(1);
+    $this->get('/hris/attendance?month=2026-11')->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('unlinkedMachineIds', 1));
 });
 
 test('attendance logs import directly on selection, reject malformed rows, and skip repeated punches on re-upload', function () {
@@ -219,7 +236,7 @@ test('saving or correcting an employee biometric ID links historical and future 
     $this->assertDatabaseHas('audit_logs', ['user_id' => $hr->id, 'action' => 'employee.biometric_link_locked', 'model_id' => $employee->id]);
 
     $this->from('/hris/employees')->put("/hris/employees/{$other->id}/biometric-id", ['biometric_id' => 15])
-        ->assertSessionHasErrors('biometric_id');
+        ->assertForbidden();
     expect($other->refresh()->biometric_id)->toBeNull();
 
     $this->post($url, ['file' => UploadedFile::fake()->createWithContent('future.dat', "15\t2026-10-20 08:00:00\t1\t0\t1\t0\n"), 'confirm' => true])
@@ -236,12 +253,32 @@ test('saving or correcting an employee biometric ID links historical and future 
         ->assertRedirect('/hris/employees')->assertSessionHasNoErrors();
     expect($employee->refresh()->biometric_locked)->toBeFalse();
     $this->assertDatabaseHas('audit_logs', ['user_id' => $hr->id, 'action' => 'employee.biometric_link_unlocked', 'model_id' => $employee->id]);
-    $this->from('/hris/employees')->put($linkUrl, ['biometric_id' => ''])->assertRedirect('/hris/employees');
+    $head = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create();
+    $cutoff = '2026-10-21T00:00';
+    $this->put($linkUrl, ['biometric_id' => null, 'previous_effective_to' => $cutoff])->assertForbidden();
+    $this->actingAs($head)->from('/hris/employees')->put($linkUrl, [
+        'biometric_id' => null, 'previous_effective_to' => $cutoff, 'password' => 'password',
+    ])->assertRedirect('/hris/employees')->assertSessionHasNoErrors();
     expect($employee->refresh()->biometric_id)->toBeNull()
-        ->and(AttendancePunch::query()->unassigned()->count())->toBe(5);
-    $this->from('/hris/employees')->put("/hris/employees/{$other->id}/biometric-id", ['biometric_id' => 15])->assertRedirect('/hris/employees');
-    expect($other->refresh()->attendancePunches()->count())->toBe(5);
-    $this->assertDatabaseCount('attendance_punches', 5);
+        ->and(AttendancePunch::query()->unassigned()->count())->toBe(0)
+        ->and(AttendancePunch::query()->ownedBy($employee->id)->count())->toBe(5);
+
+    $otherLink = "/hris/employees/{$other->id}/biometric-id";
+    $this->put($otherLink, ['biometric_id' => 15])->assertSessionHasErrors('biometric_id');
+    $this->put($otherLink, ['biometric_id' => 15, 'effective_from' => $cutoff])->assertSessionHasNoErrors();
+    expect(AttendancePunch::query()->ownedBy($other->id)->count())->toBe(0)
+        ->and(AttendancePunch::query()->ownedBy($employee->id)->count())->toBe(5);
+    $this->post($url, ['file' => UploadedFile::fake()->createWithContent('after-transfer.dat', "15\t2026-10-21 08:00:00\t1\t0\t1\t0\n"), 'confirm' => true])
+        ->assertSessionHasNoErrors();
+    expect(AttendancePunch::query()->ownedBy($other->id)->count())->toBe(1)
+        ->and(AttendancePunch::query()->ownedBy($employee->id)->count())->toBe(5);
+    $this->getJson($dtr.'?month=2026-10')->assertJsonPath('punchTimes.20', ['08:00:00']);
+    $this->getJson("/hris/attendance/dtr/{$other->id}?month=2026-10")
+        ->assertJsonMissingPath('punchTimes.20')->assertJsonPath('punchTimes.21', ['08:00:00']);
+    $this->get('/hris/attendance/daily-punches?start_date=2026-10-20&end_date=2026-10-21&employee='.$other->id)
+        ->assertInertia(fn (Assert $page) => $page->has('rows.data', 1)
+            ->where('rows.data.0.date', '2026-10-21')->where('rows.data.0.employee_id', $other->id));
+    $this->assertDatabaseCount('attendance_punches', 6);
 });
 
 test('verification reports missing punches and dates before hire', function () {

@@ -15,21 +15,36 @@ export default function BiometricIdField({
     link: EmployeeBiometricLink;
 }) {
     const savedId = link.id?.toString() ?? '';
-    const form = useForm({ biometric_id: savedId });
+    const form = useForm({
+        biometric_id: savedId,
+        effective_from: '',
+        effective_to: '',
+        previous_effective_to: '',
+        password: '',
+    });
     const lockForm = useForm({ locked: !link.locked });
     const url = `/hris/employees/${employeeId}/biometric-id`;
     const busy = form.processing || lockForm.processing;
     const dirty = form.data.biometric_id !== savedId;
     const canVerify = !dirty && link.id !== null && link.status === 'pending';
     const canSave = !link.locked && dirty;
-    const error = form.errors.biometric_id ?? lockForm.errors.locked;
+    const error =
+        form.errors.biometric_id ??
+        form.errors.effective_from ??
+        form.errors.effective_to ??
+        form.errors.previous_effective_to ??
+        form.errors.password ??
+        lockForm.errors.locked;
     const noteId = `biometric-note-${employeeId}`;
 
     function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!busy && (canSave || canVerify)) {
             form.transform((data) => ({ ...data, verify_only: canVerify }));
-            form.put(url, { preserveScroll: true });
+            form.put(url, {
+                preserveScroll: true,
+                onFinish: () => form.reset('password'),
+            });
         }
     }
 
@@ -97,6 +112,68 @@ export default function BiometricIdField({
                     </Button>
                 )}
             </div>
+            {dirty && !link.locked && (
+                <div className="space-y-1 text-xs">
+                    {link.id !== null && (
+                        <label className="block">
+                            Current password, if not recently confirmed
+                            <Input
+                                type="password"
+                                autoComplete="current-password"
+                                value={form.data.password}
+                                onChange={(event) =>
+                                    form.setData('password', event.target.value)
+                                }
+                            />
+                        </label>
+                    )}
+                    {link.id !== null && (
+                        <label className="block">
+                            Previous link ends
+                            <Input
+                                type="datetime-local"
+                                value={form.data.previous_effective_to}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'previous_effective_to',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </label>
+                    )}
+                    {form.data.biometric_id && (
+                        <>
+                            <label className="block">
+                                New link starts (optional)
+                                <Input
+                                    type="datetime-local"
+                                    value={form.data.effective_from}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'effective_from',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </label>
+                            <label className="block">
+                                New link ends (optional)
+                                <Input
+                                    type="datetime-local"
+                                    value={form.data.effective_to}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'effective_to',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </label>
+                        </>
+                    )}
+                </div>
+            )}
             <div
                 id={noteId}
                 className="max-w-72 space-y-1 text-xs text-muted-foreground"

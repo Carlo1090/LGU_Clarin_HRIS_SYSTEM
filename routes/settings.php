@@ -16,7 +16,7 @@ Route::middleware(['auth', EnsureHrisAccountReady::class])->group(function () {
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 
-Route::middleware(['auth', 'verified', EnsureHrisAccountReady::class])->group(function () {
+Route::middleware(['auth', EnsureHrisAccountReady::class.':verify-legacy'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('settings/security', [SecurityController::class, 'edit'])
