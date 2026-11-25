@@ -137,13 +137,3 @@
         max-width: 36rem;
     }
 }
-
-@media screen and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-    .workspace-panel:hover {
-        background-image: radial-gradient(
-            circle 16rem at var(--panel-x, 50%) var(--panel-y, 50%),
-            rgb(166 235 32 / 16%), transparent
-        );
-        border-color: color-mix(in srgb, var(--border), #90bc31 50%);
-    }
-}
