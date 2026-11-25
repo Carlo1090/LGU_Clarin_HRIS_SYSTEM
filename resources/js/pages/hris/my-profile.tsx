@@ -88,7 +88,7 @@ export default function MyProfile({
     return (
         <>
             <Head title="My HR Profile" />
-            <main className="workspace-page max-w-5xl">
+            <main className="workspace-page">
                 <WorkspaceHeader
                     title="My HR Profile"
                     description="Employee information maintained by HRMO."
@@ -109,7 +109,7 @@ export default function MyProfile({
                         className="workspace-panel space-y-4 p-5"
                     >
                         <h2 className="font-semibold">{section.title}</h2>
-                        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <dl className="grid gap-4 @min-[34rem]/workspace:grid-cols-2 @min-[56rem]/workspace:grid-cols-3">
                             {section.fields.map(([key, label]) => (
                                 <div key={key} className="min-w-0">
                                     <dt className="text-xs text-muted-foreground">
@@ -143,7 +143,7 @@ export default function MyProfile({
                         <h2 className="font-semibold">
                             Additional HR information
                         </h2>
-                        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <dl className="grid gap-4 @min-[34rem]/workspace:grid-cols-2 @min-[56rem]/workspace:grid-cols-3">
                             {customFields.map((field) => (
                                 <div key={field.label} className="min-w-0">
                                     <dt className="text-xs text-muted-foreground">

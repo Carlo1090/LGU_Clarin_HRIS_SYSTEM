@@ -114,7 +114,7 @@ class MonthlyAttendanceReportController
 
     /**
      * @param  'asc'|'desc'  $direction
-     * @return LengthAwarePaginator<array-key, array{id: mixed, employee_number: mixed, name: string, days_attended: int, late_arrivals: int, undetermined_days: int}>
+     * @return LengthAwarePaginator<array-key, array{id: mixed, employee_number: mixed, avatar: mixed, name: string, days_attended: int, late_arrivals: int, undetermined_days: int}>
      */
     private function summary(Builder $daily, string $month, string $sort, string $direction): LengthAwarePaginator
     {

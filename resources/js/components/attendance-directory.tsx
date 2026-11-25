@@ -95,7 +95,7 @@ export default function AttendanceDirectory({
     ];
 
     return (
-        <div className="workspace-page max-w-7xl">
+        <div className="workspace-page">
             <Head title={title} />
             <AttendanceWorkspaceHeader
                 active="records"
@@ -230,7 +230,15 @@ export default function AttendanceDirectory({
                                             </p>
                                         )}
                                     </div>
-                                    <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Button asChild variant="outline" size="sm">
+                                            <Link
+                                                href="/hris/attendance/daily-punches"
+                                                data={{ month: attendanceMonth, employee: employee.id }}
+                                            >
+                                                Daily punches
+                                            </Link>
+                                        </Button>
                                         <DailyTimeRecordDialog
                                             url={employee.dtr_url}
                                         />

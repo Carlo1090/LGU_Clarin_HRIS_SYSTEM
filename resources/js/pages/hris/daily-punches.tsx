@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import { Button } from '@/components/ui/button';
 import type { DailyPunchRow } from '@/types/attendance';
@@ -21,6 +22,7 @@ type Props = {
     employees: { id: number; name: string }[];
     departments: { id: number; name: string }[];
     canManage: boolean;
+    departmentUnavailable: boolean;
     timezone: string;
 };
 
@@ -47,12 +49,23 @@ export default function DailyPunches({
     employees,
     departments,
     canManage,
+    departmentUnavailable,
     timezone,
 }: Props) {
     return (
-        <main className="mx-auto w-full max-w-[96rem] space-y-6 p-4 md:p-8">
+        <main className="workspace-page">
             <Head title="Daily Punches" />
-            <AttendanceWorkspaceHeader active="daily" canManage={canManage} />
+            <AttendanceWorkspaceHeader
+                active="daily"
+                month={filters.start_date.slice(0, 7)}
+                canManage={canManage}
+            />
+            {departmentUnavailable && (
+                <p role="status" className="workspace-panel p-5 text-sm">
+                    Your account has no assigned department. Contact HR to link
+                    your employee record and department so you can view its punches.
+                </p>
+            )}
 
             <section className="space-y-4 rounded-xl border bg-card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -66,15 +79,17 @@ export default function DailyPunches({
                             schedule.
                         </p>
                     </div>
-                    <Button asChild variant="outline">
-                        <a href={exportHref(filters)}>Export Excel workbook</a>
-                    </Button>
+                    {!departmentUnavailable && (
+                        <Button asChild variant="outline">
+                            <a href={exportHref(filters)}>Export Excel workbook</a>
+                        </Button>
+                    )}
                 </div>
 
                 <form
                     method="get"
                     action="/hris/attendance/daily-punches"
-                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
+                    className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-3"
                 >
                     <label className="grid gap-1 text-sm">
                         Start date
@@ -194,6 +209,13 @@ export default function DailyPunches({
                                                 ? ` · ${row.department_name}`
                                                 : ''}
                                         </div>
+                                        {row.employee_id !== null && (
+                                            <div className="mt-2">
+                                                <DailyTimeRecordDialog
+                                                    url={`/hris/attendance/dtr/${row.employee_id}?month=${row.date.slice(0, 7)}`}
+                                                />
+                                            </div>
+                                        )}
                                     </th>
                                     <td className="p-3 tabular-nums">
                                         {row.date}
@@ -299,6 +321,15 @@ export default function DailyPunches({
                                     >
                                         No attendance punches found for this
                                         date range.
+                                        {canManage && (
+                                            <Link
+                                                className="mt-2 block font-medium text-foreground underline underline-offset-4"
+                                                href="/hris/attendance/logs"
+                                                data={{ month: filters.start_date.slice(0, 7) }}
+                                            >
+                                                Open biometric log imports
+                                            </Link>
+                                        )}
                                     </td>
                                 </tr>
                             )}

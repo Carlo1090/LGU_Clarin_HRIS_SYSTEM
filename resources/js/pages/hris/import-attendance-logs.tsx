@@ -126,7 +126,7 @@ export default function ImportAttendanceLogs({
     }
 
     return (
-        <main className="workspace-page max-w-7xl">
+        <main className="workspace-page">
             <Head title="Import Attendance Logs" />
             <AttendanceWorkspaceHeader
                 active="import"

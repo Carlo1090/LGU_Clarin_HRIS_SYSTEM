@@ -245,7 +245,7 @@ export default function PlantillaItems({ title, fields, records }: Props) {
     );
 
     return (
-        <main className="workspace-page max-w-7xl">
+        <main className="workspace-page">
             <Head title={title} />
             <WorkspaceHeader
                 title={title}

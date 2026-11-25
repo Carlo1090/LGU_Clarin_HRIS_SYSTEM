@@ -1,9 +1,12 @@
+import DashboardAnnouncements, {
+    type DashboardAnnouncement,
+} from '@/components/dashboard-announcements';
 import GradientASCII from '@/components/GradientASCII';
 import TechText from '@/components/TechText';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import SpotlightCard from '@/components/SpotlightCard';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage, usePoll } from '@inertiajs/react';
 import {
     ArrowDownToLine,
     ArrowUpRight,
@@ -92,6 +95,8 @@ type Props = {
         kind: string;
         expiresAt: string;
     }[];
+    announcements: DashboardAnnouncement[];
+    canManageAnnouncements: boolean;
 };
 const number = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 2 });
 const compact = new Intl.NumberFormat('en-PH', {
@@ -313,7 +318,11 @@ export default function Dashboard({
     cards,
     analytics,
     employeeLockouts = [],
+    announcements,
+    canManageAnnouncements,
 }: Props) {
+    usePoll(60_000, { only: ['announcements', 'notifications'] });
+
     const { auth } = usePage().props;
 
     useEffect(() => {
@@ -418,7 +427,7 @@ export default function Dashboard({
         <>
             <Head title={title} />
             <div
-                className="dashboard-page mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-5 lg:p-6"
+                className="dashboard-page min-w-0 space-y-4 p-[clamp(0.75rem,2cqw,3rem)] [overflow-wrap:anywhere]"
                 aria-busy={loading}
             >
                 <header className="flex flex-wrap items-start justify-between gap-3">
@@ -499,6 +508,10 @@ export default function Dashboard({
                         </ul>
                     </section>
                 )}
+                <DashboardAnnouncements
+                    announcements={announcements}
+                    canManage={canManageAnnouncements}
+                />
 
                 {cards.length ? (
                     <>
@@ -559,10 +572,10 @@ export default function Dashboard({
                             </div>
                             <div
                                 className={cn(
-                                    'grid gap-3 sm:grid-cols-2',
+                                    'grid gap-3 @min-[32rem]/workspace:grid-cols-2',
                                     cards.length > 4
-                                        ? 'xl:grid-cols-5'
-                                        : 'xl:grid-cols-4',
+                                        ? '@min-[70rem]/workspace:grid-cols-5'
+                                        : '@min-[62rem]/workspace:grid-cols-4',
                                 )}
                             >
                                 {cards.map((card, index) => {
@@ -623,10 +636,10 @@ export default function Dashboard({
                         <section
                             id="dashboard-overview"
                             aria-label="Dashboard charts"
-                            className="grid scroll-mt-20 gap-3 md:grid-cols-2 xl:grid-cols-12"
+                            className="grid scroll-mt-20 gap-3 @min-[42rem]/workspace:grid-cols-2 @min-[70rem]/workspace:grid-cols-12"
                         >
                             <AnalyticsCard
-                                className="md:col-span-2 xl:col-span-8"
+                                className="@min-[42rem]/workspace:col-span-2 @min-[70rem]/workspace:col-span-8"
                                 title={analytics.activity.title}
                                 description={analytics.activity.description}
                                 accessory={
@@ -750,7 +763,7 @@ export default function Dashboard({
                             </AnalyticsCard>
 
                             <AnalyticsCard
-                                className="dashboard-snapshot md:col-span-2 xl:col-span-4"
+                                className="dashboard-snapshot @min-[42rem]/workspace:col-span-2 @min-[70rem]/workspace:col-span-4"
                                 title="Workspace snapshot"
                                 description={analytics.scope}
                             >
@@ -830,7 +843,7 @@ export default function Dashboard({
                             </AnalyticsCard>
 
                             <AnalyticsCard
-                                className="dashboard-queue-card md:col-span-2 xl:col-span-6"
+                                className="dashboard-queue-card @min-[42rem]/workspace:col-span-2 @min-[70rem]/workspace:col-span-6"
                                 title="Your work queue"
                                 description="Open a workspace to review your next actions."
                                 accessory={
@@ -847,7 +860,7 @@ export default function Dashboard({
                                     className="scroll-mt-24"
                                 >
                                     {analytics.tasks.length ? (
-                                        <div className="grid gap-2.5 sm:grid-cols-3">
+                                        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-2.5">
                                             {analytics.tasks.map((task) => (
                                                 <Link
                                                     key={task.title}
@@ -910,7 +923,7 @@ export default function Dashboard({
                             </AnalyticsCard>
 
                             <AnalyticsCard
-                                className="dashboard-attendance-card xl:col-span-3"
+                                className="dashboard-attendance-card @min-[70rem]/workspace:col-span-3"
                                 title={analytics.bars.title}
                                 description={analytics.bars.description}
                             >
@@ -1013,7 +1026,7 @@ export default function Dashboard({
                             </AnalyticsCard>
 
                             <AnalyticsCard
-                                className="dashboard-workforce-card xl:col-span-3"
+                                className="dashboard-workforce-card @min-[70rem]/workspace:col-span-3"
                                 title={analytics.distribution.title}
                                 description={analytics.distribution.description}
                             >
@@ -1489,7 +1502,7 @@ export default function Dashboard({
                 >
                     <div className="relative overflow-hidden rounded-[3rem] border border-border/80 bg-muted px-6 pt-16 pb-12 text-foreground shadow-sm sm:px-10 lg:px-14">
                         {/* Top Info & Navigation Row */}
-                        <div className="grid items-start gap-12 border-b border-border pb-16 lg:grid-cols-[1.5fr_1fr_1fr_1.5fr]">
+                        <div className="grid items-start gap-12 border-b border-border pb-16 @min-[38rem]/workspace:grid-cols-2 @min-[64rem]/workspace:grid-cols-[1.5fr_1fr_1fr_1.5fr]">
                             {/* Col 1: Bio / Tagline */}
                             <div>
                                 <p className="text-base leading-relaxed font-normal text-muted-foreground">

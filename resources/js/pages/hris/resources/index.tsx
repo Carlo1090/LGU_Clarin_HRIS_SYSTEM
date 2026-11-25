@@ -12,7 +12,7 @@ import {
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Check, FileUp, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useId, useMemo, useState } from 'react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import EmployeeCodeReissue from '@/components/employee-code-reissue';
 import EmployeeAccountStatusAction from '@/components/employee-account-status-action';
@@ -63,8 +63,71 @@ const moduleDescriptions: Record<string, string> = {
 
 type FormData = Record<string, string | number | boolean | null>;
 
+const statusSuggestions: Partial<Record<string, string[]>> = {
+    vacancies: ['open', 'closed', 'filled', 'on hold'],
+    applicants: ['pending', 'shortlisted', 'interviewed', 'hired', 'rejected', 'withdrawn'],
+    attendance: ['present', 'late', 'absent', 'incomplete'],
+    'payroll-periods': ['draft', 'approved', 'closed'],
+    payrolls: ['draft', 'approved', 'paid', 'error'],
+    'evaluation-periods': ['draft', 'active', 'closed'],
+    'privacy-requests': ['pending', 'processed', 'rejected'],
+    'plantilla-items': ['active', 'inactive'],
+};
+
 const emptyValue = (field: Field): string | number | boolean | null =>
     field.type === 'checkbox' ? false : '';
+
+/* ---------- Employee form field overrides ---------- */
+
+const SUFFIX_OPTIONS = ['Jr.', 'Sr.', 'I', 'II', 'III', 'IV', 'V'].map(
+    (value) => ({ value, label: value }),
+);
+
+const SEX_OPTIONS = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
+];
+
+// Converts older values such as "M" / "F" so they match the dropdown.
+const normalizeSex = (value: HrisValue): HrisValue => {
+    if (typeof value !== 'string') return value;
+
+    const key = value.trim().toLowerCase();
+
+    if (key === 'm' || key === 'male') return 'Male';
+    if (key === 'f' || key === 'female') return 'Female';
+
+    return value;
+};
+
+const isSexField = (name: string) => name === 'gender' || name === 'sex';
+
+const applyEmployeeFieldOverrides = (field: Field): Field => {
+    if (field.name === 'middle_name') {
+        return { ...field, label: 'Middle name (optional)', required: false };
+    }
+
+    if (field.name === 'suffix') {
+        return {
+            ...field,
+            label: 'Suffix (optional)',
+            type: 'select',
+            required: false,
+            options: SUFFIX_OPTIONS,
+        };
+    }
+
+    if (isSexField(field.name)) {
+        return {
+            ...field,
+            label: 'Sex',
+            type: 'select',
+            options: SEX_OPTIONS,
+        };
+    }
+
+    return field;
+};
 
 export default function HrisResourceIndex(
     props: Props | AttendanceDirectoryProps,
@@ -79,7 +142,7 @@ export default function HrisResourceIndex(
 function ResourceRecords({
     resource,
     title,
-    fields,
+    fields: serverFields,
     canManage,
     leaveReviewStage,
     canCreateLeaveOnBehalf = false,
@@ -94,6 +157,15 @@ function ResourceRecords({
     statusSummary = [],
     records,
 }: Props) {
+    const statusListId = useId();
+    const availableStatuses = statusSuggestions[resource];
+    const fields = useMemo(
+        () =>
+            resource === 'employees'
+                ? serverFields.map(applyEmployeeFieldOverrides)
+                : serverFields,
+        [resource, serverFields],
+    );
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
     const isAttendance = resource === 'attendance';
@@ -196,12 +268,20 @@ function ResourceRecords({
         editor?.scrollIntoView({ block: 'start' });
         form.setData(
             Object.fromEntries(
-                fields.map((field) => [
-                    field.name,
-                    row[field.name] === null || row[field.name] === undefined
-                        ? emptyValue(field)
-                        : row[field.name],
-                ]),
+                fields.map((field) => {
+                    const raw = row[field.name];
+
+                    if (raw === null || raw === undefined) {
+                        return [field.name, emptyValue(field)];
+                    }
+
+                    return [
+                        field.name,
+                        resource === 'employees' && isSexField(field.name)
+                            ? normalizeSex(raw)
+                            : raw,
+                    ];
+                }),
             ),
         );
     };
@@ -221,8 +301,11 @@ function ResourceRecords({
 
     const displayValue = (field: Field, value: HrisValue | undefined) => {
         if (value === null || value === undefined || value === '') return '—';
-        if (resource === 'leave-applications' && field.name === 'status') {
+        if (['leave-applications', 'vacancies'].includes(resource) && field.name === 'status') {
             return String(value).replaceAll('_', ' ');
+        }
+        if (resource === 'employees' && isSexField(field.name)) {
+            return normalizeSex(value);
         }
         if (field.type === 'checkbox') return value ? 'Yes' : 'No';
         if (Array.isArray(field.options))
@@ -346,7 +429,7 @@ function ResourceRecords({
     return (
         <>
             <Head title={title} />
-            <div className="workspace-page max-w-7xl">
+            <div className="workspace-page">
                 {isAttendance ? (
                     <AttendanceWorkspaceHeader
                         active="records"
@@ -416,11 +499,25 @@ function ResourceRecords({
                             }
                         >
                             {editingId
-                                ? 'Edit record'
+                                ? resource === 'vacancies'
+                                    ? 'Edit vacancy'
+                                    : 'Edit record'
                                 : resource === 'employees'
                                   ? 'Create employee account'
-                                  : 'Add record'}
+                                  : resource === 'announcements'
+                                    ? 'Create announcement'
+                                    : resource === 'vacancies'
+                                      ? 'Add vacancy'
+                                      : 'Add record'}
                         </EditorHeading>
+                        {resource === 'announcements' && (
+                            <p className="mb-4 text-sm text-muted-foreground">
+                                Check Published to show this announcement on all
+                                dashboards. Leave the start time blank to publish
+                                immediately, or set a Manila date and time to
+                                schedule it.
+                            </p>
+                        )}
                         {resource === 'employees' && (
                             <div className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                                 <p>
@@ -445,12 +542,19 @@ function ResourceRecords({
                         )}
                         <form
                             onSubmit={submit}
-                            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                            className="grid gap-4 @min-[34rem]/workspace:grid-cols-2 @min-[56rem]/workspace:grid-cols-3"
                         >
+                            {availableStatuses && (
+                                <datalist id={statusListId}>
+                                    {availableStatuses.map((status) => (
+                                        <option key={status} value={status} />
+                                    ))}
+                                </datalist>
+                            )}
                             {fields.map((field) => (
                                 <label
                                     key={field.name}
-                                    className={`space-y-1 text-sm ${field.type === 'textarea' ? 'sm:col-span-2 lg:col-span-3' : ''}`}
+                                    className={`space-y-1 text-sm ${field.type === 'textarea' ? '@min-[34rem]/workspace:col-span-2 @min-[56rem]/workspace:col-span-3' : ''}`}
                                 >
                                     <span>
                                         {field.label}
@@ -521,6 +625,16 @@ function ResourceRecords({
                                     ) : (
                                         <input
                                             type={field.type}
+                                            list={
+                                                field.name === 'status' && availableStatuses
+                                                    ? statusListId
+                                                    : undefined
+                                            }
+                                            placeholder={
+                                                field.name === 'status' && availableStatuses
+                                                    ? 'Choose or type a status'
+                                                    : undefined
+                                            }
                                             step={
                                                 field.type === 'number'
                                                     ? 'any'
@@ -627,7 +741,7 @@ function ResourceRecords({
                                     )}
                                 </label>
                             )}
-                            <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
+                            <div className="flex items-center gap-2 @min-[34rem]/workspace:col-span-2 @min-[56rem]/workspace:col-span-3">
                                 <Button
                                     type="submit"
                                     disabled={form.processing}
@@ -639,7 +753,9 @@ function ResourceRecords({
                                           ? 'Save changes'
                                           : resource === 'employees'
                                             ? 'Create account'
-                                            : 'Create record'}
+                                            : resource === 'vacancies'
+                                              ? 'Create vacancy'
+                                              : 'Create record'}
                                 </Button>
                                 {editingId && (
                                     <Button
@@ -705,7 +821,7 @@ function ResourceRecords({
                             id="records-heading"
                             className="text-lg font-semibold tracking-tight"
                         >
-                            {directory?.title ?? 'Records'}
+                            {directory?.title ?? (resource === 'vacancies' ? 'Vacancy listings' : 'Records')}
                         </h2>
                         <span className="text-sm text-muted-foreground">
                             {records.data.length} on this page
@@ -736,23 +852,29 @@ function ResourceRecords({
                             renderActions={hasActions ? rowActions : undefined}
                         />
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div
+                            role="region"
+                            aria-labelledby="records-heading"
+                            tabIndex={0}
+                            className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                        >
                             <table className="w-full text-left text-sm">
-                                <thead className="workspace-table-head">
+                                <thead className="workspace-table-head whitespace-nowrap">
                                     <tr>
-                                        <th className="px-3 py-3 font-medium">
+                                        <th scope="col" className="px-3 py-3 font-medium">
                                             ID
                                         </th>
                                         {fields.map((field) => (
                                             <th
                                                 key={field.name}
+                                                scope="col"
                                                 className="px-3 py-3 font-medium"
                                             >
                                                 {field.label}
                                             </th>
                                         ))}
                                         {hasActions && (
-                                            <th className="px-3 py-3 font-medium">
+                                            <th scope="col" className="px-3 py-3 font-medium">
                                                 Actions
                                             </th>
                                         )}
@@ -770,7 +892,11 @@ function ResourceRecords({
                                             {fields.map((field) => (
                                                 <td
                                                     key={field.name}
-                                                    className="max-w-64 truncate px-3 py-3"
+                                                    className={
+                                                        resource === 'vacancies'
+                                                            ? 'max-w-64 px-3 py-3 [overflow-wrap:break-word]'
+                                                            : 'max-w-64 truncate px-3 py-3'
+                                                    }
                                                 >
                                                     {(field.name ===
                                                         'employee_id' ||

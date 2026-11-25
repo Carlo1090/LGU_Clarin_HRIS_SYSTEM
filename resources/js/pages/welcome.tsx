@@ -75,15 +75,15 @@ export default function Welcome() {
                 /> */}
             </Head>
 
-            <div className="public-surface min-h-screen overflow-x-clip bg-background text-foreground antialiased selection:bg-[#A6EB20] selection:text-primary-foreground">
+            <div className="public-surface welcome-page min-h-screen overflow-x-clip bg-background text-foreground antialiased selection:bg-[#A6EB20] selection:text-primary-foreground">
                 <PublicHeader showNavigation />
 
                 <main>
                     {/* Hero Section */}
-                    <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 pt-10 pb-20 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:px-10">
+                    <section className="mx-auto grid w-full max-w-[var(--welcome-width)] items-center gap-12 px-6 pt-10 pb-20 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:px-10">
                         {/* Left Column */}
                         <div data-aos="fade-up">
-                            <h1 className="text-4xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-5xl lg:text-[54px]">
+                            <h1 className="text-4xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-5xl lg:text-[clamp(3.375rem,3.6vw,4.5rem)]">
                                 Our people.
                                 <br />
                                 <span className="text-accent-foreground">
@@ -149,7 +149,7 @@ export default function Welcome() {
                                     ].map((tag) => (
                                         <span
                                             key={tag}
-                                            className="rounded-full border border-border bg-card px-3.5 py-1 text-[11px] font-medium text-muted-foreground"
+                                            className="rounded-full border border-border bg-card px-3.5 py-1 text-[0.6875rem] font-medium text-muted-foreground"
                                         >
                                             {tag}
                                         </span>
@@ -162,7 +162,7 @@ export default function Welcome() {
                         <div
                             data-aos="fade-up"
                             data-aos-delay="150"
-                            className="relative flex min-h-[460px] items-center justify-center"
+                            className="relative flex min-h-[28.75rem] items-center justify-center"
                         >
                             {/* Background Decorative Rings / Glow */}
                             <div className="absolute size-[min(380px,100%)] rounded-full border border-[#8CE01F]/30" />
@@ -170,7 +170,7 @@ export default function Welcome() {
 
                             {/* Decorative cards behind the hero image */}
                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                <div className="relative h-[340px] w-full max-w-[400px]">
+                                <div className="relative h-[21.25rem] w-full max-w-[25rem]">
                                     {/* Top-Left Blank Card */}
                                     <div className="absolute top-2 left-4 z-0 h-28 w-40 rounded-2xl border border-border/90 bg-card shadow-md" />
 
@@ -191,7 +191,7 @@ export default function Welcome() {
                                     alt="Three LGU Clarin officials in municipal uniforms"
                                     width={1293}
                                     height={1217}
-                                    className="max-h-[800px] w-auto max-w-full object-contain drop-shadow-2xl"
+                                    className="max-h-[50rem] 2xl:max-h-[min(46rem,75svh)] w-auto max-w-full object-contain drop-shadow-2xl"
                                 />
                             </div>
                         </div>
@@ -201,12 +201,12 @@ export default function Welcome() {
                     <section
                         id="departments"
                         data-aos="fade-up"
-                        className="mx-auto max-w-5xl px-6 py-8 text-center lg:px-10"
+                        className="mx-auto max-w-[var(--welcome-width)] px-6 py-8 text-center lg:px-10"
                     >
-                        <p className="text-[11px] font-medium text-muted-foreground">
+                        <p className="text-[0.6875rem] font-medium text-muted-foreground">
                             Municipal Offices &amp; Divisions
                         </p>
-                        <div className="mt-6 flex flex-wrap items-center justify-center gap-10 text-muted-foreground sm:gap-16">
+                        <div className="mt-6 flex flex-wrap items-center justify-center gap-10 text-muted-foreground sm:gap-16 2xl:justify-evenly">
                             <span className="text-lg font-extrabold tracking-tight">
                                 HRMO
                             </span>
@@ -233,13 +233,13 @@ export default function Welcome() {
                     {/* Features Section */}
                     <section
                         id="features"
-                        className="mx-auto max-w-6xl px-6 py-20 lg:px-10"
+                        className="mx-auto max-w-[var(--welcome-width)] px-6 py-20 lg:px-10"
                     >
                         <div
                             data-aos="fade-up"
                             className="flex flex-wrap items-center justify-between gap-4"
                         >
-                            <span className="rounded-full bg-[#1C4722] px-4 py-1 text-[11px] font-semibold text-white">
+                            <span className="rounded-full bg-[#1C4722] px-4 py-1 text-[0.6875rem] font-semibold text-white">
                                 Features
                             </span>
                             <span className="text-xs text-muted-foreground">
@@ -283,7 +283,7 @@ export default function Welcome() {
                             >
                                 <div className="group relative flex h-72 flex-col justify-between overflow-hidden rounded-3xl p-6 text-[#142014]">
                                     <div className="relative z-10">
-                                        <span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold text-[#142014]">
+                                        <span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-[0.625rem] font-semibold text-[#142014]">
                                             LGU Clarin
                                         </span>
                                     </div>
@@ -385,7 +385,7 @@ export default function Welcome() {
                                     </h3>
                                     <span
                                         aria-hidden="true"
-                                        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[150px] font-black text-[#95CE1B]/30 select-none"
+                                        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9.375rem] font-black text-[#95CE1B]/30 select-none"
                                     >
                                         §
                                     </span>
@@ -405,12 +405,12 @@ export default function Welcome() {
                         aria-labelledby="how-it-works-title"
                         className="relative overflow-hidden bg-[#A6EB20] py-20 text-[#142014] sm:py-24"
                     >
-                        <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 lg:grid-cols-2 lg:gap-16 lg:px-10">
+                        <div className="mx-auto grid max-w-[var(--welcome-width)] items-center gap-14 px-6 lg:grid-cols-2 lg:gap-16 lg:px-10">
                             {/* Headline, benefits, and portal access */}
                             <div>
                                 <p
                                     data-aos="fade-up"
-                                    className="mb-5 text-[11px] font-semibold tracking-[0.18em] text-[#1C4722] uppercase"
+                                    className="mb-5 text-[0.6875rem] font-semibold tracking-[0.18em] text-[#1C4722] uppercase"
                                 >
                                     How it works
                                 </p>
@@ -488,7 +488,7 @@ export default function Welcome() {
                                     aria-hidden="true"
                                     className="pointer-events-none absolute inset-6 rounded-full bg-white/30 blur-3xl"
                                 />
-                                <div className="hr-preview-stage relative isolate min-h-[470px] sm:min-h-[500px]">
+                                <div className="hr-preview-stage relative isolate min-h-[29.375rem] sm:min-h-[31.25rem]">
                                     {/* Back card: illustrative attendance overview */}
                                     <div
                                         className="hr-overview-card absolute top-0 right-0 z-0 w-[min(18rem,90%)] sm:top-2 sm:w-80"
@@ -511,18 +511,18 @@ export default function Welcome() {
                                         >
                                             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3">
                                                 <div>
-                                                    <p className="text-[11px] font-medium text-muted-foreground">
+                                                    <p className="text-[0.6875rem] font-medium text-muted-foreground">
                                                         Attendance &amp; DTR
                                                     </p>
                                                     <p className="mt-1 text-xl font-bold tracking-tight">
                                                         Your workweek
                                                     </p>
                                                 </div>
-                                                <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold">
+                                                <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-1 text-[0.625rem] font-semibold">
                                                     Weekly view
                                                 </span>
                                             </div>
-                                            <div className="mt-4 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                                            <div className="mt-4 flex items-center justify-between gap-2 text-[0.625rem] text-muted-foreground">
                                                 <span className="rounded-md bg-accent px-2 py-0.5 font-semibold text-accent-foreground">
                                                     DTR logs
                                                 </span>
@@ -626,7 +626,7 @@ export default function Welcome() {
                                                             ? dashboard()
                                                             : login()
                                                     }
-                                                    className="rounded text-[11px] font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                                                    className="rounded text-[0.6875rem] font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
                                                 >
                                                     View all
                                                 </Link>
@@ -644,7 +644,7 @@ export default function Welcome() {
                                                         <p className="text-sm font-bold tracking-tight">
                                                             201 File
                                                         </p>
-                                                        <p className="mt-1 text-[10px] text-muted-foreground">
+                                                        <p className="mt-1 text-[0.625rem] text-muted-foreground">
                                                             Service records
                                                             &amp; documents
                                                         </p>
@@ -668,7 +668,7 @@ export default function Welcome() {
                                                         <p className="text-sm font-bold tracking-tight">
                                                             Leave credits
                                                         </p>
-                                                        <p className="mt-1 text-[10px] text-muted-foreground">
+                                                        <p className="mt-1 text-[0.625rem] text-muted-foreground">
                                                             Balances &amp;
                                                             applications
                                                         </p>
@@ -684,7 +684,7 @@ export default function Welcome() {
                                         </SpotlightCard>
                                     </div>
                                 </div>
-                                <p className="mt-5 text-center text-[10px] font-medium tracking-wide text-[#1C4722]/80">
+                                <p className="mt-5 text-center text-[0.625rem] font-medium tracking-wide text-[#1C4722]/80">
                                     Illustrative HR workspace preview
                                 </p>
                             </div>
@@ -694,7 +694,7 @@ export default function Welcome() {
                     <section
                         id="users"
                         aria-labelledby="users-heading"
-                        className="mx-auto max-w-6xl px-6 py-16 lg:px-10"
+                        className="mx-auto max-w-[var(--welcome-width)] px-6 py-16 lg:px-10"
                     >
                         <h2
                             id="users-heading"
@@ -738,12 +738,12 @@ export default function Welcome() {
                     <section
                         id="about"
                         aria-labelledby="about-title"
-                        className="mx-auto max-w-6xl px-6 py-20 lg:px-10"
+                        className="mx-auto max-w-[var(--welcome-width)] px-6 py-20 lg:px-10"
                     >
                         <div className="mx-auto max-w-3xl text-center">
                             <p
                                 data-aos="fade-up"
-                                className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] text-muted-foreground uppercase"
+                                className="inline-flex items-center gap-2 text-[0.6875rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase"
                             >
                                 <span
                                     aria-hidden="true"
@@ -794,7 +794,7 @@ export default function Welcome() {
                             {/* Portrait with a floating employee records card */}
                             <article
                                 data-aos="fade-up"
-                                className="about-bento-portrait relative flex min-h-[380px] flex-col justify-between overflow-hidden rounded-[1.75rem] bg-[#1C4722] p-4 shadow-xs"
+                                className="about-bento-portrait relative flex min-h-[23.75rem] flex-col justify-between overflow-hidden rounded-[1.75rem] bg-[#1C4722] p-4 shadow-xs"
                             >
                                 <div
                                     aria-hidden="true"
@@ -839,13 +839,13 @@ export default function Welcome() {
                             <article
                                 data-aos="fade-up"
                                 data-aos-delay="100"
-                                className="about-bento-mission flex min-h-[380px] flex-col justify-between rounded-[1.75rem] bg-muted p-7"
+                                className="about-bento-mission flex min-h-[23.75rem] flex-col justify-between rounded-[1.75rem] bg-muted p-7"
                             >
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground">
                                         Built for our public servants
                                     </p>
-                                    <h3 className="mt-2 text-4xl font-medium tracking-tight text-foreground lg:text-[42px]">
+                                    <h3 className="mt-2 text-4xl font-medium tracking-tight text-foreground lg:text-[2.625rem]">
                                         People first
                                     </h3>
                                 </div>
@@ -887,14 +887,14 @@ export default function Welcome() {
                             <div
                                 data-aos="fade-up"
                                 data-aos-delay="200"
-                                className="about-bento-platform flex min-h-[380px] flex-col gap-4"
+                                className="about-bento-platform flex min-h-[23.75rem] flex-col gap-4"
                             >
                                 <article className="flex flex-1 flex-col justify-between rounded-[1.75rem] bg-[#A6EB20] p-7 text-[#142014]">
                                     <div>
                                         <p className="text-xs font-medium text-[#142014]/80">
                                             Connected workforce tools
                                         </p>
-                                        <h3 className="mt-2 text-4xl font-medium tracking-tight lg:text-[42px]">
+                                        <h3 className="mt-2 text-4xl font-medium tracking-tight lg:text-[2.625rem]">
                                             One portal
                                         </h3>
                                     </div>
@@ -938,12 +938,12 @@ export default function Welcome() {
                         aria-labelledby="employee-showcase-title"
                         className="employee-showcase bg-white py-12 text-[#142014]"
                     >
-                        <div className="mx-auto max-w-6xl px-6 lg:px-10">
+                        <div className="mx-auto max-w-[var(--welcome-width)] px-6 lg:px-10">
                             <div className="relative overflow-hidden rounded-[2.5rem] border border-[#E4E9DF] bg-white px-6 pt-8 pb-0 text-[#142014] shadow-xl shadow-[#142014]/5 sm:px-12 sm:pt-10">
                                 {/* Subtle Top & Bottom Radial Ambient Glow */}
                                 <div
                                     aria-hidden="true"
-                                    className="pointer-events-none absolute top-1/2 left-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#A6EB20]/10 blur-3xl"
+                                    className="pointer-events-none absolute top-1/2 left-1/2 size-[32.5rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#A6EB20]/10 blur-3xl"
                                 />
 
                                 {/* Centered Headline with Highlighted Pill Word */}
@@ -1026,13 +1026,13 @@ export default function Welcome() {
                                                 </span>
                                                 {/* Overlapping Mini Avatar / Icon Stack */}
                                                 <div className="flex -space-x-2">
-                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-[9px] font-bold text-white">
+                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-[0.5625rem] font-bold text-white">
                                                         201
                                                     </span>
-                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-[9px] font-bold text-white">
+                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-[0.5625rem] font-bold text-white">
                                                         DTR
                                                     </span>
-                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-[#A6EB20] text-[9px] font-bold text-[#142014]">
+                                                    <span className="flex size-6 items-center justify-center rounded-full border-2 border-white bg-[#A6EB20] text-[0.5625rem] font-bold text-[#142014]">
                                                         HR
                                                     </span>
                                                 </div>
@@ -1071,19 +1071,19 @@ export default function Welcome() {
                                             smoothing={0.3}
                                         >
                                             <div className="flex flex-wrap items-center gap-1.5">
-                                                <span className="rounded-full bg-[#142014] px-3 py-1 text-[11px] font-semibold text-white">
+                                                <span className="rounded-full bg-[#142014] px-3 py-1 text-[0.6875rem] font-semibold text-white">
                                                     Connects
                                                 </span>
-                                                <span className="flex size-6 items-center justify-center rounded-full border border-neutral-200 bg-white text-[10px] font-bold shadow-2xs">
+                                                <span className="flex size-6 items-center justify-center rounded-full border border-neutral-200 bg-white text-[0.625rem] font-bold shadow-2xs">
                                                     <Sparkles
                                                         aria-hidden="true"
                                                         className="size-3"
                                                     />
                                                 </span>
-                                                <span className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[10px] font-medium text-neutral-600 shadow-2xs">
+                                                <span className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[0.625rem] font-medium text-neutral-600 shadow-2xs">
                                                     HRMO Sync
                                                 </span>
-                                                <span className="rounded-full bg-[#142014] px-3 py-1 text-[11px] font-semibold text-white">
+                                                <span className="rounded-full bg-[#142014] px-3 py-1 text-[0.6875rem] font-semibold text-white">
                                                     and acts
                                                 </span>
                                             </div>
@@ -1138,7 +1138,7 @@ export default function Welcome() {
 
                 {/* Creative Custom Footer Styled Like Reference Layout */}
                 <footer
-                    className="mx-auto max-w-6xl px-6 pb-16 lg:px-10"
+                    className="mx-auto max-w-[var(--welcome-width)] px-6 pb-16 lg:px-10"
                     data-aos="fade-up"
                 >
                     <div className="relative overflow-hidden rounded-[3rem] border border-border/80 bg-muted px-6 pt-16 pb-12 text-foreground shadow-sm sm:px-10 lg:px-14">
@@ -1219,7 +1219,7 @@ export default function Welcome() {
                                         <p className="text-sm font-bold text-foreground transition group-hover:text-accent-foreground">
                                             Access HRMO workspace
                                         </p>
-                                        <p className="text-[11px] text-muted-foreground">
+                                        <p className="text-[0.6875rem] text-muted-foreground">
                                             Let&apos;s coordinate together
                                         </p>
                                     </div>
@@ -1236,7 +1236,7 @@ export default function Welcome() {
                                         <p className="text-sm font-bold text-foreground">
                                             Portal Tools &amp; Logs
                                         </p>
-                                        <p className="text-[11px] text-muted-foreground">
+                                        <p className="text-[0.6875rem] text-muted-foreground">
                                             Employee resources
                                         </p>
                                     </div>
@@ -1283,7 +1283,7 @@ export default function Welcome() {
                                     <TechText
                                         text="CLARIN"
                                         fontWeight={900}
-                                        fontSize={180}
+                                        fitContainer
                                         letterSpacing={-0.06}
                                         color="#142014"
                                         accentColor="#1C4722"

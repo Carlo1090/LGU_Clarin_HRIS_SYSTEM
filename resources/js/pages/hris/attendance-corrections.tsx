@@ -126,7 +126,7 @@ export default function AttendanceCorrections({
     }
 
     return (
-        <div className="workspace-page max-w-7xl">
+        <div className="workspace-page">
             <Head title="Attendance corrections" />
             <WorkspaceHeader
                 title="Attendance corrections"

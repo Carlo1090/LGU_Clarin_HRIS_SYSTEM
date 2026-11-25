@@ -98,7 +98,7 @@ export default function ImportEmployees({
     return (
         <>
             <Head title="Bulk import employees" />
-            <main className="workspace-page max-w-6xl">
+            <main className="workspace-page">
                 <WorkspaceHeader
                     title="Bulk import employees"
                     description="Import employee records and create employee sign-in accounts from the EMPLOYEES worksheet. This workflow does not add Plantilla positions."

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Announcement;
 use App\Models\AttendanceRecord;
 use App\Models\AuditLog;
 use App\Models\Department;
@@ -21,6 +22,7 @@ use App\Models\User;
 use App\Models\Vacancy;
 use App\Support\DashboardInsights;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -117,11 +119,21 @@ class DashboardController extends Controller
             default => [],
         };
 
+        $announcements = Announcement::query()
+            ->visible()
+            ->withVisibleAt()
+            ->orderByDesc('visible_at')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get();
+
         return Inertia::render('dashboard', [
+            'announcements' => $announcements,
+            'canManageAnnouncements' => Gate::allows('manage-hris-resource', 'announcements'),
             'role' => $role ?? 'Unassigned',
             'office' => $employee?->department?->name,
             'cards' => $cards,
-            'analytics' => $insights->for($user, $months),
+            'analytics' => fn () => $insights->for($user, $months),
             'employeeLockouts' => in_array($role, ['HR Officer', 'HRMO Head'], true) ? $this->employeeLockouts() : [],
         ]);
     }

@@ -70,7 +70,7 @@ function LeaveRequestForm({
             )}
             {types.length ? (
                 <form
-                    className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    className="mt-6 grid gap-4 @min-[34rem]/workspace:grid-cols-2 @min-[68rem]/workspace:grid-cols-4"
                     onSubmit={(event) => {
                         event.preventDefault();
                         if (!form.data.leave_type_id) {
@@ -104,7 +104,7 @@ function LeaveRequestForm({
                         });
                     }}
                 >
-                    <fieldset className="rounded-lg border p-4 sm:col-span-2 xl:col-span-4">
+                    <fieldset className="rounded-lg border p-4 @min-[34rem]/workspace:col-span-2 @min-[68rem]/workspace:col-span-4">
                         <legend className="px-1 text-sm font-semibold">
                             Type of leave
                         </legend>
@@ -205,7 +205,7 @@ function LeaveRequestForm({
                             )}
                         </label>
                     ))}
-                    <fieldset className="rounded-lg border p-4 sm:col-span-2 xl:col-span-4">
+                    <fieldset className="rounded-lg border p-4 @min-[34rem]/workspace:col-span-2 @min-[68rem]/workspace:col-span-4">
                         <legend className="px-1 text-sm font-semibold">
                             Reason
                         </legend>
@@ -272,7 +272,7 @@ function LeaveRequestForm({
                             </p>
                         )}
                     </fieldset>
-                    <fieldset className="rounded-lg border p-4 sm:col-span-2 xl:col-span-4">
+                    <fieldset className="rounded-lg border p-4 @min-[34rem]/workspace:col-span-2 @min-[68rem]/workspace:col-span-4">
                         <legend className="px-1 text-sm font-semibold">
                             Commutation
                         </legend>
@@ -300,7 +300,7 @@ function LeaveRequestForm({
                             ))}
                         </div>
                     </fieldset>
-                    <div className="flex flex-wrap items-center gap-3 border-t pt-4 sm:col-span-2 xl:col-span-4">
+                    <div className="flex flex-wrap items-center gap-3 border-t pt-4 @min-[34rem]/workspace:col-span-2 @min-[68rem]/workspace:col-span-4">
                         <LeaveFormPreviewDialog
                             draft={{
                                 applicant,
@@ -361,10 +361,10 @@ export default function PortalPage({
 }: Props) {
     const search = useTableSearch(records?.data ?? [], columns, (row) => row);
     return (
-        <div className="workspace-page max-w-7xl">
+        <div className="workspace-page">
             <Head title={title} />
             <WorkspaceHeader title={title} description={description}>
-                <LeaveFormPreviewDialog />
+                {leaveTypes && <LeaveFormPreviewDialog />}
             </WorkspaceHeader>
 
             {leaveTypes && leaveApplicant && (
