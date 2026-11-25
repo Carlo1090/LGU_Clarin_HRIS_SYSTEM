@@ -37,7 +37,7 @@ function AnnouncementEntry({
                     Manila time
                 </time>
             )}
-            <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">
+            <p className="text-sm [overflow-wrap:anywhere] whitespace-pre-wrap">
                 {announcement.content}
             </p>
         </article>

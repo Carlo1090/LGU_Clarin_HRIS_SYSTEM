@@ -41,8 +41,8 @@ class Employee extends Model
     public static function accountAvatarQuery(string $table = 'employees'): Builder
     {
         return User::query()->select('users.avatar')
-            ->whereColumn('users.id', $table . '.user_id')
-            ->orWhere(fn($query) => $query->whereNull($table . '.user_id')->whereColumn('users.employee_id', $table . '.id'))
+            ->whereColumn('users.id', $table.'.user_id')
+            ->orWhere(fn ($query) => $query->whereNull($table.'.user_id')->whereColumn('users.employee_id', $table.'.id'))
             ->orderBy('users.id')->limit(1);
     }
 
@@ -50,7 +50,7 @@ class Employee extends Model
     {
         $letters = preg_replace('/[^\p{L}]/u', '', $this->first_name) ?? '';
 
-        return mb_strtoupper(mb_substr($letters, 0, 3, 'UTF-8'), 'UTF-8') . $this->employee_number;
+        return mb_strtoupper(mb_substr($letters, 0, 3, 'UTF-8'), 'UTF-8').$this->employee_number;
     }
 
     /** @return BelongsTo<User, $this> */

@@ -6,12 +6,13 @@ use App\Attendance\Contracts\EmployeeDirectory;
 use App\Attendance\Models\AttendanceDaily;
 use App\Attendance\Models\DepartmentSchedule;
 use App\Attendance\Models\EmployeeScheduleOverride;
-use App\Attendance\Support\HrisEmployeeDirectory;
 use App\Attendance\Services\ScheduleResolver;
+use App\Attendance\Support\HrisEmployeeDirectory;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\Department;
 use App\Models\Employee;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -120,7 +121,7 @@ class AttendanceScheduleSchemaTest extends TestCase
                 'created_at' => now(),
             ]);
             $this->fail('Duplicate (machine_id, punched_at) punch was inserted.');
-        } catch (\Illuminate\Database\QueryException) {
+        } catch (QueryException) {
             $this->assertDatabaseCount('attendance_punches', 1);
         }
     }

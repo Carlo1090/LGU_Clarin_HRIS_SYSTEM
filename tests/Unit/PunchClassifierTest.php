@@ -3,7 +3,7 @@
 use App\Attendance\Services\PunchClassifier;
 
 /**
- * @param array<string,int|string|bool> $override
+ * @param  array<string,int|string|bool>  $override
  * @return array{am_in:string,am_out:string,pm_in:string,pm_out:string,grace_minutes:int,crosses_midnight:bool}
  */
 function schedule(array $override = []): array
@@ -19,7 +19,7 @@ function schedule(array $override = []): array
 }
 
 test('classifies a normal day using actual clock time', function () {
-    $result = (new PunchClassifier())->classify([
+    $result = (new PunchClassifier)->classify([
         ['punched_at' => '2026-11-24 07:55:00', 'raw_status' => 3],
         ['punched_at' => '2026-11-24 12:01:00', 'raw_status' => 0],
         ['punched_at' => '2026-11-24 13:02:00', 'raw_status' => 1],
@@ -36,7 +36,7 @@ test('classifies a normal day using actual clock time', function () {
 });
 
 test('grace removes late minutes and duplicate taps merge', function () {
-    $result = (new PunchClassifier())->classify([
+    $result = (new PunchClassifier)->classify([
         ['punched_at' => '2026-11-24 08:05:00'],
         ['punched_at' => '2026-11-24 08:06:30'],
         ['punched_at' => '2026-11-24 12:00:00'],
@@ -50,7 +50,7 @@ test('grace removes late minutes and duplicate taps merge', function () {
 });
 
 test('missing slots stay null and raw status never changes slot assignment', function () {
-    $result = (new PunchClassifier())->classify([
+    $result = (new PunchClassifier)->classify([
         ['punched_at' => '2026-11-24 08:00:00', 'raw_status' => 3],
         ['punched_at' => '2026-11-24 13:00:00', 'raw_status' => 0],
         ['punched_at' => '2026-11-24 17:00:00', 'raw_status' => 3],
@@ -64,14 +64,14 @@ test('missing slots stay null and raw status never changes slot assignment', fun
 });
 
 test('a scheduled day with no punches is absent', function () {
-    $result = (new PunchClassifier())->classify([], schedule(), '2026-11-24');
+    $result = (new PunchClassifier)->classify([], schedule(), '2026-11-24');
 
     expect($result['status'])->toBe('absent')
         ->and($result['am_in_at'])->toBeNull();
 });
 
 test('missing schedule returns no_schedule', function () {
-    $result = (new PunchClassifier())->classify([
+    $result = (new PunchClassifier)->classify([
         ['punched_at' => '2026-11-24 08:00:00'],
     ], null, '2026-11-24');
 
@@ -88,7 +88,7 @@ test('cross midnight shift allows pm out punches on the next day', function () {
         'crosses_midnight' => true,
     ]);
 
-    $result = (new PunchClassifier())->classify([
+    $result = (new PunchClassifier)->classify([
         ['punched_at' => '2026-11-24 21:58:00'],
         ['punched_at' => '2026-11-25 02:01:00'],
         ['punched_at' => '2026-11-25 03:02:00'],

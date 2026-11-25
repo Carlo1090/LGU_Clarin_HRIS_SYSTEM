@@ -13,8 +13,8 @@ class PunchClassifier
     ) {}
 
     /**
-     * @param list<array{punched_at:string, raw_status?:int|null}> $rawPunches
-     * @param array{am_in:string, am_out:string, pm_in:string, pm_out:string, grace_minutes?:int, crosses_midnight?:bool, schedule_source?:string, schedule_id?:int}|null $schedule
+     * @param  list<array{punched_at:string, raw_status?:int|null}>  $rawPunches
+     * @param  array{am_in:string, am_out:string, pm_in:string, pm_out:string, grace_minutes?:int, crosses_midnight?:bool, schedule_source?:string, schedule_id?:int}|null  $schedule
      * @return array{
      *     am_in_at:string|null,
      *     am_out_at:string|null,
@@ -60,8 +60,7 @@ class PunchClassifier
         }
 
         $punches = $rawPunches;
-        usort($punches, fn (array $first, array $second): int =>
-            strcmp((string) $first['punched_at'], (string) $second['punched_at']));
+        usort($punches, fn (array $first, array $second): int => strcmp((string) $first['punched_at'], (string) $second['punched_at']));
 
         $windowSeconds = max(0, $this->duplicateWindowSeconds);
         /** @var list<array{punched_at:string,slot:string|null,duplicate_merged:bool}> $merged */
@@ -81,6 +80,7 @@ class PunchClassifier
                         'duplicate_merged' => true,
                     ];
                     $flags['duplicate_merged'] = true;
+
                     continue;
                 }
             }
@@ -173,7 +173,7 @@ class PunchClassifier
     }
 
     /**
-     * @param array{am_in:string, am_out:string, pm_in:string, pm_out:string, crosses_midnight?:bool} $schedule
+     * @param  array{am_in:string, am_out:string, pm_in:string, pm_out:string, crosses_midnight?:bool}  $schedule
      * @return array<string,Carbon>
      */
     public function boundaries(string $workDate, array $schedule): array
@@ -201,6 +201,7 @@ class PunchClassifier
         $amMid = $this->midpoint($amIn, $amOut);
         $pmLunchMid = $this->midpoint($amOut, $pmIn);
         $pmOutMid = $this->midpoint($pmIn, $pmOut);
+
         return [
             'am_in_window_start' => $amIn->copy()->subHours($this->amInHoursBefore),
             'am_mid' => $amMid,
@@ -217,6 +218,7 @@ class PunchClassifier
     private function at(Carbon $base, string $time): Carbon
     {
         [$hour, $minute] = array_map('intval', explode(':', $time));
+
         return $base->copy()->setTime($hour, $minute, 0);
     }
 

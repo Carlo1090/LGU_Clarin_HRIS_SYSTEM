@@ -7,12 +7,12 @@ use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
 use App\Models\Employee;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -69,6 +69,7 @@ class DailyTimeRecordController extends Controller
 
         return back();
     }
+
     public function __invoke(Request $request, Employee $employee): Response|JsonResponse
     {
         $user = $request->user();

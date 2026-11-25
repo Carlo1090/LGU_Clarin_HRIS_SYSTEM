@@ -81,7 +81,12 @@ export const directoryLayouts: Record<string, DirectoryLayout | undefined> = {
         title: 'Office directory',
         nameLabel: 'Department',
         nameFields: ['name'],
-        summaryFields: ['code', 'parent_department_id', 'description', 'work_schedule'],
+        summaryFields: [
+            'code',
+            'parent_department_id',
+            'description',
+            'work_schedule',
+        ],
     },
     positions: {
         title: 'Position directory',
@@ -298,9 +303,14 @@ export function ResourceDirectory({
                                             : undefined
                                     }
                                 >
-                                    {field.name === 'work_schedule' && !row.work_schedule ? (
-                                        <Badge variant="secondary">No schedule</Badge>
-                                    ) : renderValue(field, row[field.name])}
+                                    {field.name === 'work_schedule' &&
+                                    !row.work_schedule ? (
+                                        <Badge variant="secondary">
+                                            No schedule
+                                        </Badge>
+                                    ) : (
+                                        renderValue(field, row[field.name])
+                                    )}
                                 </TableCell>
                             ))}
                             {detailFields.length > 0 && (

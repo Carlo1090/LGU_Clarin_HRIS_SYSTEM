@@ -63,7 +63,6 @@ class ScheduleResolver
     }
 
     /**
-     * @param DepartmentSchedule|EmployeeScheduleOverride $schedule
      * @return array{
      *     schedule_source:'override'|'department',
      *     schedule_id:int,
@@ -78,6 +77,7 @@ class ScheduleResolver
     private function payload(string $source, DepartmentSchedule|EmployeeScheduleOverride $schedule): array
     {
         $scheduleSource = $source === 'override' ? 'override' : 'department';
+
         return [
             'schedule_source' => $scheduleSource,
             'schedule_id' => (int) $schedule->id,

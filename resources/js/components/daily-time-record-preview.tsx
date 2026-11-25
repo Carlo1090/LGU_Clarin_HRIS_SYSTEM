@@ -189,10 +189,7 @@ export default function DailyTimeRecordPreview({
                     className="rounded-lg border p-4 print:hidden"
                     aria-labelledby="manual-review-heading"
                 >
-                    <h2
-                        id="manual-review-heading"
-                        className="font-semibold"
-                    >
+                    <h2 id="manual-review-heading" className="font-semibold">
                         Manually confirm review days
                     </h2>
                     <div className="mt-3 grid gap-3">
@@ -215,14 +212,20 @@ export default function DailyTimeRecordPreview({
                                         const data = new FormData(
                                             event.currentTarget,
                                         );
+                                        const readTime = (field: string) => {
+                                            const value = data.get(field);
+                                            return typeof value === 'string'
+                                                ? value
+                                                : '';
+                                        };
                                         router.put(
                                             reviewUrl,
                                             {
                                                 attendance_date: `${month}-${day.padStart(2, '0')}`,
-                                                am_in: String(data.get('am_in')),
-                                                am_out: String(data.get('am_out')),
-                                                pm_in: String(data.get('pm_in')),
-                                                pm_out: String(data.get('pm_out')),
+                                                am_in: readTime('am_in'),
+                                                am_out: readTime('am_out'),
+                                                pm_in: readTime('pm_in'),
+                                                pm_out: readTime('pm_out'),
                                             },
                                             { preserveScroll: true },
                                         );
@@ -230,11 +233,7 @@ export default function DailyTimeRecordPreview({
                                 >
                                     <strong>Day {day}</strong>
                                     {[
-                                        [
-                                            'am_in',
-                                            'AM In',
-                                            times[0] ?? '08:00',
-                                        ],
+                                        ['am_in', 'AM In', times[0] ?? '08:00'],
                                         [
                                             'am_out',
                                             'AM Out',
@@ -243,7 +242,10 @@ export default function DailyTimeRecordPreview({
                                         [
                                             'pm_in',
                                             'PM In',
-                                            times[2] ?? times[1] ?? times[0] ?? '13:00',
+                                            times[2] ??
+                                                times[1] ??
+                                                times[0] ??
+                                                '13:00',
                                         ],
                                         [
                                             'pm_out',

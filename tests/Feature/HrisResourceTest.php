@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Attendance\Models\DepartmentSchedule;
 use App\Models\AttendanceImport;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
@@ -103,7 +104,7 @@ class HrisResourceTest extends TestCase
         $employee = Employee::factory()->create();
         $employee->forceFill(['biometric_id' => 15])->save();
         $batch = AttendanceImport::query()->create(['file_name' => 'test.dat', 'status' => 'completed']);
-        \App\Attendance\Models\DepartmentSchedule::query()->create([
+        DepartmentSchedule::query()->create([
             'department_id' => $employee->department_id,
             'am_in' => '08:00', 'am_out' => '12:00', 'pm_in' => '13:00', 'pm_out' => '17:00',
             'effective_from' => '2026-10-01',

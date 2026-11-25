@@ -162,7 +162,11 @@ function ResourceRecords({
     const [reviewing, setReviewing] = useState(false);
     const [reviewError, setReviewError] = useState('');
     const isAttendance = resource === 'attendance';
-    const hasActions = canManage || canManageSchedules || Boolean(leaveReviewStage) || isAttendance;
+    const hasActions =
+        canManage ||
+        canManageSchedules ||
+        Boolean(leaveReviewStage) ||
+        isAttendance;
 
     function reviewLeave(id: number, decision: 'advance' | 'reject') {
         if (
@@ -319,7 +323,12 @@ function ResourceRecords({
                 {canManageSchedules && typeof row.id === 'number' && (
                     <WorkScheduleDialog
                         id={row.id}
-                        name={String(row.name ?? [row.first_name, row.last_name].filter(Boolean).join(' '))}
+                        name={String(
+                            row.name ??
+                                [row.first_name, row.last_name]
+                                    .filter(Boolean)
+                                    .join(' '),
+                        )}
                         override={resource === 'employees'}
                     />
                 )}
@@ -458,9 +467,9 @@ function ResourceRecords({
                         {resource === 'announcements' && (
                             <p className="mb-4 text-sm text-muted-foreground">
                                 Check Published to show this announcement on all
-                                dashboards. Leave the start time blank to publish
-                                immediately, or set a Manila date and time to
-                                schedule it.
+                                dashboards. Leave the start time blank to
+                                publish immediately, or set a Manila date and
+                                time to schedule it.
                             </p>
                         )}
                         {resource === 'employees' && (
@@ -729,7 +738,9 @@ function ResourceRecords({
                             </p>
                         </div>
                         <Button asChild size="sm" variant="outline">
-                            <Link href="/hris/employees">Clear assignment filter</Link>
+                            <Link href="/hris/employees">
+                                Clear assignment filter
+                            </Link>
                         </Button>
                     </section>
                 )}
@@ -762,7 +773,18 @@ function ResourceRecords({
                         <ResourceDirectory
                             layout={directory}
                             rows={records.data}
-                            fields={resource === 'employees' ? [...fields, { name: 'work_schedule', label: 'Schedule', type: 'text' }] : fields}
+                            fields={
+                                resource === 'employees'
+                                    ? [
+                                          ...fields,
+                                          {
+                                              name: 'work_schedule',
+                                              label: 'Schedule',
+                                              type: 'text',
+                                          },
+                                      ]
+                                    : fields
+                            }
                             canLinkBiometricIds={canLinkBiometricIds}
                             renderValue={displayValue}
                             renderActions={hasActions ? rowActions : undefined}

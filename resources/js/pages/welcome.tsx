@@ -191,7 +191,7 @@ export default function Welcome() {
                                     alt="Three LGU Clarin officials in municipal uniforms"
                                     width={1293}
                                     height={1217}
-                                    className="max-h-[50rem] 2xl:max-h-[min(46rem,75svh)] w-auto max-w-full object-contain drop-shadow-2xl"
+                                    className="max-h-[50rem] w-auto max-w-full object-contain drop-shadow-2xl 2xl:max-h-[min(46rem,75svh)]"
                                 />
                             </div>
                         </div>
