@@ -1,3 +1,7 @@
+import {
+    CredentialsAcknowledgment,
+    useFeedback,
+} from '@/components/feedback-provider';
 import { useTableSearch } from '@/components/table-search';
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -58,6 +62,7 @@ export default function ImportEmployees({
     statusOptions?: string[];
     columns?: TemplateColumn[];
 }) {
+    const feedback = useFeedback();
     const credentialSearch = useTableSearch(
         credentials,
         ['Employee number', 'Reference code', 'Name', 'Username'],
@@ -151,7 +156,23 @@ export default function ImportEmployees({
                             created: {result.createdAccounts}.
                         </p>
                         {credentials.length > 0 && (
-                            <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
+                            <CredentialsAcknowledgment
+                                title="Employee accounts created"
+                                credentials={credentials
+                                    .map((account) =>
+                                        [
+                                            account.name,
+                                            'Employee number: ' +
+                                                account.employee_number,
+                                            'Reference code: ' +
+                                                account.reference_code,
+                                            'Username: ' + account.username,
+                                            'Temporary password: ' +
+                                                account.temporary_password,
+                                        ].join('\n'),
+                                    )
+                                    .join('\n\n')}
+                            >
                                 <h3 className="font-medium">
                                     One-time temporary credentials
                                 </h3>
@@ -234,7 +255,7 @@ export default function ImportEmployees({
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            </CredentialsAcknowledgment>
                         )}
                         <p className="text-sm text-muted-foreground">
                             Account setup links sent by email:{' '}
@@ -360,19 +381,52 @@ export default function ImportEmployees({
                                                             type="button"
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() =>
+                                                            onClick={() => {
                                                                 templateForm.setData(
                                                                     'columns',
                                                                     templateForm.data.columns.filter(
                                                                         (
                                                                             _,
-                                                                            itemIndex,
+                                                                            i,
                                                                         ) =>
-                                                                            itemIndex !==
+                                                                            i !==
                                                                             index,
                                                                     ),
-                                                                )
-                                                            }
+                                                                );
+                                                                feedback.undo(
+                                                                    'Template column removed.',
+                                                                    () =>
+                                                                        templateForm.setData(
+                                                                            (
+                                                                                current,
+                                                                            ) => {
+                                                                                if (
+                                                                                    current.columns.some(
+                                                                                        (
+                                                                                            item,
+                                                                                        ) =>
+                                                                                            item.key ===
+                                                                                            column.key,
+                                                                                    )
+                                                                                )
+                                                                                    return current;
+                                                                                const columns =
+                                                                                    [
+                                                                                        ...current.columns,
+                                                                                    ];
+                                                                                columns.splice(
+                                                                                    index,
+                                                                                    0,
+                                                                                    column,
+                                                                                );
+                                                                                return {
+                                                                                    ...current,
+                                                                                    columns,
+                                                                                };
+                                                                            },
+                                                                        ),
+                                                                );
+                                                            }}
                                                         >
                                                             Remove
                                                         </Button>

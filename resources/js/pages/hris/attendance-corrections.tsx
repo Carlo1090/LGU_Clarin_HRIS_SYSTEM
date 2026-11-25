@@ -1,3 +1,4 @@
+import { useFeedback } from '@/components/feedback-provider';
 import { useTableSearch } from '@/components/table-search';
 import TableAction from '@/components/table-action';
 import PersonAvatar from '@/components/person-avatar';
@@ -100,13 +101,14 @@ export default function AttendanceCorrections({
     const [reviewing, setReviewing] = useState(false);
     const [decisionError, setDecisionError] = useState('');
 
-    function review(id: number, decision: 'advance' | 'reject') {
+    const feedback = useFeedback();
+    async function review(id: number, decision: 'advance' | 'reject') {
         if (
-            !window.confirm(
+            !(await feedback.confirm(
                 decision === 'advance'
                     ? advanceLabel + '?'
                     : 'Reject this correction?',
-            )
+            ))
         )
             return;
         setDecisionError('');

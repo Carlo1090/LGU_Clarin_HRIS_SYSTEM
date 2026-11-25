@@ -1,3 +1,4 @@
+import { useFeedback } from '@/components/feedback-provider';
 import { useTableSearch } from '@/components/table-search';
 import PersonAvatar from '@/components/person-avatar';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -71,6 +72,7 @@ export default function ImportAttendanceLogs({
             g.last_punch,
         ],
     );
+    const feedback = useFeedback();
     const inputRef = useRef<HTMLInputElement>(null);
     const form = useForm<{ file: File | null }>({ file: null });
     const removal = useForm({});
@@ -78,8 +80,25 @@ export default function ImportAttendanceLogs({
 
     function upload(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        startImport();
+    }
+
+    function startImport() {
+        const notification = feedback.progress('Processing attendance log...');
+        const failed = () => {
+            notification.error(
+                'Attendance import could not be completed. Check your connection and try again.',
+                startImport,
+            );
+            return false;
+        };
         form.post(logsUrl, {
+            onCancel: notification.cancel,
+            onError: notification.cancel,
+            onHttpException: failed,
+            onNetworkError: failed,
             onSuccess: () => {
+                notification.success('Attendance log processed.');
                 form.reset();
                 if (inputRef.current) {
                     inputRef.current.value = '';
@@ -174,13 +193,14 @@ export default function ImportAttendanceLogs({
                             size="sm"
                             variant="destructive"
                             disabled={removal.processing || form.processing}
-                            onClick={() => {
+                            onClick={async () => {
                                 const count = batch.inserted_count;
                                 const punches =
                                     count === 1 ? 'punch' : 'punches';
                                 if (
-                                    window.confirm(
+                                    await feedback.confirm(
                                         `Remove "${batch.file_name}"? This will delete the ${count} attendance ${punches} added by this import.`,
+                                        'DELETE',
                                     )
                                 ) {
                                     removal.delete(`${logsUrl}/${batch.id}`);

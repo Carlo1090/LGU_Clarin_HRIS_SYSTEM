@@ -79,7 +79,9 @@ class EmployeeImportController
         abort_if(strlen($statuses->implode(',')) > 253, 422, 'The combined status choices are too long for Excel’s dropdown.');
         $template->save($input['columns'], array_values($statuses->all()));
 
-        return back()->with('success', 'Employee template columns and choices updated.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Employee template columns and choices updated.']);
+
+        return back();
     }
 
     public function preview(Request $request, EmployeeSpreadsheetImport $import): RedirectResponse

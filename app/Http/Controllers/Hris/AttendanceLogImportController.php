@@ -60,7 +60,6 @@ class AttendanceLogImportController
     public function store(ImportAttendanceLogRequest $request, AttendanceLogParser $parser): RedirectResponse
     {
         $batch = $parser->import($request->file('file'), $request->user(), $request->integer('clock_offset_seconds'));
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance log processed.']);
 
         return to_route('hris.attendance-logs.index', ['batch' => $batch->id]);
     }
