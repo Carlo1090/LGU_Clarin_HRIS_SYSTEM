@@ -16,7 +16,7 @@ export function NavMain({
     items: NavItem[];
     label?: string;
 }) {
-    const { isCurrentUrl } = useCurrentUrl();
+    const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();
 
     return (
         <SidebarGroup className="px-2 py-0">
@@ -27,14 +27,18 @@ export function NavMain({
                         <SidebarMenuButton
                             className="rounded-xl md:min-h-9"
                             asChild
-                            isActive={isCurrentUrl(item.href)}
+                            isActive={isCurrentOrParentUrl(item.href)}
                             tooltip={{ children: item.title }}
                         >
                             <Link
                                 href={item.href}
                                 prefetch
                                 aria-current={
-                                    isCurrentUrl(item.href) ? 'page' : undefined
+                                    isCurrentUrl(item.href)
+                                        ? 'page'
+                                        : isCurrentOrParentUrl(item.href)
+                                          ? 'location'
+                                          : undefined
                                 }
                             >
                                 {item.icon && <item.icon />}
