@@ -93,7 +93,7 @@ class AttendanceLogImportController
             ]);
         }, attempts: 3);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance import removed.']);
+        Inertia::flash('toast', ['type' => 'success', 'kind' => 'delete', 'message' => 'Attendance import removed.']);
 
         return to_route('hris.attendance-logs.index');
     }

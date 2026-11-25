@@ -9,6 +9,8 @@ export type AppLayoutProps = {
 export type AppVariant = 'header' | 'sidebar';
 
 export type FlashToast = {
+    kind?: import('@/lib/feedback').SuccessKind;
+    description?: string;
     type: 'success' | 'info' | 'warning' | 'error';
     message: string;
 };

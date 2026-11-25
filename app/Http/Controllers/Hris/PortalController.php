@@ -102,7 +102,7 @@ class PortalController extends Controller
             $lockedEmployee->leaveApplications()->create($data + ['commutation' => false, 'status' => 'pending']);
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Leave request submitted.']);
+        Inertia::flash('toast', ['type' => 'success', 'kind' => 'create', 'message' => 'Leave request submitted.']);
 
         return to_route('hris.portal', ['page' => 'my-leave-requests']);
     }

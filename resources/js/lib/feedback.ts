@@ -1,10 +1,18 @@
 import { toast } from 'sonner';
 
+export type SuccessKind = 'create' | 'update' | 'delete';
 type Id = string | number;
 export const feedback = {
-    success(message: string, id?: Id) {
+    success(
+        message: string,
+        id?: Id,
+        kind: SuccessKind = 'update',
+        description?: string,
+    ) {
         return toast.success(message, {
             id,
+            className: `hr-toast--${kind}`,
+            description,
             duration: 4000,
             dismissible: true,
             closeButton: true,
@@ -21,7 +29,8 @@ export const feedback = {
         });
     },
     undo(message: string, restore: () => void) {
-        return toast(message, {
+        return toast.success(message, {
+            className: 'hr-toast--delete',
             duration: 6000,
             action: { label: 'Undo', onClick: restore },
         });

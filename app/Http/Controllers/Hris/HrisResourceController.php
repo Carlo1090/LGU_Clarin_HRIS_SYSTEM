@@ -650,7 +650,7 @@ class HrisResourceController extends Controller
                 }
                 PlantillaItem::query()->create($data + ['employee_id' => $employee?->id]);
             });
-            Inertia::flash('toast', ['type' => 'success', 'message' => 'Plantilla position record created.']);
+            Inertia::flash('toast', ['type' => 'success', 'kind' => 'create', 'message' => 'Plantilla position record created.']);
 
             return to_route('hris.resources.index', ['resource' => $resource]);
         }
@@ -694,7 +694,7 @@ class HrisResourceController extends Controller
                     report($exception);
                 }
             }
-            Inertia::flash('toast', ['type' => 'success', 'message' => 'Employee account created.']);
+            Inertia::flash('toast', ['type' => 'success', 'kind' => 'create', 'message' => 'Employee account created.']);
 
             return to_route('hris.resources.index', ['resource' => $resource])->with([
                 'createdAccountCredentials' => [
@@ -712,7 +712,7 @@ class HrisResourceController extends Controller
         $model = $config['model'];
         $model::query()->create($request->validate($this->validationRules($config)));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record created.']);
+        Inertia::flash('toast', ['type' => 'success', 'kind' => 'create', 'message' => $config['title'].' record created.']);
 
         return $this->resourceIndexAfterMutation($resource);
     }
@@ -766,7 +766,9 @@ class HrisResourceController extends Controller
             $entry->update($data);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record updated.']);
+        Inertia::flash('toast', $entry instanceof Employee
+            ? ['type' => 'success', 'message' => trim($entry->first_name.' '.$entry->last_name).' details updated', 'description' => 'Employee record '.$entry->employee_number.' was saved.']
+            : ['type' => 'success', 'message' => $config['title'].' record updated.']);
 
         return $this->resourceIndexAfterMutation($resource);
     }
@@ -779,7 +781,7 @@ class HrisResourceController extends Controller
         $model = $config['model'];
         $model::query()->findOrFail($record)->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $config['title'].' record deleted.']);
+        Inertia::flash('toast', ['type' => 'success', 'kind' => 'delete', 'message' => $config['title'].' record deleted.']);
 
         return $this->resourceIndexAfterMutation($resource);
     }

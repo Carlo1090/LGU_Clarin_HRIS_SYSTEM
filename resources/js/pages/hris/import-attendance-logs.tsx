@@ -84,6 +84,7 @@ export default function ImportAttendanceLogs({
     }
 
     function startImport() {
+        if (!navigator.onLine) return;
         const notification = feedback.progress('Processing attendance log...');
         const failed = () => {
             notification.error(
@@ -96,7 +97,10 @@ export default function ImportAttendanceLogs({
             onCancel: notification.cancel,
             onError: notification.cancel,
             onHttpException: failed,
-            onNetworkError: failed,
+            onNetworkError: () => {
+                notification.cancel();
+                // The connection listener explains the uncertain result; the server may have received the file.
+            },
             onSuccess: () => {
                 notification.success('Attendance log processed.');
                 form.reset();

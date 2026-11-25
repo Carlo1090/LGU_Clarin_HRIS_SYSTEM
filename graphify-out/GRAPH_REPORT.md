@@ -1,17 +1,17 @@
 # Graph Report - LGU_Clarin_HRIS_SYSTEM  (2026-11-25)
 
 ## Corpus Check
-- 309 files · ~112,517 words
+- 309 files · ~112,761 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 46 file(s) not represented in the graph (top: (none) 30, .css 9, .conf 2)
+- Unclassified: 47 file(s) not represented in the graph (top: (none) 30, .css 10, .conf 2)
 
 ## Summary
-- 2172 nodes · 5176 edges · 137 communities (92 shown, 45 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 34 edges (avg confidence: 0.86)
+- 2174 nodes · 5179 edges · 134 communities (86 shown, 48 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 35 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fad8e065`
+- Built from commit: `202b5a4b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,29 +19,29 @@
 - Illuminate\Database\Eloquent\Relations\BelongsTo
 - react
 - index.tsx
-- package.json
+- dependencies
 - Button
 - Illuminate\Http\Request
 - Inertia\Testing\AssertableInertia
 - sidebar.tsx
 - EmployeeSpreadsheetImport.php
-- Employee
+- App\Models\Applicant
 - two-factor-setup-modal.tsx
 - Illuminate\Database\Eloquent\Factories\Factory
 - HrisResourceController.php
 - use-appearance.tsx
-- Inertia\Response
+- DailyTimeRecordController.php
 - DashboardInsights.php
 - cn
 - TestCase
 - app-header.tsx
-- import-employees.tsx
+- layout.tsx
 - User
 - AttendanceLogImportController.php
 - Illuminate\Database\Schema\Blueprint
 - EmployeeImportTemplate
 - web.php
-- app-sidebar-header.tsx
+- plantilla-items.tsx
 - Illuminate\Http\RedirectResponse
 - MonthlyAttendanceReportController.php
 - devDependencies
@@ -55,70 +55,69 @@
 - two-factor-recovery-codes.tsx
 - leave-form-preview-dialog.tsx
 - Illuminate\Database\Migrations\Migration
+- two-factor-setup-modal.tsx
 - AppServiceProvider.php
-- welcome.tsx
+- package.json
 - Part A — Mandatory production engineering rules
 - compilerOptions
-- PasswordValidationRules
-- optionalDependencies
-- profile.tsx
-- GradientASCII.jsx
 - Illuminate\Foundation\Http\FormRequest
-- Laravel\Fortify\Features
+- optionalDependencies
+- HandleInertiaRequests.php
+- welcome.tsx
+- react
 - Part B — Functional HRIS overview (preserved project scope)
 - ProfileUpdateTest
-- DashboardInsights
+- AttendanceCorrectionController.php
 - scripts
 - Architecture Decision Log
-- toggle-group.tsx
-- chart.tsx
-- .skipUnlessFortifyHas
+- web.php
+- import-employees.tsx
+- PasswordResetTest
 - BiometricAttendanceTest.php
-- Department
+- EmployeeSpreadsheetImportTest.php
+- AuthenticationTest
 - composer.json
 - updates
 - 3. User roles and their functions
 - EmailVerificationTest
-- LeaveApplication
-- Payslip
+- AttendanceRecord
+- Department
 - services
 - require-dev
 - 2025_01_01_000004_create_hris_recruitment_performance_tables.php
 - 2. Main system modules
 - ProfileCard.jsx
-- Position
-- Role
+- TwoFactorChallengeTest.php
+- icon.tsx
 - 2025_01_01_000005_create_hris_system_tables.php
 - 2026_11_18_000002_expand_plantilla_items_for_hrmo_form.php
-- AccountInvitationTest.php
-- breadcrumbs.tsx
+- Laravel\Fortify\Features
+- cmdk
 - auth.ts
-- PasswordResetTest.php
+- concurrently@^10.0.3
 - EmployeeSpreadsheetImportTest
 - volumes
 - db
 - rustfs
 - UserFactory.php
-- ProfileUpdateRequest
-- Vacancy
+- gsap
+- @radix-ui/react-dialog
 - require
 - 2026_11_18_000005_add_biometric_attendance_imports.php
 - DemoPortalAccountSeeder.php
-- AttendanceCorrection
+- @radix-ui/react-label
 - config
 - 2025_01_01_000001_create_hris_organization_tables.php
 - 2026_11_18_000006_add_work_calendar.php
 - scripts
-- alert.tsx
-- TechText
-- dashboard.ts
+- @radix-ui/react-navigation-menu
+- vite@npm:@voidzero-dev/vite-plus-core@1.4.0
 - healthcheck
 - nginx
 - 0001_01_01_000000_create_users_table.php
 - 0001_01_01_000002_create_jobs_table.php
 - 7. Common workflows in the system
 - collapsible.tsx
-- SpotlightCard
 - depends_on
 - redis
 - psr-4
@@ -141,13 +140,13 @@
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 152 edges
 2. `Button()` - 86 edges
-3. `User` - 83 edges
-4. `react` - 82 edges
-5. `Employee` - 73 edges
+3. `react` - 82 edges
+4. `User` - 78 edges
+5. `Employee` - 63 edges
 6. `@inertiajs/react` - 59 edges
-7. `lucide-react` - 50 edges
-8. `Dashboard()` - 40 edges
-9. `TestCase` - 40 edges
+7. `lucide-react` - 51 edges
+8. `TestCase` - 40 edges
+9. `Dashboard()` - 40 edges
 10. `Input()` - 39 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -155,145 +154,137 @@
   HRIS_PROJECT_SCAN.md → app/Models/Employee.php
 - `CHG-0002 - Fixed offices and account setup` --references--> `DatabaseSeeder`  [INFERRED]
   HRIS_PROJECT_SCAN.md → database/seeders/DatabaseSeeder.php
-- `{closure#39}()` --references--> `Employee`  [EXTRACTED]
-  app/Http/Controllers/Hris/HrisResourceController.php → app/Models/Employee.php
-- `{closure#3}()` --references--> `Department`  [EXTRACTED]
-  app/Http/Controllers/Hris/PortalController.php → app/Models/Department.php
-- `{closure#6}()` --references--> `Department`  [EXTRACTED]
-  app/Http/Controllers/Hris/PortalController.php → app/Models/Department.php
+- `{closure#33}()` --calls--> `User`  [INFERRED]
+  app/Http/Controllers/Hris/HrisResourceController.php → app/Models/User.php
+- `{closure#3}()` --references--> `Notification`  [EXTRACTED]
+  app/Http/Middleware/HandleInertiaRequests.php → app/Models/Notification.php
+- `{closure#2}()` --references--> `AttendanceRecord`  [EXTRACTED]
+  app/Http/Controllers/Hris/DailyTimeRecordController.php → app/Models/AttendanceRecord.php
 
 ## Import Cycles
 - None detected.
 
-## Communities (137 total, 45 thin omitted)
+## Communities (134 total, 48 thin omitted)
 
 ### Community 0 - "Illuminate\Database\Eloquent\Relations\BelongsTo"
 Cohesion: 0.04
-Nodes (25): {closure#27}(), {closure#6}(), Announcement, ApplicantDocument, ApplicantEvaluation, AttendanceClockInRule, AttendanceImport, DisciplinaryRecord (+17 more)
+Nodes (26): {closure#3}(), {closure#5}(), {closure#27}(), Announcement, ApplicantDocument, ApplicantEvaluation, AttendanceClockInRule, AttendanceCorrection (+18 more)
 
 ### Community 1 - "react"
-Cohesion: 0.08
-Nodes (27): @laravel/passkeys, react, InputError(), PasskeyRegistration(), Props, PasskeyVerify(), Props, PasswordInput() (+19 more)
+Cohesion: 0.07
+Nodes (32): @laravel/passkeys, InputError(), PasskeyRegistration(), Props, PasskeyVerify(), Props, PasswordInput(), Props (+24 more)
 
 ### Community 2 - "index.tsx"
-Cohesion: 0.08
-Nodes (52): AttendanceDirectory(), AttendanceDirectoryProps, EmployeeAttendance, statuses, statusFor(), BiometricIdField(), useFeedback(), PersonAvatar() (+44 more)
+Cohesion: 0.09
+Nodes (40): lucide-react, AttendanceDirectory(), AttendanceDirectoryProps, EmployeeAttendance, statuses, statusFor(), AttendanceWorkspaceHeader(), views (+32 more)
 
-### Community 3 - "package.json"
-Cohesion: 0.05
-Nodes (60): dependencies, aos@^2.3.4, clsx@^2.1.1, cmdk@^1.1.1, concurrently@^10.0.3, gsap@^3.15.1, @inertiajs/react@^3.0.0, input-otp@^1.4.2 (+52 more)
+### Community 3 - "dependencies"
+Cohesion: 0.07
+Nodes (30): dependencies, class-variance-authority@^0.7.1, clsx@^2.1.1, @inertiajs/react@^3.0.0, input-otp@^1.4.2, @laravel/passkeys@^0.2.0, lucide-react@^0.475.0, motion@^14.14.0 (+22 more)
 
 ### Community 4 - "Button"
-Cohesion: 0.09
-Nodes (37): @inertiajs/react, @radix-ui/react-slot, AttendanceWorkspaceHeader(), viewLink(), views, DailyTimeRecordDialog(), PreviewContent(), columns (+29 more)
+Cohesion: 0.14
+Nodes (17): class-variance-authority, @radix-ui/react-slot, viewLink(), Badge(), badgeVariants, Button(), buttonVariants, ClockInRule (+9 more)
 
 ### Community 5 - "Illuminate\Http\Request"
-Cohesion: 0.07
-Nodes (17): AccountInvitationController, AttendanceCorrectionController, PortalController, {closure#3}(), {closure#4}(), HandleInertiaRequests, {closure#1}(), {closure#10}() (+9 more)
+Cohesion: 0.11
+Nodes (12): AccountInvitationController, {closure#1}(), {closure#10}(), {closure#11}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}() (+4 more)
 
 ### Community 6 - "Inertia\Testing\AssertableInertia"
-Cohesion: 0.06
-Nodes (22): {closure#11}(), {closure#13}(), {closure#14}(), {closure#3}(), {closure#5}(), {closure#7}(), {closure#9}(), {closure#3}() (+14 more)
+Cohesion: 0.07
+Nodes (20): {closure#11}(), {closure#13}(), {closure#14}(), {closure#3}(), {closure#5}(), {closure#7}(), {closure#9}(), {closure#3}() (+12 more)
 
 ### Community 7 - "sidebar.tsx"
 Cohesion: 0.12
-Nodes (36): AppSidebar(), mainNavItems, NavFooter(), NavMain(), NavUser(), SidebarContent(), SidebarContext, SidebarFooter() (+28 more)
+Nodes (35): AppSidebar(), mainNavItems, NavFooter(), NavMain(), NavUser(), SidebarContent(), SidebarContext, SidebarFooter() (+27 more)
 
 ### Community 8 - "EmployeeSpreadsheetImport.php"
 Cohesion: 0.07
-Nodes (7): BootstrapHrmoHead, {closure#2}(), {closure#5}(), {closure#7}(), AuditLog, {closure#1}(), HrisAccountSetup
-
-### Community 9 - "Employee"
-Cohesion: 0.08
-Nodes (5): {closure#2}(), {closure#1}(), Applicant, Employee, ApplicantFactory
+Nodes (8): BootstrapHrmoHead, {closure#1}(), {closure#2}(), {closure#5}(), {closure#7}(), AuditLog, {closure#1}(), HrisAccountSetup
 
 ### Community 10 - "two-factor-setup-modal.tsx"
-Cohesion: 0.13
-Nodes (31): input-otp, DeleteUser(), Confirm, Context, CredentialsAcknowledgment(), FeedbackProvider(), GridScanIcon(), Props (+23 more)
+Cohesion: 0.24
+Nodes (20): DeleteUser(), Confirm, Context, CredentialsAcknowledgment(), FeedbackProvider(), TwoFactorSetupModal(), Checkbox(), Command() (+12 more)
 
 ### Community 11 - "Illuminate\Database\Eloquent\Factories\Factory"
-Cohesion: 0.08
-Nodes (12): {closure#1}(), {closure#2}(), AttendanceRecord, EvaluationPeriod, LeaveType, PayrollPeriod, AttendanceRecordFactory, EmployeeFactory (+4 more)
+Cohesion: 0.05
+Nodes (18): {closure#6}(), EvaluationPeriod, LeaveType, PayrollPeriod, Position, Role, Vacancy, AttendanceRecordFactory (+10 more)
+
+### Community 12 - "HrisResourceController.php"
+Cohesion: 0.05
+Nodes (4): {closure#13}(), {closure#33}(), {closure#39}(), {closure#1}()
 
 ### Community 13 - "use-appearance.tsx"
-Cohesion: 0.10
-Nodes (27): sonner@^2.0.0, sonner, withApp(), AppearanceToggleTab(), Toaster(), TooltipProvider(), Appearance, applyTheme() (+19 more)
+Cohesion: 0.09
+Nodes (29): sonner@^2.0.0, sonner, withApp(), AppearanceToggleTab(), Toaster(), TooltipProvider(), Appearance, applyTheme() (+21 more)
 
-### Community 14 - "Inertia\Response"
-Cohesion: 0.08
-Nodes (6): Controller, DailyTimeRecordController, LeaveReviewController, {closure#3}(), {closure#6}(), SecurityController
+### Community 14 - "DailyTimeRecordController.php"
+Cohesion: 0.14
+Nodes (6): Controller, {closure#2}(), DailyTimeRecordController, {closure#1}(), LeaveReviewController, SecurityController
 
 ### Community 15 - "DashboardInsights.php"
-Cohesion: 0.08
-Nodes (11): LoginActivity, Payroll, PrivacyIncident, PrivacyRequest, {closure#3}(), {closure#6}(), {closure#7}(), {closure#8}() (+3 more)
+Cohesion: 0.09
+Nodes (11): LeaveApplication, LoginActivity, Payroll, PrivacyIncident, PrivacyRequest, {closure#2}(), {closure#3}(), {closure#6}() (+3 more)
 
 ### Community 16 - "cn"
-Cohesion: 0.11
-Nodes (27): DirectoryResults(), DotPattern(), DotPatternProps, DropdownMenuShortcut(), DropdownMenuSubContent(), DropdownMenuSubTrigger(), NavigationMenu(), NavigationMenuContent() (+19 more)
+Cohesion: 0.09
+Nodes (37): AlertError(), Breadcrumbs(), Alert(), AlertDescription(), AlertTitle(), alertVariants, Breadcrumb(), BreadcrumbEllipsis() (+29 more)
 
 ### Community 17 - "TestCase"
-Cohesion: 0.10
-Nodes (8): AuthenticationTest, {closure#1}(), PasswordConfirmationTest, RegistrationTest, DashboardTest, ExampleTest, TestCase, ExampleTest
+Cohesion: 0.11
+Nodes (8): {closure#1}(), PasswordConfirmationTest, RegistrationTest, DashboardTest, ExampleTest, {closure#2}(), TestCase, ExampleTest
 
 ### Community 18 - "app-header.tsx"
-Cohesion: 0.16
-Nodes (20): AppHeader(), Props, AppLogo(), AppearanceToggle(), options, PublicHeader(), DropdownMenu(), DropdownMenuContent() (+12 more)
+Cohesion: 0.10
+Nodes (37): AppHeader(), Props, AppLogo(), AppSidebarHeader(), Destination, AppearanceToggle(), options, navigation (+29 more)
 
-### Community 19 - "import-employees.tsx"
-Cohesion: 0.09
-Nodes (17): WorkspaceHeader(), IsCurrentOrParentUrlFn, IsCurrentUrlFn, useCurrentUrl(), UseCurrentUrlReturn, WhenCurrentUrlFn, SettingsLayout(), sidebarNavItems (+9 more)
+### Community 19 - "layout.tsx"
+Cohesion: 0.20
+Nodes (8): IsCurrentOrParentUrlFn, IsCurrentUrlFn, useCurrentUrl(), UseCurrentUrlReturn, WhenCurrentUrlFn, SettingsLayout(), sidebarNavItems, toUrl()
 
 ### Community 20 - "User"
-Cohesion: 0.09
-Nodes (4): {closure#1}(), {closure#1}(), {closure#33}(), User
-
-### Community 21 - "AttendanceLogImportController.php"
-Cohesion: 0.10
-Nodes (7): AttendanceLogImportController, BiometricLinkController, {closure#1}(), AttendancePunch, AttendanceLogParser, {closure#1}(), BiometricLinkVerifier
+Cohesion: 0.06
+Nodes (5): {closure#1}(), Employee, User, {closure#1}(), {closure#2}()
 
 ### Community 22 - "Illuminate\Database\Schema\Blueprint"
 Cohesion: 0.13
 Nodes (21): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), {closure#7}(), {closure#8}() (+13 more)
 
 ### Community 23 - "EmployeeImportTemplate"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (3): EmployeeImportController, EmployeeSpreadsheetImport, EmployeeImportTemplate
 
-### Community 24 - "web.php"
-Cohesion: 0.10
-Nodes (4): DashboardController, LeaveApplicationController, EnsureHrisAccountReady, HandleAppearance
-
-### Community 25 - "app-sidebar-header.tsx"
-Cohesion: 0.19
-Nodes (20): AppSidebarHeader(), Destination, Avatar(), AvatarFallback(), AvatarImage(), Command(), CommandDialog(), CommandEmpty() (+12 more)
+### Community 25 - "plantilla-items.tsx"
+Cohesion: 0.16
+Nodes (26): ResourceDirectory(), Sheet(), SheetContent(), SheetDescription(), SheetHeader(), SheetOverlay(), SheetPortal(), SheetTitle() (+18 more)
 
 ### Community 26 - "Illuminate\Http\RedirectResponse"
-Cohesion: 0.13
-Nodes (4): GoogleLoginController, NotificationController, ProfileController, ProfileDeleteRequest
+Cohesion: 0.12
+Nodes (4): GoogleLoginController, BiometricLinkController, NotificationController, ProfileController
 
 ### Community 27 - "MonthlyAttendanceReportController.php"
-Cohesion: 0.12
-Nodes (11): {closure#1}(), {closure#1}(), {closure#1}(), {closure#3}(), {closure#5}(), {closure#6}(), {closure#7}(), {closure#8}() (+3 more)
+Cohesion: 0.15
+Nodes (8): {closure#1}(), {closure#3}(), {closure#5}(), {closure#6}(), {closure#7}(), {closure#8}(), MonthlyAttendanceReportController, DashboardInsights
 
 ### Community 28 - "devDependencies"
 Cohesion: 0.09
 Nodes (23): @inertiajs/vite@^3.0.0, laravel-vite-plugin@^3.0.0, @tailwindcss/vite@^4.1.11, @vitejs/plugin-react@^6.1.1, devDependencies, @babel/core@^8.1.2, babel-plugin-react-compiler@^1.0.0, @laravel/vite-plugin-wayfinder@^0.1.3 (+15 more)
 
 ### Community 29 - "dashboard.tsx"
-Cohesion: 0.15
-Nodes (20): DropdownMenuCheckboxItem(), Select(), SelectContent(), SelectItem(), SelectLabel(), SelectScrollDownButton(), SelectScrollUpButton(), SelectSeparator() (+12 more)
+Cohesion: 0.08
+Nodes (40): Avatar(), AvatarFallback(), AvatarImage(), ChartConfig, ChartContainer(), ChartContext, ChartContextProps, ChartLegendContent() (+32 more)
 
 ### Community 30 - "lucide-react"
-Cohesion: 0.13
-Nodes (11): lucide-react, Heading(), EmptyState(), ManagePasskeys(), Props, ManageTwoFactor(), Props, PasskeyItem() (+3 more)
+Cohesion: 0.22
+Nodes (9): Heading(), EmptyState(), ManagePasskeys(), Props, ManageTwoFactor(), Props, useTwoFactorAuth(), Props (+1 more)
 
 ### Community 31 - "HrisResourceController"
-Cohesion: 0.18
-Nodes (5): {closure#13}(), {closure#32}(), {closure#34}(), {closure#35}(), HrisResourceController
+Cohesion: 0.19
+Nodes (6): {closure#32}(), {closure#34}(), {closure#35}(), {closure#6}(), {closure#7}(), HrisResourceController
 
 ### Community 32 - "index.ts"
-Cohesion: 0.18
-Nodes (14): AppContent(), Props, AppShell(), Props, SidebarInset(), SidebarProvider(), AppHeaderLayout(), AppSidebarLayout() (+6 more)
+Cohesion: 0.20
+Nodes (12): AppContent(), Props, AppShell(), Props, SidebarInset(), SidebarProvider(), AppHeaderLayout(), AppSidebarLayout() (+4 more)
 
 ### Community 34 - "components.json"
 Cohesion: 0.10
@@ -304,24 +295,24 @@ Cohesion: 0.10
 Nodes (20): runs-on, steps, jobs, ci, name, on, pull_request, push (+12 more)
 
 ### Community 36 - "two-factor-recovery-codes.tsx"
-Cohesion: 0.28
-Nodes (13): AppLogoIcon(), Props, TwoFactorRecoveryCodes(), Card(), CardContent(), CardDescription(), CardFooter(), CardHeader() (+5 more)
+Cohesion: 0.25
+Nodes (14): AppLogoIcon(), Props, TwoFactorRecoveryCodes(), Card(), CardContent(), CardDescription(), CardFooter(), CardHeader() (+6 more)
 
 ### Community 37 - "leave-form-preview-dialog.tsx"
-Cohesion: 0.17
-Nodes (18): Choice(), creditRows, FormLine(), LeaveApplicant, LeaveDraft, LeaveFormPreview(), LeaveFormPreviewDialog(), leaveReasons (+10 more)
+Cohesion: 0.10
+Nodes (28): @inertiajs/react, PreviewContent(), columns, DailyTimeRecordData, DailyTimeRecordPreview(), Choice(), creditRows, FormLine() (+20 more)
 
 ### Community 38 - "Illuminate\Database\Migrations\Migration"
 Cohesion: 0.12
 Nodes (6): {closure#1}(), {closure#1}(), {closure#2}(), {closure#1}(), {closure#1}(), {closure#2}()
 
-### Community 40 - "AppServiceProvider.php"
-Cohesion: 0.16
-Nodes (5): AppServiceProvider, {closure#1}(), {closure#2}(), {closure#3}(), FortifyServiceProvider
+### Community 39 - "two-factor-setup-modal.tsx"
+Cohesion: 0.12
+Nodes (16): input-otp, GridScanIcon(), Props, TwoFactorSetupStep(), TwoFactorVerificationStep(), InputOTP, InputOTPGroup, InputOTPSeparator (+8 more)
 
-### Community 41 - "welcome.tsx"
-Cohesion: 0.22
-Nodes (11): navigation, clamp01(), clampToScroll(), easeBack(), easeOut(), glowAt(), paintPiece(), ScrollReveal() (+3 more)
+### Community 41 - "package.json"
+Cohesion: 0.09
+Nodes (21): aos@^2.3.4, @radix-ui/react-avatar@^1.1.3, @radix-ui/react-select@^2.1.6, react-dom@^19.2.0, tailwindcss@^4.0.0, tw-animate-css@^1.4.0, @types/react@^19.2.0, @types/react-dom@^19.2.0 (+13 more)
 
 ### Community 42 - "Part A — Mandatory production engineering rules"
 Cohesion: 0.12
@@ -331,29 +322,33 @@ Nodes (16): A10. Minimum test and verification matrix, A11. Deployment checklist
 Cohesion: 0.12
 Nodes (15): compilerOptions, allowJs, esModuleInterop, forceConsistentCasingInFileNames, isolatedModules, jsx, module, moduleResolution (+7 more)
 
-### Community 44 - "PasswordValidationRules"
-Cohesion: 0.21
-Nodes (3): ResetUserPassword, PasswordValidationRules, PasswordUpdateRequest
+### Community 44 - "Illuminate\Foundation\Http\FormRequest"
+Cohesion: 0.08
+Nodes (9): ResetUserPassword, PasswordValidationRules, ProfileValidationRules, UpdateBiometricLinkRequest, PasswordUpdateRequest, ProfileDeleteRequest, ProfileUpdateRequest, TwoFactorAuthenticationRequest (+1 more)
 
 ### Community 45 - "optionalDependencies"
 Cohesion: 0.13
 Nodes (15): optionalDependencies, @laravel/multiplex@^0.4.1, lightningcss-linux-x64-gnu@^1.29.1, lightningcss-win32-x64-msvc@^1.29.1, @rollup/rollup-linux-x64-gnu@4.9.5, @rollup/rollup-win32-x64-msvc@4.9.5, @tailwindcss/oxide-linux-x64-gnu@^4.0.1, @tailwindcss/oxide-win32-x64-msvc@^4.0.1 (+7 more)
 
-### Community 46 - "profile.tsx"
+### Community 46 - "HandleInertiaRequests.php"
 Cohesion: 0.14
-Nodes (10): autocomplete, Details, Field, labels, lengths, Profile(), ProfileCard(), ProfileValues (+2 more)
+Nodes (4): PortalController, {closure#3}(), {closure#4}(), HandleInertiaRequests
 
-### Community 47 - "GradientASCII.jsx"
-Cohesion: 0.22
-Nodes (13): buildAtlas(), clamp(), CLICK_EFFECTS, compile(), createTarget(), DEFAULT_COLORS, GradientASCII(), link() (+5 more)
+### Community 47 - "welcome.tsx"
+Cohesion: 0.09
+Nodes (35): buildAtlas(), clamp(), CLICK_EFFECTS, compile(), createTarget(), DEFAULT_COLORS, GradientASCII(), link() (+27 more)
 
-### Community 48 - "Illuminate\Foundation\Http\FormRequest"
-Cohesion: 0.19
-Nodes (3): ImportAttendanceLogRequest, UpdateBiometricLinkRequest, TwoFactorAuthenticationRequest
+### Community 48 - "react"
+Cohesion: 0.20
+Nodes (12): react, useFeedback(), PasskeyItem(), Props, ImportAttendanceLogs(), startImport(), upload(), Page (+4 more)
 
 ### Community 50 - "Part B — Functional HRIS overview (preserved project scope)"
 Cohesion: 0.14
 Nodes (13): 10. Important rules before development, 11. The complete system in one simple view, 1. Main purpose of the system, 4. Suggested dashboard and sidebar structure, 5. What should appear on each dashboard?, 6. How the modules work together, 8. Important system features, 9. Recommended development order (+5 more)
+
+### Community 52 - "AttendanceCorrectionController.php"
+Cohesion: 0.19
+Nodes (5): AttendanceCorrectionController, {closure#1}(), {closure#1}(), {closure#1}(), {closure#5}()
 
 ### Community 53 - "scripts"
 Cohesion: 0.15
@@ -363,21 +358,21 @@ Nodes (13): scripts, ci:check, dev, lint, lint:check, post-autoload-dump, post-c
 Cohesion: 0.15
 Nodes (12): Architecture Decision Log, D-001: Application stack (Laravel + React + Inertia), D-002: PHP 8.4 is the minimum version, D-003: MySQL 8.4 instead of PostgreSQL 16, D-004: RustFS replaces MinIO for local file storage, D-005: The app container does not use `env_file`, D-006: Tests run on in-memory SQLite with forced settings, D-007: Frontend is built on the host, not in Docker (+4 more)
 
-### Community 55 - "toggle-group.tsx"
+### Community 55 - "web.php"
 Cohesion: 0.21
-Nodes (11): class-variance-authority@^0.7.1, @radix-ui/react-toggle@^1.1.2, @radix-ui/react-toggle-group@^1.1.2, class-variance-authority, @radix-ui/react-toggle, @radix-ui/react-toggle-group, ToggleGroup(), ToggleGroupContext (+3 more)
+Nodes (3): DashboardController, {closure#2}(), LeaveApplicationController
 
-### Community 56 - "chart.tsx"
-Cohesion: 0.22
-Nodes (12): ChartConfig, ChartContainer(), ChartContext, ChartContextProps, ChartLegendContent(), ChartStyle(), ChartTooltipContent(), getPayloadConfigFromPayload() (+4 more)
+### Community 56 - "import-employees.tsx"
+Cohesion: 0.20
+Nodes (5): Credential, ImportEmployees(), PreviewRow, Result, TemplateColumn
 
 ### Community 58 - "BiometricAttendanceTest.php"
 Cohesion: 0.15
 Nodes (4): {closure#11}(), {closure#3}(), {closure#5}(), {closure#7}()
 
-### Community 60 - "Department"
-Cohesion: 0.18
-Nodes (3): {closure#14}(), Department, DepartmentFactory
+### Community 59 - "EmployeeSpreadsheetImportTest.php"
+Cohesion: 0.09
+Nodes (5): {closure#1}(), AttendanceImport, AttendanceLogParser, {closure#1}(), BiometricLinkVerifier
 
 ### Community 61 - "composer.json"
 Cohesion: 0.17
@@ -391,9 +386,13 @@ Nodes (11): default-days, patterns, github-actions, interval, updates, cooldown,
 Cohesion: 0.17
 Nodes (12): 10. Data Protection Officer (DPO), 11. Auditor / Authorized Audit User, 1. Employee, 2. Department Head / Office Head, 3. HR Officer, 3. User roles and their functions, 4. HRMO Head, 5. Payroll Officer (+4 more)
 
-### Community 65 - "LeaveApplication"
-Cohesion: 0.22
-Nodes (4): {closure#1}(), LeaveApplication, {closure#2}(), LeaveApplicationFactory
+### Community 65 - "AttendanceRecord"
+Cohesion: 0.25
+Nodes (3): {closure#1}(), AttendanceRecord, {closure#2}()
+
+### Community 66 - "Department"
+Cohesion: 0.07
+Nodes (7): {closure#14}(), {closure#3}(), {closure#6}(), {closure#7}(), AttendancePunch, Department, Payslip
 
 ### Community 67 - "services"
 Cohesion: 0.18
@@ -415,14 +414,6 @@ Nodes (11): 2. Main system modules, A. Employee Management / 201 Files, B. Organ
 Cohesion: 0.22
 Nodes (9): @hugeicons/core-free-icons@^4.4.0, @hugeicons/react@^1.1.10, @hugeicons/core-free-icons, @hugeicons/react, clamp(), FOILS, isDark(), ProfileCard() (+1 more)
 
-### Community 72 - "Position"
-Cohesion: 0.22
-Nodes (3): {closure#6}(), Position, PositionFactory
-
-### Community 73 - "Role"
-Cohesion: 0.22
-Nodes (3): Role, RoleFactory, {closure#2}()
-
 ### Community 74 - "2025_01_01_000005_create_hris_system_tables.php"
 Cohesion: 0.20
 Nodes (7): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), {closure#7}()
@@ -431,9 +422,9 @@ Nodes (7): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#
 Cohesion: 0.20
 Nodes (5): {closure#1}(), {closure#2}(), {closure#3}(), {closure#6}(), {closure#7}()
 
-### Community 77 - "breadcrumbs.tsx"
-Cohesion: 0.44
-Nodes (8): Breadcrumbs(), Breadcrumb(), BreadcrumbEllipsis(), BreadcrumbItem(), BreadcrumbLink(), BreadcrumbList(), BreadcrumbPage(), BreadcrumbSeparator()
+### Community 76 - "Laravel\Fortify\Features"
+Cohesion: 0.14
+Nodes (3): VerificationNotificationTest, {closure#1}(), {closure#2}()
 
 ### Community 78 - "auth.ts"
 Cohesion: 0.22
@@ -459,9 +450,9 @@ Nodes (8): require, inertiajs/inertia-laravel, laravel/chisel, laravel/fortify, 
 Cohesion: 0.25
 Nodes (5): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}()
 
-### Community 90 - "AttendanceCorrection"
-Cohesion: 0.33
-Nodes (3): {closure#3}(), {closure#5}(), AttendanceCorrection
+### Community 89 - "DemoPortalAccountSeeder.php"
+Cohesion: 0.29
+Nodes (3): DatabaseSeeder, DemoDashboardSeeder, DemoPortalAccountSeeder
 
 ### Community 91 - "config"
 Cohesion: 0.29
@@ -478,18 +469,6 @@ Nodes (4): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}()
 ### Community 94 - "scripts"
 Cohesion: 0.29
 Nodes (7): scripts, build, build:ssr, check, check:fix, dev, types:check
-
-### Community 95 - "alert.tsx"
-Cohesion: 0.62
-Nodes (5): AlertError(), Alert(), AlertDescription(), AlertTitle(), alertVariants
-
-### Community 96 - "TechText"
-Cohesion: 0.57
-Nodes (6): approach(), clamp01(), noise(), signed(), smoothstep(), TechText()
-
-### Community 97 - "dashboard.ts"
-Cohesion: 0.29
-Nodes (6): DashboardAnalytics, DashboardMetric, DashboardPoint, DashboardRecord, DashboardSeries, NotificationFeed
 
 ### Community 98 - "healthcheck"
 Cohesion: 0.53
@@ -510,10 +489,6 @@ Nodes (3): {closure#1}(), {closure#2}(), {closure#3}()
 ### Community 102 - "7. Common workflows in the system"
 Cohesion: 0.33
 Nodes (6): 7. Common workflows in the system, A. Registering a new employee, B. Filing a leave application, C. Correcting attendance, D. Preparing payroll, E. Recruitment
-
-### Community 104 - "SpotlightCard"
-Cohesion: 0.53
-Nodes (5): clamp(), falloff(), SHAPES, SpotlightCard(), THEMES
 
 ### Community 105 - "depends_on"
 Cohesion: 0.40
@@ -536,22 +511,22 @@ Cohesion: 0.40
 Nodes (5): A14. Change Register — MUST be maintained in THIS file, CHG-0002 - Fixed offices and account setup, CHG-0003 - Employee spreadsheet import and department directory, CHG-0004 - Employee import workbook columns, CHG-0005 - Employee account creation workflow
 
 ## Knowledge Gaps
-- **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **48 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `User` connect `User` to `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Illuminate\Http\Request`, `Inertia\Testing\AssertableInertia`, `EmployeeSpreadsheetImport.php`, `Illuminate\Database\Eloquent\Factories\Factory`, `HrisResourceController.php`, `Inertia\Response`, `DashboardInsights.php`, `TestCase`, `AttendanceLogImportController.php`, `EmployeeImportTemplate`, `web.php`, `Illuminate\Http\RedirectResponse`, `HrisResourceTest.php`, `AppServiceProvider.php`, `PasswordValidationRules`, `Laravel\Fortify\Features`, `ProfileUpdateTest`, `DashboardInsights`, `BiometricAttendanceTest.php`, `EmployeeSpreadsheetImportTest.php`, `EmailVerificationTest`, `Role`, `AccountInvitationTest.php`, `PasswordResetTest.php`, `UserFactory.php`, `DemoPortalAccountSeeder.php`, `BiometricLinkVerifier.php`?**
-  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+- **Why does `Employee` connect `User` to `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Inertia\Testing\AssertableInertia`, `EmployeeSpreadsheetImport.php`, `App\Models\Applicant`, `Illuminate\Database\Eloquent\Factories\Factory`, `HrisResourceController.php`, `DailyTimeRecordController.php`, `DashboardInsights.php`, `TestCase`, `EmployeeImportTemplate`, `Illuminate\Http\RedirectResponse`, `MonthlyAttendanceReportController.php`, `HrisResourceController`, `HrisResourceTest`, `Part A — Mandatory production engineering rules`, `AttendanceCorrectionController.php`, `BiometricAttendanceTest.php`, `EmployeeSpreadsheetImportTest.php`, `EmailVerificationTest`, `AttendanceRecord`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
 - **Should `Illuminate\Database\Eloquent\Relations\BelongsTo` be split into smaller, more focused modules?**
-  _Cohesion score 0.04119850187265917 - nodes in this community are weakly interconnected._
-- **Why does `Employee` connect `Employee` to `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Inertia\Testing\AssertableInertia`, `EmployeeSpreadsheetImport.php`, `Illuminate\Database\Eloquent\Factories\Factory`, `HrisResourceController.php`, `Inertia\Response`, `DashboardInsights.php`, `User`, `AttendanceLogImportController.php`, `EmployeeImportTemplate`, `MonthlyAttendanceReportController.php`, `HrisResourceController`, `HrisResourceTest.php`, `Part A — Mandatory production engineering rules`, `BiometricAttendanceTest.php`, `EmployeeSpreadsheetImportTest.php`, `LeaveApplication`, `Role`, `AccountInvitationTest.php`, `BiometricLinkVerifier.php`?**
-  _High betweenness centrality (0.046) - this node is a cross-community bridge._
+  _Cohesion score 0.04330392943063352 - nodes in this community are weakly interconnected._
+- **Why does `User` connect `User` to `Illuminate\Http\Request`, `Inertia\Testing\AssertableInertia`, `EmployeeSpreadsheetImport.php`, `Illuminate\Database\Eloquent\Factories\Factory`, `HrisResourceController.php`, `DailyTimeRecordController.php`, `DashboardInsights.php`, `TestCase`, `EmployeeImportTemplate`, `Illuminate\Http\RedirectResponse`, `MonthlyAttendanceReportController.php`, `HrisResourceTest`, `Illuminate\Foundation\Http\FormRequest`, `GoogleLoginTest.php`, `ProfileUpdateTest`, `AttendanceCorrectionController.php`, `BiometricAttendanceTest.php`, `EmployeeSpreadsheetImportTest.php`, `AuthenticationTest`, `EmailVerificationTest`, `AttendanceRecord`, `TwoFactorChallengeTest.php`, `Laravel\Fortify\Features`, `UserFactory.php`?**
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
-  _Cohesion score 0.07885763000852515 - nodes in this community are weakly interconnected._
-- **Why does `react` connect `react` to `index.tsx`, `package.json`, `Button`, `sidebar.tsx`, `two-factor-setup-modal.tsx`, `use-appearance.tsx`, `cn`, `app-header.tsx`, `import-employees.tsx`, `app-sidebar-header.tsx`, `dashboard.tsx`, `lucide-react`, `index.ts`, `two-factor-recovery-codes.tsx`, `leave-form-preview-dialog.tsx`, `welcome.tsx`, `profile.tsx`, `GradientASCII.jsx`, `toggle-group.tsx`, `chart.tsx`, `ProfileCard.jsx`, `breadcrumbs.tsx`, `alert.tsx`, `TechText`, `SpotlightCard`, `placeholder-pattern.tsx`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+  _Cohesion score 0.07161125319693094 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `react` to `react`, `index.tsx`, `dependencies`, `Button`, `sidebar.tsx`, `two-factor-setup-modal.tsx`, `use-appearance.tsx`, `cn`, `app-header.tsx`, `layout.tsx`, `plantilla-items.tsx`, `dashboard.tsx`, `lucide-react`, `index.ts`, `two-factor-recovery-codes.tsx`, `leave-form-preview-dialog.tsx`, `two-factor-setup-modal.tsx`, `package.json`, `welcome.tsx`, `import-employees.tsx`, `ProfileCard.jsx`, `placeholder-pattern.tsx`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
 - **Should `index.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.08365384615384615 - nodes in this community are weakly interconnected._
-- **Should `package.json` be split into smaller, more focused modules?**
-  _Cohesion score 0.04590163934426229 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0861952861952862 - nodes in this community are weakly interconnected._
+- **Should `dependencies` be split into smaller, more focused modules?**
+  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
