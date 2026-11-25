@@ -49,3 +49,19 @@ test('employee sign-in locks across employee number and email and HR can see the
     $this->post(route('login.store'), ['email' => $employee->employee_number, 'password' => 'password'])->assertRedirect();
     $this->assertAuthenticatedAs($user);
 });
+
+test('new security enrollment is off for scoped roles while existing TOTP management stays available', function (string $role) {
+    $this->withoutVite();
+    $user = User::factory()->unverified()->for(Role::factory()->state(['name' => $role]))->create(['requires_mfa' => true]);
+    $this->actingAs($user)->withSession(['auth.password_confirmed_at' => now()->timestamp]);
+
+    $this->get(route('security.edit'))->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('canManageTwoFactor', false)->where('canEnrollPasskeys', false)->where('requiresMfaEnrollment', false));
+    $this->post(route('two-factor.enable'))->assertForbidden();
+    $this->get(route('passkey.registration-options'))->assertForbidden();
+    $this->post(route('verification.send'))->assertForbidden();
+
+    $user->forceFill(['two_factor_secret' => encrypt('test-secret'), 'two_factor_confirmed_at' => now()])->save();
+    $this->actingAs($user->refresh())->get(route('security.edit'))->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('canManageTwoFactor', true)->where('twoFactorEnabled', true));
+})->with(['HRMO Head', 'HR Officer', 'Employee']);

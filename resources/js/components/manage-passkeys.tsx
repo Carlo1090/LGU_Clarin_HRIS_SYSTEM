@@ -8,6 +8,7 @@ import type { Passkey } from '@/types/auth';
 
 export type Props = {
     canManagePasskeys?: boolean;
+    canEnrollPasskeys?: boolean;
     passkeys?: Passkey[];
 };
 
@@ -39,7 +40,11 @@ export default function ManagePasskeys(props: Props) {
         router.reload();
     };
 
-    if (!(props.canManagePasskeys ?? false)) {
+    const canEnroll = props.canEnrollPasskeys ?? true;
+    if (
+        !(props.canManagePasskeys ?? false) ||
+        (!canEnroll && passkeys.length === 0)
+    ) {
         return null;
     }
 
@@ -65,7 +70,9 @@ export default function ManagePasskeys(props: Props) {
                 )}
             </div>
 
-            <PasskeyRegistration onSuccess={handleRegisterSuccess} />
+            {canEnroll && (
+                <PasskeyRegistration onSuccess={handleRegisterSuccess} />
+            )}
         </div>
     );
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
+use App\Support\HrisEnrollmentPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -18,10 +19,15 @@ class SecurityController extends Controller
      */
     public function edit(TwoFactorAuthenticationRequest $request): Response
     {
+        $user = $request->user();
+        $canEnrollTotp = HrisEnrollmentPolicy::offers($user, 'totp');
+        $canEnrollPasskeys = HrisEnrollmentPolicy::offers($user, 'passkeys');
+        $totpEnabled = $user->hasEnabledTwoFactorAuthentication();
         $props = [
-            'requiresMfaEnrollment' => (bool) $request->user()->requires_mfa && ! $request->user()->hasEnabledTwoFactorAuthentication(),
-            'canManageTwoFactor' => Features::canManageTwoFactorAuthentication(),
+            'requiresMfaEnrollment' => $canEnrollTotp && $user->requires_mfa && ! $totpEnabled,
+            'canManageTwoFactor' => Features::canManageTwoFactorAuthentication() && ($canEnrollTotp || $totpEnabled),
             'canManagePasskeys' => Features::canManagePasskeys(),
+            'canEnrollPasskeys' => $canEnrollPasskeys,
             'passkeys' => Features::canManagePasskeys()
                 ? $request->user()
                     ->passkeys()
@@ -44,7 +50,7 @@ class SecurityController extends Controller
         if (Features::canManageTwoFactorAuthentication()) {
             $request->ensureStateIsValid();
 
-            $props['twoFactorEnabled'] = $request->user()->hasEnabledTwoFactorAuthentication();
+            $props['twoFactorEnabled'] = $totpEnabled;
             $props['requiresConfirmation'] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
         }
 

@@ -7,6 +7,7 @@ use App\Http\Middleware\ExpireIdleHrisSession;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
+use App\Support\HrisEnrollmentPolicy;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,7 @@ class ProfileController extends Controller
         $lastLogin = $trackLogin ? $user->loginActivities()->where('status', 'success')->max('login_at') : null;
 
         return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail && HrisEnrollmentPolicy::offers($user, 'email_verification'),
             'status' => $request->session()->get('status'),
             'showLastLogin' => $trackLogin,
             'lastLoginAt' => $lastLogin === null ? null : Date::parse($lastLogin)->toIso8601String(),

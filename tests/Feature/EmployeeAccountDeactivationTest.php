@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
-use Laravel\Passkeys\Models\Passkey;
+use Laravel\Passkeys\Passkey;
 use Laravel\Passkeys\Passkeys;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
@@ -29,6 +29,8 @@ test('HRMO Head deactivation requires a password and reason and revokes employee
         'id' => 'employee-session', 'user_id' => $employee->id, 'payload' => 'fixture', 'last_activity' => now()->timestamp,
     ]);
     $service = app(EmployeeAccountDeactivation::class);
+    $passkey = (new Passkey)->setRelation('user', $employee);
+    expect(Passkeys::allowsLogin(request(), $passkey))->toBeTrue();
 
     expect(fn () => $service->deactivate($head, $employee, 'wrong', 'Reason'))->toThrow(ValidationException::class)
         ->and(fn () => $service->deactivate($head, $employee, 'password', ' '))->toThrow(ValidationException::class)
@@ -50,8 +52,7 @@ test('HRMO Head deactivation requires a password and reason and revokes employee
     $this->get(route('hris.profile-review.index'))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('audit.data.0.reactivateEmployeeId', $record->id)
         ->where('audit.data.0.details.sessions_revoked', 1));
-    $passkey = (new Passkey)->setRelation('user', $employee->fresh());
-    expect(Passkeys::allowsLogin(request(), $passkey))->toBeFalse();
+    expect(Passkeys::allowsLogin(request(), $passkey->setRelation('user', $employee->fresh())))->toBeFalse();
 
     $slip = $this->post(route('hris.employees.reactivate', $record), ['password' => 'password'], ['X-Inertia' => 'true'])
         ->assertOk()->json('flash.activationSlips.0');

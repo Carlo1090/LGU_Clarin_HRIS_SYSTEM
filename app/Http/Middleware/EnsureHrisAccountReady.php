@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\AuditLog;
 use App\Models\Employee;
+use App\Support\HrisEnrollmentPolicy;
 use Closure;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Http\Request;
@@ -24,7 +25,8 @@ class EnsureHrisAccountReady
             return to_route('hris.my-profile');
         }
 
-        if ($emailPolicy === 'verify-legacy' && ! $onboarded && ! $user->hasVerifiedEmail()) {
+        if ($emailPolicy === 'verify-legacy' && ! $onboarded && $user->role?->name !== 'Employee'
+            && HrisEnrollmentPolicy::offers($user, 'email_verification') && ! $user->hasVerifiedEmail()) {
             return app(EnsureEmailIsVerified::class)->handle($request, $next);
         }
 
@@ -33,7 +35,8 @@ class EnsureHrisAccountReady
             return to_route('security.edit');
         }
 
-        if ($user->requires_mfa && ! $user->hasEnabledTwoFactorAuthentication() && ! $passwordSetupRoute) {
+        if ($user->requires_mfa && HrisEnrollmentPolicy::offers($user, 'totp')
+            && ! $user->hasEnabledTwoFactorAuthentication() && ! $passwordSetupRoute) {
             return to_route('security.edit');
         }
 

@@ -41,6 +41,13 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->email === null || $this->email_verified_at !== null;
     }
 
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        if ($this->role?->name !== 'Employee') {
+            parent::sendPasswordResetNotification($token);
+        }
+    }
+
     /**
      * Get the attributes that should be cast.
      *

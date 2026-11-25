@@ -142,6 +142,7 @@ export default function Security(props: Props) {
 
             <ManagePasskeys
                 canManagePasskeys={props.canManagePasskeys}
+                canEnrollPasskeys={props.canEnrollPasskeys}
                 passkeys={props.passkeys}
             />
         </>

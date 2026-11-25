@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'role_security' => [
+        'HRMO Head' => [],
+        'HR Officer' => [],
+        'Employee' => [],
+    ],
     // shortcut: bundled common passphrases, expand from an approved offline corpus before deployment.
     'common_passwords' => [
         'password1234', 'password12345', 'password123456', '123456789012', '1234567890123',

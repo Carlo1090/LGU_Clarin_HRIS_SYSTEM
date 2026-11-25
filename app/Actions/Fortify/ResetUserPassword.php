@@ -19,8 +19,8 @@ class ResetUserPassword implements ResetsUserPasswords
      */
     public function reset(User $user, array $input): void
     {
-        if ($user->password === null) {
-            throw ValidationException::withMessages(['email' => 'Use your employee activation code to set your password.']);
+        if ($user->password === null || $user->role?->name === 'Employee') {
+            throw ValidationException::withMessages(['email' => 'Contact HR for an employee activation code.']);
         }
 
         Validator::make($input, [

@@ -21,7 +21,7 @@ use Inertia\Response;
 class AccountInvitationController
 {
     private const INVITABLE_ROLES = [
-        'Employee', 'Department Head', 'HR Officer', 'Payroll Officer', 'Accountant',
+        'Department Head', 'HR Officer', 'Payroll Officer', 'Accountant',
         'Treasurer', 'Mayor', 'MIS Administrator', 'DPO', 'Auditor',
     ];
 

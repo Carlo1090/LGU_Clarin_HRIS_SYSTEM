@@ -40,7 +40,7 @@ class AccountInvitationTest extends TestCase
             ->post(route('hris.invitations.store'), $input)->assertForbidden();
 
         $this->actingAs($actor)->get(route('hris.invitations.create'))
-            ->assertOk()->assertInertia(fn ($page) => $page->component('hris/invite-account')->has('roles', 10));
+            ->assertOk()->assertInertia(fn ($page) => $page->component('hris/invite-account')->has('roles', 9));
         $this->post(route('hris.invitations.store'), array_replace($input, ['role' => 'HRMO Head']))
             ->assertSessionHasErrors('role');
         $this->post(route('hris.invitations.store'), $input)->assertSessionHasNoErrors()->assertRedirect();
@@ -95,7 +95,7 @@ class AccountInvitationTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
-    public function test_account_invitation_accepts_optional_email_and_requires_email_for_setup(): void
+    public function test_employee_accounts_cannot_be_created_through_email_invitations(): void
     {
         $this->seed();
         $actor = User::factory()->create([
@@ -107,10 +107,10 @@ class AccountInvitationTest extends TestCase
         $employee = Employee::factory()->for(Department::query()->where('code', 'HEALTH')->firstOrFail())->create();
         $this->actingAs($actor)->withSession(['auth.password_confirmed_at' => time()])->post(route('hris.invitations.store'), [
             'employee_number' => $employee->employee_number,
-            'email' => '',
+            'email' => 'employee@example.com',
             'role' => 'Employee',
             'approval_reference' => 'TEST-APPROVAL',
-        ])->assertSessionHasErrors('email');
+        ])->assertSessionHasErrors('role');
         $this->assertDatabaseCount('users', 1);
     }
 }

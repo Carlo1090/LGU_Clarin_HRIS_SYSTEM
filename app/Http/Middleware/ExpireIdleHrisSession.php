@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\HrisEnrollmentPolicy;
 use Closure;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Http\Request;
@@ -36,6 +37,15 @@ class ExpireIdleHrisSession
         }
 
         $request->session()->put(self::LAST_ACTIVITY, $now);
+        if ($request->routeIs('two-factor.enable', 'two-factor.confirm', 'two-factor.qr-code', 'two-factor.secret-key')) {
+            abort_unless(HrisEnrollmentPolicy::offers($user, 'totp'), 403);
+        }
+        if ($request->routeIs('passkey.registration-options', 'passkey.store')) {
+            abort_unless(HrisEnrollmentPolicy::offers($user, 'passkeys'), 403);
+        }
+        if ($request->routeIs('verification.notice', 'verification.send')) {
+            abort_unless($user->email !== null && HrisEnrollmentPolicy::offers($user, 'email_verification'), 403);
+        }
 
         return $next($request);
     }
