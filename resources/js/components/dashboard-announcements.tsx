@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/react';
 import { Clock3, Megaphone } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export type DashboardAnnouncement = {
     id: number;
@@ -9,14 +10,50 @@ export type DashboardAnnouncement = {
     visible_at: string | null;
 };
 
-const manilaDateTime = new Intl.DateTimeFormat('en-PH', {
+const manilaDateTimeOptions = {
     timeZone: 'Asia/Manila',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+} satisfies Intl.DateTimeFormatOptions;
+
+const manilaDateTime = new Intl.DateTimeFormat('en-PH', manilaDateTimeOptions);
+
+const manilaClock = new Intl.DateTimeFormat('en-PH', {
+    ...manilaDateTimeOptions,
+    second: '2-digit',
 });
+
+function ManilaClock() {
+    const [now, setNow] = useState<Date | null>(null);
+
+    useEffect(() => {
+        const tick = () => setNow(new Date());
+        tick();
+        const interval = window.setInterval(tick, 1000);
+
+        return () => window.clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="ml-auto inline-flex max-w-full items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+            <Clock3 className="size-3.5 shrink-0" aria-hidden="true" />
+            <span>
+                Manila time
+                {now && (
+                    <>
+                        {' · '}
+                        <time className="tabular-nums" dateTime={now.toISOString()}>
+                            {manilaClock.format(now)}
+                        </time>
+                    </>
+                )}
+            </span>
+        </div>
+    );
+}
 
 function AnnouncementEntry({
     announcement,
@@ -32,12 +69,12 @@ function AnnouncementEntry({
             >
                 {announcement.title}
             </h3>
-            {!featured && announcement.visible_at && (
+            {announcement.visible_at && (
                 <time
                     dateTime={announcement.visible_at}
                     className="block text-xs text-muted-foreground"
                 >
-                    {manilaDateTime.format(new Date(announcement.visible_at))}{' '}
+                    Posted {manilaDateTime.format(new Date(announcement.visible_at))}{' '}
                     Manila time
                 </time>
             )}
@@ -78,18 +115,7 @@ export default function DashboardAnnouncements({
                     />
                     Announcements
                 </h2>
-                {latest?.visible_at && (
-                    <time
-                        dateTime={latest.visible_at}
-                        className="ml-auto inline-flex max-w-full items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
-                    >
-                        <Clock3 className="size-3.5 shrink-0" aria-hidden="true" />
-                        <span>
-                            {manilaDateTime.format(new Date(latest.visible_at))}{' '}
-                            Manila time
-                        </span>
-                    </time>
-                )}
+                <ManilaClock />
             </div>
             {latest ? (
                 <AnnouncementEntry announcement={latest} featured />
