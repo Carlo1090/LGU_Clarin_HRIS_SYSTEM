@@ -43,3 +43,8 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
+
+# Graphify machine-local and incremental build state
+/graphify-out/cache/
+/graphify-out/.graphify*
+/graphify-out/manifest.json
