@@ -105,3 +105,37 @@ test('daily punches use schedules and show all raw punches including duplicates 
         ->and(AttendanceImport::query()->latest('id')->value('duplicate_count'))->toBe(15)
         ->and(AttendancePunch::query()->count())->toBe(15);
 });
+
+test('daily punches honor the attendance month and blank optional filters without exposing other departments', function () {
+    $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create();
+    $own = Employee::factory()->create(['user_id' => $head->id, 'biometric_id' => 71, 'department_id' => Department::factory()]);
+    $other = Employee::factory()->create(['biometric_id' => 72, 'department_id' => Department::factory()]);
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+
+    $file = "71\t2026-11-02 08:00:00\t1\t0\t1\t0\n72\t2026-11-02 08:00:00\t1\t0\t1\t0\n71\t2026-12-02 08:00:00\t1\t0\t1\t0\n";
+    $this->actingAs($hr)->post('/hris/attendance/logs', [
+        'file' => UploadedFile::fake()->createWithContent('daily.dat', $file),
+        'confirm' => true,
+    ])->assertSessionHasNoErrors();
+
+    $url = '/hris/attendance/daily-punches';
+    $this->actingAs($head->fresh())->get($url.'?month=2026-11')
+        ->assertOk()->assertInertia(fn ($page) => $page
+        ->where('departmentUnavailable', true)
+        ->has('employees', 0)
+        ->has('departments', 0)
+        ->has('rows.data', 0));
+
+    $head->forceFill(['employee_id' => $own->id])->save();
+
+    $this->actingAs($head->fresh())->get($url.'?month=2026-11&employee=&department=&flags_only=')
+        ->assertOk()->assertInertia(fn ($page) => $page
+        ->where('departmentUnavailable', false)
+        ->where('filters.start_date', '2026-11-01')
+        ->where('filters.end_date', '2026-11-30')
+        ->has('rows.data', 1)
+        ->where('rows.data.0.employee_id', $own->id));
+    $this->get($url.'?month=2026-11&employee='.$other->id)
+        ->assertOk()->assertInertia(fn ($page) => $page->has('rows.data', 0));
+    $this->get('/hris/attendance/dtr/'.$other->id.'?month=2026-11')->assertForbidden();
+});

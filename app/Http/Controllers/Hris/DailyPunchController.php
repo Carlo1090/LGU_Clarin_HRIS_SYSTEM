@@ -83,6 +83,7 @@ class DailyPunchController
      *     employees: Collection<int, array{id: int, name: string}>,
      *     departments: Collection<int, array{id: int, name: string}>,
      *     canManage: bool,
+     *     departmentUnavailable: bool,
      *     timezone: string
      * }
      */
@@ -93,9 +94,10 @@ class DailyPunchController
         $input = $request->validate([
             'start_date' => ['sometimes', 'required', 'date_format:Y-m-d', 'regex:/^[1-9][0-9]{3}-/'],
             'end_date' => ['sometimes', 'required', 'date_format:Y-m-d', 'regex:/^[1-9][0-9]{3}-/'],
-            'employee' => ['sometimes', 'integer', 'min:1', 'exists:employees,id'],
-            'department' => ['sometimes', 'integer', 'min:1', 'exists:departments,id'],
-            'flags_only' => ['sometimes', 'in:missing,no_schedule,duplicate,pin_verify,unlinked'],
+            'month' => ['sometimes', 'required', 'date_format:Y-m', 'regex:/^[1-9][0-9]{3}-/'],
+            'employee' => ['nullable', 'integer', 'min:1', 'exists:employees,id'],
+            'department' => ['nullable', 'integer', 'min:1', 'exists:departments,id'],
+            'flags_only' => ['nullable', 'in:missing,no_schedule,duplicate,pin_verify,unlinked'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ]);
         if (isset($input['start_date'], $input['end_date']) && $input['start_date'] > $input['end_date']) {
@@ -104,10 +106,11 @@ class DailyPunchController
 
         $attendance = app(AttendanceRecomputer::class);
         $headDepartment = $user->role?->name === 'Department Head' ? $user->employee?->department_id : null;
-        abort_if($user->role?->name === 'Department Head' && $headDepartment === null, 403);
+        $departmentUnavailable = $user->role?->name === 'Department Head' && $headDepartment === null;
 
         $query = AttendancePunch::query()
             ->with(['employee.department'])
+            ->when($departmentUnavailable, fn (Builder $builder) => $builder->whereRaw('1 = 0'))
             ->when(isset($input['employee']), fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->whereKey($input['employee'])))
             ->when(isset($input['department']), fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->where('department_id', $input['department'])))
             ->when($headDepartment !== null, fn (Builder $builder) => $builder->whereHas('employee', fn (Builder $employee) => $employee->where('department_id', $headDepartment)))
@@ -125,12 +128,14 @@ class DailyPunchController
             return $attendance->workDateFor($employee->id, $punch->punched_at, $windows[$employee->id]);
         };
         $fallbackDate = now(config('attendance.timezone'))->toDateString();
-        if (! isset($input['start_date'], $input['end_date'])) {
+        if (! isset($input['start_date']) && ! isset($input['end_date']) && ! isset($input['month'])) {
             $latest = (clone $query)->reorder('punched_at', 'desc')->first();
             $fallbackDate = $latest === null ? $fallbackDate : $workDateFor($latest);
         }
-        $startDate = (string) ($input['start_date'] ?? $input['end_date'] ?? $fallbackDate);
-        $endDate = (string) ($input['end_date'] ?? $input['start_date'] ?? $fallbackDate);
+        $monthStart = isset($input['month']) ? $input['month'].'-01' : null;
+        $monthEnd = $monthStart ? Date::parse($monthStart)->endOfMonth()->toDateString() : null;
+        $startDate = (string) ($input['start_date'] ?? $input['end_date'] ?? $monthStart ?? $fallbackDate);
+        $endDate = (string) ($input['end_date'] ?? $input['start_date'] ?? $monthEnd ?? $fallbackDate);
 
         $groups = $query->whereBetween('punched_at', [
             Date::parse($startDate)->subDays($attendance->earlyDays())->startOfDay(),
@@ -141,6 +146,7 @@ class DailyPunchController
         $calendar = $this->calendarContext($groups);
         $absent = AttendanceDaily::query()
             ->where('status', 'absent')
+            ->when($departmentUnavailable, fn (Builder $builder) => $builder->whereRaw('1 = 0'))
             ->whereBetween('work_date', [$startDate, $endDate])
             ->whereIn('employee_id', Employee::query()->select('id')
                 ->when(isset($input['employee']), fn ($query) => $query->whereKey($input['employee']))
@@ -281,13 +287,14 @@ class DailyPunchController
         ];
 
         $departments = Department::query()
+            ->when($departmentUnavailable, fn (Builder $builder) => $builder->whereRaw('1 = 0'))
             ->when($headDepartment !== null, fn (Builder $builder) => $builder->whereKey($headDepartment))
             ->orderBy('name')->get(['id', 'name'])->map(fn (Department $department): array => [
                 'id' => $department->id,
                 'name' => $department->name,
             ]);
         $employees = Employee::query()
-            ->whereNotNull('biometric_id')
+            ->when($departmentUnavailable, fn (Builder $builder) => $builder->whereRaw('1 = 0'))
             ->when($headDepartment !== null, fn (Builder $builder) => $builder->where('department_id', $headDepartment))
             ->when(isset($input['department']), fn (Builder $builder) => $builder->where('department_id', $input['department']))
             ->orderBy('last_name')->orderBy('first_name')
@@ -308,6 +315,7 @@ class DailyPunchController
             ],
             'employees' => $employees,
             'departments' => $departments,
+            'departmentUnavailable' => $departmentUnavailable,
             'canManage' => $user->can('manage-hris-resource', 'attendance'),
             'timezone' => (string) config('attendance.timezone', 'Asia/Manila'),
         ];
