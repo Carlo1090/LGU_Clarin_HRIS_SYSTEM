@@ -278,7 +278,7 @@ function ResourceRecords({
 
     const displayValue = (field: Field, value: HrisValue | undefined) => {
         if (value === null || value === undefined || value === '') return '—';
-        if (resource === 'leave-applications' && field.name === 'status') {
+        if (['leave-applications', 'vacancies'].includes(resource) && field.name === 'status') {
             return String(value).replaceAll('_', ' ');
         }
         if (resource === 'employees' && isSexField(field.name)) {
@@ -448,12 +448,16 @@ function ResourceRecords({
                             }
                         >
                             {editingId
-                                ? 'Edit record'
+                                ? resource === 'vacancies'
+                                    ? 'Edit vacancy'
+                                    : 'Edit record'
                                 : resource === 'employees'
                                   ? 'Create employee account'
                                   : resource === 'announcements'
                                     ? 'Create announcement'
-                                    : 'Add record'}
+                                    : resource === 'vacancies'
+                                      ? 'Add vacancy'
+                                      : 'Add record'}
                         </EditorHeading>
                         {resource === 'announcements' && (
                             <p className="mb-4 text-sm text-muted-foreground">
@@ -638,7 +642,9 @@ function ResourceRecords({
                                           ? 'Save changes'
                                           : resource === 'employees'
                                             ? 'Create account'
-                                            : 'Create record'}
+                                            : resource === 'vacancies'
+                                              ? 'Create vacancy'
+                                              : 'Create record'}
                                 </Button>
                                 {editingId && (
                                     <Button
@@ -748,7 +754,7 @@ function ResourceRecords({
                             id="records-heading"
                             className="text-lg font-semibold tracking-tight"
                         >
-                            {directory?.title ?? 'Records'}
+                            {directory?.title ?? (resource === 'vacancies' ? 'Vacancy listings' : 'Records')}
                         </h2>
                         <span className="text-sm text-muted-foreground">
                             {records.data.length} on this page
@@ -768,23 +774,29 @@ function ResourceRecords({
                             renderActions={hasActions ? rowActions : undefined}
                         />
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div
+                            role="region"
+                            aria-labelledby="records-heading"
+                            tabIndex={0}
+                            className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                        >
                             <table className="w-full text-left text-sm">
-                                <thead className="workspace-table-head">
+                                <thead className="workspace-table-head whitespace-nowrap">
                                     <tr>
-                                        <th className="px-3 py-3 font-medium">
+                                        <th scope="col" className="px-3 py-3 font-medium">
                                             ID
                                         </th>
                                         {fields.map((field) => (
                                             <th
                                                 key={field.name}
+                                                scope="col"
                                                 className="px-3 py-3 font-medium"
                                             >
                                                 {field.label}
                                             </th>
                                         ))}
                                         {hasActions && (
-                                            <th className="px-3 py-3 font-medium">
+                                            <th scope="col" className="px-3 py-3 font-medium">
                                                 Actions
                                             </th>
                                         )}
@@ -802,7 +814,11 @@ function ResourceRecords({
                                             {fields.map((field) => (
                                                 <td
                                                     key={field.name}
-                                                    className="max-w-64 truncate px-3 py-3"
+                                                    className={
+                                                        resource === 'vacancies'
+                                                            ? 'max-w-64 px-3 py-3 [overflow-wrap:break-word]'
+                                                            : 'max-w-64 truncate px-3 py-3'
+                                                    }
                                                 >
                                                     {(field.name ===
                                                         'employee_id' ||

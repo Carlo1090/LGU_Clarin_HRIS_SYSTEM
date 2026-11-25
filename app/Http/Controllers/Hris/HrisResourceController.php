@@ -235,9 +235,9 @@ class HrisResourceController extends Controller
             'title' => 'Vacancies',
             'model' => Vacancy::class,
             'fields' => [
+                ['name' => 'title', 'label' => 'Vacancy title', 'type' => 'text', 'required' => true],
                 ['name' => 'department_id', 'label' => 'Department', 'type' => 'select', 'options' => 'departments'],
                 ['name' => 'position_id', 'label' => 'Position', 'type' => 'select', 'options' => 'positions'],
-                ['name' => 'title', 'label' => 'Title', 'type' => 'text', 'required' => true],
                 ['name' => 'open_positions', 'label' => 'Open positions', 'type' => 'number', 'required' => true],
                 ['name' => 'closing_date', 'label' => 'Closing date', 'type' => 'date'],
                 ['name' => 'status', 'label' => 'Status', 'type' => 'text', 'required' => true],
