@@ -19,7 +19,10 @@ class EnsureHrisAccountReady
 
         $onboarded = $user->role?->name === 'Employee'
             && AuditLog::query()->where('user_id', $user->id)->where('action', 'employee.activation_completed')->exists();
+        $selfAttendance = ($request->routeIs('hris.portal') && $request->route('page') === 'my-attendance')
+            || $request->routeIs('hris.attendance-corrections.index', 'hris.attendance-corrections.store', 'hris.attendance.dtr');
         if ($onboarded && ! $request->routeIs('hris.my-profile', 'hris.my-profile.draft', 'hris.my-profile.submit', 'hris.employee.identifier.reveal')
+            && ! $selfAttendance
             && ! AuditLog::query()->where('action', 'employee.profile_approved')->where('model_type', Employee::class)
                 ->where('model_id', $user->employee_id)->exists()) {
             return to_route('hris.my-profile');

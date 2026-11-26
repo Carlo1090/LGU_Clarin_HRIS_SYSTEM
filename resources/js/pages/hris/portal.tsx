@@ -23,6 +23,7 @@ type Props = {
     missingEmployee?: boolean;
     dtrPreviewUrl?: string | null;
     dtrDemoUrl?: string | null;
+    correctionsUrl?: string | null;
     leaveTypes?: { id: number; name: string }[] | null;
     leaveApplicant?: LeaveApplicant | null;
     filingDate?: string | null;
@@ -355,6 +356,7 @@ export default function PortalPage({
     missingEmployee,
     dtrPreviewUrl,
     dtrDemoUrl,
+    correctionsUrl,
     leaveTypes,
     leaveApplicant,
     filingDate,
@@ -379,7 +381,11 @@ export default function PortalPage({
                     {dtrPreviewUrl && (
                         <DailyTimeRecordDialog url={dtrPreviewUrl} />
                     )}
-                    <DailyTimeRecordDialog url={dtrDemoUrl} demo />
+                    {correctionsUrl && (
+                        <Link href={correctionsUrl} className="dashboard-action">
+                            View punches and request corrections
+                        </Link>
+                    )}
                 </div>
             )}
 

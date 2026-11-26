@@ -11,9 +11,6 @@ export type DailyTimeRecordData = {
     period?: 'full' | 'first' | 'second';
     periodLabel: string;
     officialHours?: string;
-    punchTimes?: Record<string, string[]>;
-    canReview?: boolean;
-    reviewUrl?: string;
     records: Partial<
         Record<
             number,
@@ -50,9 +47,6 @@ export default function DailyTimeRecordPreview({
     period,
     periodLabel,
     officialHours,
-    punchTimes,
-    canReview = false,
-    reviewUrl,
     records,
     previewUrl,
     backUrl,
@@ -184,112 +178,7 @@ export default function DailyTimeRecordPreview({
                 )}
             </header>
 
-            {!demo && canReview && reviewUrl && punchTimes && month && (
-                <section
-                    className="rounded-lg border p-4 print:hidden"
-                    aria-labelledby="manual-review-heading"
-                >
-                    <h2 id="manual-review-heading" className="font-semibold">
-                        Manually confirm review days
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Verify each prefilled time against the employee’s
-                        attendance records before confirming.
-                    </p>
-                    <div className="mt-3 grid gap-3">
-                        {Object.entries(punchTimes)
-                            .filter(
-                                ([day]) =>
-                                    !(
-                                        records[Number(day)]?.amIn &&
-                                        records[Number(day)]?.amOut &&
-                                        records[Number(day)]?.pmIn &&
-                                        records[Number(day)]?.pmOut
-                                    ),
-                            )
-                            .map(([day, times]) => (
-                                <form
-                                    key={day}
-                                    className="grid items-end gap-2 rounded-md border p-3 sm:grid-cols-[5rem_repeat(4,minmax(8rem,1fr))_auto]"
-                                    onSubmit={(event) => {
-                                        event.preventDefault();
-                                        const data = new FormData(
-                                            event.currentTarget,
-                                        );
-                                        const amIn = data.get('am_in');
-                                        const amOut = data.get('am_out');
-                                        const pmIn = data.get('pm_in');
-                                        const pmOut = data.get('pm_out');
-                                        if (
-                                            typeof amIn !== 'string' ||
-                                            typeof amOut !== 'string' ||
-                                            typeof pmIn !== 'string' ||
-                                            typeof pmOut !== 'string'
-                                        ) {
-                                            return;
-                                        }
-                                        router.put(
-                                            reviewUrl,
-                                            {
-                                                attendance_date: `${month}-${day.padStart(2, '0')}`,
-                                                am_in: amIn,
-                                                am_out: amOut,
-                                                pm_in: pmIn,
-                                                pm_out: pmOut,
-                                            },
-                                            { preserveScroll: true },
-                                        );
-                                    }}
-                                >
-                                    <strong>Day {day}</strong>
-                                    {[
-                                        ['am_in', 'AM In', times[0] ?? '08:00'],
-                                        [
-                                            'am_out',
-                                            'AM Out',
-                                            times[1] ?? times[0] ?? '12:00',
-                                        ],
-                                        [
-                                            'pm_in',
-                                            'PM In',
-                                            times[2] ??
-                                                times[1] ??
-                                                times[0] ??
-                                                '13:00',
-                                        ],
-                                        [
-                                            'pm_out',
-                                            'PM Out',
-                                            times[3] ??
-                                                times[times.length - 1] ??
-                                                '17:00',
-                                        ],
-                                    ].map(([name, label, value]) => (
-                                        <label
-                                            key={name}
-                                            className="grid gap-1 text-xs"
-                                        >
-                                            {label}
-                                            <Input
-                                                type="time"
-                                                name={name}
-                                                defaultValue={value.slice(0, 5)}
-                                                required
-                                            />
-                                        </label>
-                                    ))}
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        disabled={busy}
-                                    >
-                                        Confirm day
-                                    </Button>
-                                </form>
-                            ))}
-                    </div>
-                </section>
-            )}
+
 
             {search.toolbar}
             <div className="overflow-x-auto print:overflow-visible">

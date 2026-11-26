@@ -141,7 +141,7 @@ A change is **MAJOR** if it affects any of the following, even when the code dif
 
 - **Employee registration/201 files:** prepare → verify supporting documents → approve authorized activation; maintain change reasons and appointment history. Protect PDS, SALN, disciplinary, dependent, identification and medical/other sensitive fields with separate access checks where relevant.
 - **Organization/plantilla:** only approved positions/salary grades may feed payroll. Reassignment must use effective dates and prevent conflicting assignment/occupancy. Approval authority and local forms require validation with HRMO.
-- **Attendance/DTR:** preserve device import provenance, import batch, source row, timestamps and timezone; deduplicate imports; keep original logs immutable. Corrections use request → supervisor review → HRMO validation → authorized decision → derived DTR recalculation, never silently replace raw records.
+- **Attendance/DTR:** Preserve device import provenance, import batches, source rows, timestamps, and timezone. Deduplicate imports and keep raw punches immutable. Employees or HR Officers file slot corrections. The HRMO Head decides, and approvals apply an override in the derived daily calculation.
 - **Leave:** draft → submitted → department review → HRMO credit/rule validation → authorized decision → ledger posting. Prevent double deductions, overlapping approved requests, unauthorized negative credit balances and duplicated approvals; define exceptions per approved CSC/municipal rules.
 - **Payroll:** prepare → validate approved HR/attendance/leave inputs → calculate with rule version/effective date → independent review/reconciliation → required approval → finalize/lock → authorized disbursement output. **Preparers cannot independently approve/release their own payroll.** Closed payroll changes become authorized adjustments or a versioned rerun, never in-place edits.
 - **Recruitment/performance:** limit applicant/evaluation access to the approved review panel and role; record scoring criteria, reviewer, status changes and decisions; document appointment transition to employee/201 file.
@@ -677,8 +677,6 @@ Monitor department attendance.
 
 Review employee leave requests.
 
-Review attendance correction requests.
-
 Review department attendance summaries.
 
 Monitor employee performance evaluations.
@@ -698,8 +696,6 @@ Department Employees
 Attendance Monitoring
 
 Leave Approvals
-
-Attendance Correction Approvals
 
 Performance Reviews
 
@@ -726,6 +722,8 @@ Review employee information submitted for correction.
 Process leave records.
 
 Review attendance records and exceptions.
+
+File attendance correction requests on an employee’s behalf with a required reason.
 
 Maintain training and performance information.
 
@@ -766,6 +764,8 @@ Oversee 201 file completeness.
 Supervise attendance and leave administration.
 
 Review and approve assigned HR requests.
+
+Approve, return with a comment, or reject attendance correction requests.
 
 Monitor recruitment activities.
 
@@ -1343,17 +1343,13 @@ The system updates the leave record and status.
 
 #### C. Correcting attendance
 
-Employee reports an incorrect or missing time log.
+The employee can view their own punches and flagged days and request a correction for a specific slot. Each request includes a proposed date and time, a required reason, and an optional evidence reference. An HR Officer can file for the employee with a required reason.
 
-Employee submits a correction request with a reason.
+The HRMO Head sees the raw punches beside the proposal and chooses Approve, Return with comment, or Reject. The system blocks self-approval and logs filing and decisions. The employee can see the outcome.
 
-Department Head or authorized supervisor reviews it.
+Approval applies a slot override in the daily calculation. Raw punches remain immutable. Employees awaiting initial profile approval can use attendance self-service after satisfying account security checks.
 
-HRMO validates the correction.
-
-The approved correction updates the attendance record.
-
-The system saves the approval history.
+The Employees attendance screen shows flagged dates, their request status, and the pending request count. Daily punches is read-only.
 
 #### D. Preparing payroll
 

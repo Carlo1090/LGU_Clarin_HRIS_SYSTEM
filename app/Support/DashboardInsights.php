@@ -118,7 +118,7 @@ class DashboardInsights
                     'value' => (int) $row->employees_count, 'unit' => 'employees', 'href' => '/hris/portal/staffing',
                 ])->all();
         }
-        if (AttendanceCorrectionController::available($user)) {
+        if ($role === 'HRMO Head' && AttendanceCorrectionController::available($user)) {
             $corrections = AttendanceCorrection::query()->whereIn('employee_id', clone $ids)
                 ->whereIn('status', AttendanceCorrectionController::OPEN_STATUSES)
                 ->where('employee_id', '!=', $user->employee_id ?? 0);

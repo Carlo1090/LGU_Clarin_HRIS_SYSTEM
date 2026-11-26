@@ -8,7 +8,6 @@ import {
     UsersRound,
 } from 'lucide-react';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
-import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import RecordPagination, {
     type RecordPageLink,
 } from '@/components/record-pagination';
@@ -25,7 +24,8 @@ type EmployeeAttendance = {
     department: string | null;
     attendance_complete_days: number;
     attendance_review_days: number;
-    dtr_url: string;
+    requests_pending: number;
+    review_days: { date: string; finding: string | null; state: string }[];
 };
 
 export type AttendanceDirectoryProps = {
@@ -50,7 +50,7 @@ const statuses = {
         badge: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
     },
     review: {
-        label: 'Needs review',
+        label: 'Employees with flagged days',
         icon: CalendarClock,
         badge: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
     },
@@ -91,7 +91,7 @@ export default function AttendanceDirectory({
         },
         ...(['complete', 'review', 'empty'] as const).map((key) => ({
             ...statuses[key],
-            count: totals[key] + (key === 'review' ? unlinkedMachineIds : 0),
+            count: totals[key],
         })),
     ];
 
@@ -180,45 +180,6 @@ export default function AttendanceDirectory({
                             : `${records.total} employees`}
                     </span>
                 </div>
-                {totals.review > 0 && (
-                    <details
-                        open
-                        className="mx-4 mb-4 rounded-lg border bg-muted/40 px-4 py-3 text-sm sm:mx-6"
-                    >
-                        <summary className="cursor-pointer font-medium">
-                            How to clear Needs review
-                        </summary>
-                        <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
-                            <li>
-                                Click <strong>Review days</strong> beside the
-                                employee. Check <strong>Remarks</strong> for the
-                                affected dates. Open <strong>Daily punches</strong>{' '}
-                                to inspect the recorded times.
-                            </li>
-                            {canManageAttendance && (
-                                <li>
-                                    If the date appears under{' '}
-                                    <strong>Manually confirm review days</strong>,
-                                    verify all four times and click{' '}
-                                    <strong>Confirm day</strong>.
-                                </li>
-                            )}
-                            {props.canViewAttendanceCorrections && (
-                                <li>
-                                    For a missing or wrong time-in or time-out,
-                                    open <strong>Corrections</strong> on the
-                                    employee’s row. Approve an existing request,
-                                    or submit a new one with the verified times
-                                    and then approve it.
-                                </li>
-                            )}
-                        </ol>
-                        <p className="mt-2 text-muted-foreground">
-                            The badge clears after all flagged days for the
-                            selected month are resolved.
-                        </p>
-                    </details>
-                )}
                 <DirectorySearch
                     columns={[
                         { name: 'employee', label: 'Employee' },
@@ -229,7 +190,6 @@ export default function AttendanceDirectory({
                 {records.data.length > 0 ? (
                     <ul className="divide-y border-t">
                         {records.data.map((employee) => {
-                            const status = statuses[statusFor(employee)];
                             return (
                                 <li
                                     key={employee.id}
@@ -251,33 +211,22 @@ export default function AttendanceDirectory({
                                             </p>
                                         </div>
                                     </div>
-                                    <div>
-                                        <Badge className={status.badge}>
-                                            {status.label}
+                                    <div className="flex flex-wrap gap-1">
+                                        <Badge className={employee.attendance_review_days ? statuses.review.badge : statuses.empty.badge}>
+                                            Flagged days · {employee.attendance_review_days}
                                         </Badge>
-                                        {employee.attendance_complete_days +
-                                            employee.attendance_review_days >
-                                            0 && (
-                                            <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                                                {
-                                                    employee.attendance_complete_days
-                                                }{' '}
-                                                complete ·{' '}
-                                                {
-                                                    employee.attendance_review_days
-                                                }{' '}
-                                                to review
-                                            </p>
-                                        )}
+                                        <Badge variant="outline">
+                                            Requests pending · {employee.requests_pending}
+                                        </Badge>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
                                         {props.canViewAttendanceCorrections && (
                                             <Button asChild variant="outline" size="sm">
                                                 <Link
                                                     href="/hris/attendance/corrections"
-                                                    data={{ employee: employee.id }}
+                                                    data={{ employee: employee.id, month: attendanceMonth }}
                                                 >
-                                                    Corrections
+                                                    Corrections ({employee.requests_pending})
                                                 </Link>
                                             </Button>
                                         )}
@@ -296,13 +245,21 @@ export default function AttendanceDirectory({
                                                 Daily punches
                                             </Link>
                                         </Button>
-                                        <DailyTimeRecordDialog
-                                            url={employee.dtr_url}
-                                            reviewDays={
-                                                employee.attendance_review_days > 0
-                                            }
-                                        />
                                     </div>
+                                    {employee.review_days.length > 0 && (
+                                        <details className="text-sm sm:col-span-full">
+                                            <summary className="cursor-pointer">Day details</summary>
+                                            <ul className="mt-2 divide-y rounded-md border px-3">
+                                                {employee.review_days.map(({ date, finding, state }) => (
+                                                    <li key={date} className="grid gap-1 py-2 sm:grid-cols-3">
+                                                        <span>{date}</span>
+                                                        <span className="capitalize">{finding?.replaceAll('_', ' ') ?? 'Resolved'}</span>
+                                                        <span>{state}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </details>
+                                    )}
                                 </li>
                             );
                         })}

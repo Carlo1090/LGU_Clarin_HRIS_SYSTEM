@@ -5,10 +5,13 @@ namespace App\Attendance\Services;
 use App\Attendance\Contracts\EmployeeDirectory;
 use App\Attendance\Models\AttendanceDaily;
 use App\Attendance\Models\BiometricLink;
+use App\Models\AttendanceCorrection;
 use App\Models\AttendancePunch;
+use App\Models\AttendanceRecord;
 use App\Models\Employee;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class AttendanceRecomputer
 {
@@ -139,7 +142,24 @@ class AttendanceRecomputer
             ->values();
 
         $preCheck = $this->precheckEmployeeDay($employeeId, $workDate);
-        $result = $this->classifier->classify($rawPunches->toArray(), $schedule, $workDate);
+        $overrides = AttendanceCorrection::query()->where('employee_id', $employeeId)
+            ->where('work_date', $workDate)->where('status', 'approved')
+            ->whereNotNull('slot')->whereNotNull('proposed_at')->orderBy('id')
+            ->pluck('proposed_at', 'slot')->all();
+        $recordedSlots = [];
+        if ($overrides !== []) {
+            $record = AttendanceRecord::where('employee_id', $employeeId)->where('attendance_date', $workDate)->latest('id')->first();
+            $recordedSlots = array_filter([
+                'am_in' => $record?->time_in,
+                'am_out' => $record?->am_out,
+                'pm_in' => $record?->pm_in,
+                'pm_out' => $record?->time_out,
+            ]);
+        }
+        $result = $this->classifier->classify($rawPunches->toArray(), $schedule, $workDate, $overrides, $recordedSlots);
+        if ($overrides !== []) {
+            $result['flags']['correction_slots'] = array_keys($overrides);
+        }
         $assignments = collect($result['punches'])->keyBy('punched_at');
         $result['flags'] = array_merge($result['flags'], $preCheck);
         $result['punches'] = $rawPunches->map(function (AttendancePunch $punch) use ($assignments): array {
@@ -155,6 +175,41 @@ class AttendanceRecomputer
             'schedule_source' => $schedule['schedule_source'] ?? null,
             'schedule_id' => $schedule['schedule_id'] ?? null,
         ];
+    }
+
+    /** @return array{complete:int, flagged:array<string,string>} */
+    public function reviewSummary(Employee $employee, string $from, string $to, ?Collection $daily = null): array
+    {
+        $manual = ($employee->relationLoaded('attendanceRecords') ? $employee->attendanceRecords
+            : $employee->attendanceRecords()->whereBetween('attendance_date', [$from, $to])->latest('id')->get())
+            ->unique('attendance_date')->keyBy('attendance_date');
+        $stored = ($daily ?? AttendanceDaily::where('employee_id', $employee->id)->whereBetween('work_date', [$from, $to])->get())
+            ->keyBy(fn (AttendanceDaily $day): string => $day->work_date->toDateString());
+        $dates = array_unique([...$manual->keys(), ...$stored->filter(fn (AttendanceDaily $day) => $day->status === 'absent' || ! empty($day->flags['correction_slots']))->keys(),
+            ...$this->recordedWorkDates($employee->id, $from, $to)]);
+        $complete = 0;
+        $flagged = [];
+        foreach ($dates as $date) {
+            $record = $manual->get($date);
+            $calculated = $stored->get($date);
+            if ($record && empty($calculated?->flags['correction_slots'])) {
+                $status = str_replace([' ', '-'], '_', strtolower(trim($record->status)));
+                if (in_array($status, ['leave', 'on_leave', 'holiday', 'rest_day', 'day_off'], true)) {
+                    continue;
+                }
+                $status = $record->time_in && $record->time_out ? 'complete' : 'incomplete';
+            } else {
+                $status = $calculated?->status ?? $this->employeeDay($employee->id, $date)['status'];
+            }
+            if ($status === 'complete') {
+                $complete++;
+            } elseif (in_array($status, ['incomplete', 'absent', 'no_schedule'], true)) {
+                $flagged[$date] = $status;
+            }
+        }
+        ksort($flagged);
+
+        return ['complete' => $complete, 'flagged' => $flagged];
     }
 
     /** @return list<string> */

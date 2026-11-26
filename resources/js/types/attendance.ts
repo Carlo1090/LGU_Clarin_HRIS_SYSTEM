@@ -75,6 +75,7 @@ export type DailyPunchRow = {
     employee_number: string | null;
     department_name: string | null;
     slots: Record<string, DailyPunchSlot[]>;
+    correction_times: Partial<Record<string, string>>;
     punches: DailyPunch[];
     flags: {
         missing: boolean;

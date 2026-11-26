@@ -239,7 +239,12 @@ export default function DailyPunches({
                                                         : undefined
                                                 }
                                             >
-                                                {punches[0]?.time ??
+                                                {row.correction_times[key] ? (
+                                                    <>
+                                                        {row.correction_times[key]}
+                                                        <span className="block text-xs text-muted-foreground">Approved correction</span>
+                                                    </>
+                                                ) : punches[0]?.time ??
                                                     (missing ? 'Missing' : '—')}
                                             </td>
                                         );

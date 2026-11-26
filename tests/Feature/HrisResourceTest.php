@@ -83,8 +83,6 @@ class HrisResourceTest extends TestCase
                 ->has('records.data', 2)
                 ->where('records.data.0.name', 'Adams, Alex')
                 ->where('attendanceMonth', '2026-10')
-                ->where('records.data.0.dtr_url', "/hris/attendance/dtr/{$employee->id}?month=2026-10")
-                ->where('records.data.1.dtr_url', "/hris/attendance/dtr/{$withoutEntries->id}?month=2026-10")
                 ->where('records.data.1.attendance_complete_days', 0)
                 ->where('records.data.1.attendance_review_days', 0));
 
@@ -137,41 +135,13 @@ class HrisResourceTest extends TestCase
                 ->where('records.data.0.attendance_review_days', 1));
     }
 
-    public function test_hr_can_confirm_reviewed_dtr_punches_as_four_slots(): void
+    public function test_old_manual_dtr_confirmation_is_unavailable(): void
     {
         $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
         $employee = Employee::factory()->create();
-        $batch = AttendanceImport::query()->create(['file_name' => 'test.dat', 'status' => 'completed']);
-        foreach ([['07:50:00', 0], ['12:03:00', 2], ['12:58:00', 3], ['17:02:00', 1]] as [$time, $state]) {
-            AttendancePunch::query()->create([
-                'attendance_import_id' => $batch->id,
-                'import_batch_id' => $batch->id,
-                'biometric_id' => 15,
-                'machine_user_id' => 15,
-                'device_id' => 1,
-                'punched_at' => '2026-10-19 '.$time,
-                'punch_state' => $state,
-                'created_at' => now(),
-            ]);
-        }
-        $employee->forceFill(['biometric_id' => 15])->save();
 
-        $this->actingAs($hr)
-            ->put("/hris/attendance/dtr/{$employee->id}/review", [
-                'attendance_date' => '2026-10-19',
-                'am_in' => '07:50',
-                'am_out' => '12:03',
-                'pm_in' => '12:58',
-                'pm_out' => '17:02',
-            ])
-            ->assertRedirect();
-
-        $this->assertDatabaseHas('attendance_records', [
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-10-19',
-            'status' => 'present',
-            'source' => 'manual-review',
-        ]);
+        $this->actingAs($hr)->put("/hris/attendance/dtr/{$employee->id}/review", [])->assertNotFound();
+        $this->assertDatabaseCount('attendance_records', 0);
     }
 
     public function test_attendance_entries_can_still_be_managed_from_the_entries_view(): void

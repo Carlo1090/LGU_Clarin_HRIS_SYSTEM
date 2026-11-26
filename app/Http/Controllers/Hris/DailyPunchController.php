@@ -148,7 +148,7 @@ class DailyPunchController
             ->filter(fn ($group, string $key): bool => $this->dateFromGroupKey($key) >= $startDate && $this->dateFromGroupKey($key) <= $endDate);
         $calendar = $this->calendarContext($groups);
         $absent = AttendanceDaily::query()
-            ->where('status', 'absent')
+            ->where(fn ($query) => $query->where('status', 'absent')->orWhereNotNull('flags->correction_slots'))
             ->when($departmentUnavailable, fn (Builder $builder) => $builder->whereRaw('1 = 0'))
             ->whereBetween('work_date', [$startDate, $endDate])
             ->whereIn('employee_id', Employee::query()->select('id')
@@ -176,8 +176,13 @@ class DailyPunchController
             $machineUserId = $dayPunches->first()?->machine_user_id ?? $employee?->biometric_id;
             $day = $employee === null ? null : $attendance->employeeDay($employee->id, $date);
             $slots = array_fill_keys(self::SLOT_NAMES, []);
+            $correctionTimes = [];
             $missing = [];
             foreach (self::SLOT_NAMES as $field => $slot) {
+                if (in_array($field, $day['flags']['correction_slots'] ?? [], true)) {
+                    $timestamp = $day['slots'][$field];
+                    $correctionTimes[$slot] = substr($timestamp, 0, 10) === $date ? substr($timestamp, 11) : $timestamp;
+                }
                 if ($day['flags']['missing_'.$field] ?? false) {
                     $missing[] = $slot;
                 }
@@ -238,6 +243,7 @@ class DailyPunchController
                 'employee_number' => $employee?->employee_number,
                 'department_name' => $employee?->department?->name,
                 'slots' => $slots,
+                'correction_times' => (object) $correctionTimes,
                 'punches' => $allPunches,
                 'flags' => $flags,
                 'flag_labels' => [...$labels, ...($calendar[0][$date] ?? []), ...($calendar[$employee?->id][$date] ?? [])],
@@ -421,7 +427,7 @@ class DailyPunchController
         foreach ($rows as $row) {
             $slotValues = [];
             foreach (self::SLOT_NAMES as $slot) {
-                $slotValues[$slot] = implode(', ', array_column($row['slots'][$slot], 'time'));
+                $slotValues[$slot] = $row['correction_times']->{$slot} ?? implode(', ', array_column($row['slots'][$slot], 'time'));
             }
             $daily[] = [
                 $row['employee_name'] ?? 'Unlinked ID '.$row['machine_user_id'],

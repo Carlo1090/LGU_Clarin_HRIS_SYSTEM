@@ -15,6 +15,8 @@ class PunchClassifier
     /**
      * @param list<array{punched_at:string, raw_status?:int|null}> $rawPunches
      * @param array{am_in:string, am_out:string, pm_in:string, pm_out:string, grace_minutes?:int, crosses_midnight?:bool, schedule_source?:string, schedule_id?:int}|null $schedule
+     * @param array<string, string> $overrides
+     * @param array<string, string> $recordedSlots
      * @return array{
      *     am_in_at:string|null,
      *     am_out_at:string|null,
@@ -29,25 +31,22 @@ class PunchClassifier
      *     punches:list<array{punched_at:string,slot:string|null,duplicate_merged:bool}>
      * }
      */
-    public function classify(array $rawPunches, ?array $schedule, string $workDate): array
+    public function classify(array $rawPunches, ?array $schedule, string $workDate, array $overrides = [], array $recordedSlots = []): array
     {
         if ($schedule === null) {
+            $slots = array_replace(array_fill_keys(['am_in', 'am_out', 'pm_in', 'pm_out'], null), $recordedSlots, $overrides);
+
             return [
-                'am_in_at' => null,
-                'am_out_at' => null,
-                'pm_in_at' => null,
-                'pm_out_at' => null,
+                'am_in_at' => $slots['am_in'],
+                'am_out_at' => $slots['am_out'],
+                'pm_in_at' => $slots['pm_in'],
+                'pm_out_at' => $slots['pm_out'],
                 'late_minutes_am' => 0,
                 'late_minutes_pm' => 0,
                 'undertime_minutes' => 0,
                 'status' => 'no_schedule',
                 'flags' => ['no_schedule' => true],
-                'slots' => [
-                    'am_in' => null,
-                    'am_out' => null,
-                    'pm_in' => null,
-                    'pm_out' => null,
-                ],
+                'slots' => $slots,
                 'punches' => array_map(
                     fn (array $punch): array => [
                         'punched_at' => (string) $punch['punched_at'],
@@ -125,6 +124,7 @@ class PunchClassifier
                 }
             }
         }
+        $assigned = array_replace($assigned, array_diff_key($recordedSlots, array_filter($assigned)), $overrides);
         foreach (['am_in', 'am_out', 'pm_in', 'pm_out'] as $slot) {
             if ($assigned[$slot] === null) {
                 $flags['missing_'.$slot] = true;

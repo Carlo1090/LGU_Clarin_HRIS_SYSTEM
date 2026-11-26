@@ -13,6 +13,7 @@ use App\Models\Announcement;
 use App\Models\Applicant;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
+use App\Models\AttendanceCorrection;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmployeeProfileDraft;
@@ -434,19 +435,51 @@ class HrisResourceController extends Controller
                 ->withQueryString();
             $attendance = app(AttendanceRecomputer::class);
             $daily = AttendanceDaily::query()->whereIn('employee_id', $records->getCollection()->modelKeys())
-                ->whereBetween('work_date', [$startDate, $endDate])->get(['employee_id', 'work_date', 'status'])
+                ->whereBetween('work_date', [$startDate, $endDate])->get(['employee_id', 'work_date', 'status', 'flags'])
                 ->groupBy('employee_id');
+            $corrections = AttendanceCorrection::query()
+                ->whereIn('employee_id', $records->getCollection()->modelKeys())
+                ->forWorkDates($startDate, $endDate)->with('attendanceRecord:id,attendance_date')
+                ->latest('id')->get(['id', 'employee_id', 'attendance_record_id', 'work_date', 'proposed_time_in', 'status'])->groupBy('employee_id');
             $unlinkedMachineIds = $departmentHead ? 0 : AttendancePunch::query()->unassigned()
                 ->whereBetween('punched_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
                 ->distinct()->count('machine_user_id');
-            $records->through(fn (Employee $employee) => [
-                'id' => $employee->id,
-                'name' => trim("{$employee->last_name}, {$employee->first_name} {$employee->suffix}"),
-                'employee_number' => $employee->employee_number,
-                'department' => $employee->department?->name,
-                'avatar' => $employee->avatar,
-                'dtr_url' => route('hris.attendance.dtr', ['employee' => $employee, 'month' => $month], false),
-            ] + $this->attendanceLogSummary($employee, $daily->get($employee->id, collect()), $attendance, $startDate, $endDate));
+            $records->through(function (Employee $employee) use ($daily, $corrections, $attendance, $startDate, $endDate): array {
+                $summary = $attendance->reviewSummary($employee, $startDate, $endDate, $daily->get($employee->id, collect()));
+                $requests = $corrections->get($employee->id, collect());
+                $pending = $requests->whereIn('status', AttendanceCorrectionController::OPEN_STATUSES);
+                $byDay = $requests->groupBy(fn ($row) => $row->work_date ?? $row->attendanceRecord?->attendance_date ?? substr($row->proposed_time_in ?? '', 0, 10));
+                $dates = array_unique([...array_keys($summary['flagged']), ...$byDay->keys()->all()]);
+                sort($dates);
+
+                return [
+                    'id' => $employee->id,
+                    'name' => trim("{$employee->last_name}, {$employee->first_name} {$employee->suffix}"),
+                    'employee_number' => $employee->employee_number,
+                    'department' => $employee->department?->name,
+                    'avatar' => $employee->avatar,
+                    'attendance_complete_days' => $summary['complete'],
+                    'attendance_review_days' => count($summary['flagged']),
+                    'requests_pending' => $pending->count(),
+                    'review_days' => array_map(function (string $date) use ($summary, $byDay): array {
+                        $requests = $byDay->get($date, collect());
+                        $state = $requests->first(fn ($row) => in_array($row->status, AttendanceCorrectionController::OPEN_STATUSES, true))?->status
+                            ?? $requests->first()?->status;
+
+                        return [
+                            'date' => $date,
+                            'finding' => $summary['flagged'][$date] ?? null,
+                            'state' => match ($state) {
+                                'pending', 'department_reviewed' => 'Requested',
+                                'approved' => 'Approved',
+                                'returned' => 'Returned',
+                                'rejected' => 'Rejected',
+                                default => 'No request',
+                            },
+                        ];
+                    }, $dates),
+                ];
+            });
 
             return Inertia::render('hris/resources/index', [
                 'resource' => $resource,
@@ -835,46 +868,6 @@ class HrisResourceController extends Controller
         }
 
         return to_route('hris.resources.index', $parameters);
-    }
-
-    /**
-     * @param  Collection<int, AttendanceDaily>  $daily
-     * @return array{attendance_complete_days: int, attendance_review_days: int}
-     */
-    private function attendanceLogSummary(Employee $employee, Collection $daily, AttendanceRecomputer $attendance, string $from, string $to): array
-    {
-        $complete = $review = 0;
-        $manualDays = $employee->attendanceRecords->unique('attendance_date')->keyBy('attendance_date');
-        foreach ($manualDays as $entry) {
-            $status = str_replace([' ', '-'], '_', strtolower(trim($entry->status)));
-            if (in_array($status, ['leave', 'on_leave', 'holiday', 'rest_day', 'day_off'], true)) {
-                continue;
-            }
-            if ($entry->time_in && $entry->time_out) {
-                $complete++;
-            } else {
-                $review++;
-            }
-        }
-
-        $stored = $daily->keyBy(fn (AttendanceDaily $day): string => $day->work_date->toDateString());
-        $workDates = array_unique([
-            ...$attendance->recordedWorkDates($employee->id, $from, $to),
-            ...$stored->where('status', 'absent')->keys()->all(),
-        ]);
-        foreach ($workDates as $date) {
-            if ($manualDays->has($date)) {
-                continue;
-            }
-            $status = $stored->get($date)?->status ?? $attendance->employeeDay($employee->id, $date)['status'];
-            if ($status === 'complete') {
-                $complete++;
-            } elseif (in_array($status, ['incomplete', 'absent', 'no_schedule'], true)) {
-                $review++;
-            }
-        }
-
-        return ['attendance_complete_days' => $complete, 'attendance_review_days' => $review];
     }
 
     /** @return array{model: class-string<Model>, title: string, fields: list<array{name: string, label: string, type: string, required?: bool, options?: string}>, rules: array<string, string>, unique: list<string>} */

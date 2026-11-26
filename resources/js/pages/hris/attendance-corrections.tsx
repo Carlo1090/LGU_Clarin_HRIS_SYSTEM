@@ -1,450 +1,253 @@
-import { useFeedback } from '@/components/feedback-provider';
-import { useTableSearch } from '@/components/table-search';
-import TableAction from '@/components/table-action';
-import PersonAvatar from '@/components/person-avatar';
-import {
-    Table,
-    TableHeader,
-    TableHead,
-    TableBody,
-    TableCell,
-    TableRow,
-} from '@/components/ui/table';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import {
-    Check,
-    X,
-    CalendarClock,
-    CalendarMinus,
-    ClipboardList,
-    UserCheck,
-} from 'lucide-react';
-import { WorkspaceOverview } from '@/components/workspace-metrics';
-import { useState } from 'react';
+import WorkspaceHeader from '@/components/workspace-header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Head, Link, useForm } from '@inertiajs/react';
 
 const path = '/hris/attendance/corrections';
-const control = 'w-full rounded-xl border border-input bg-background px-3 py-2';
-const button =
-    'rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50';
-
-type Log = {
-    id: number;
-    attendance_date: string;
-    time_in: string | null;
-    time_out: string | null;
-};
+const slots = {
+    am_in: 'AM in',
+    am_out: 'AM out',
+    pm_in: 'PM in',
+    pm_out: 'PM out',
+} as const;
 
 type Correction = {
     id: number;
-    date: string | null;
-    missingDay: boolean;
+    date: string;
     employee: string;
-    avatar?: string | null;
-    timeIn: string | null;
-    timeOut: string | null;
+    slot: keyof typeof slots | null;
+    proposedAt: string | null;
+    legacyTimes: string[];
     reason: string;
+    evidence: string | null;
+    filer: string | null;
     status: string;
+    comment: string | null;
     canReview: boolean;
 };
 
-export default function AttendanceCorrections({
-    records,
-    logs,
-    advanceLabel,
-    employeeId,
-    employeeNumber,
-    canManageAttendance,
-}: {
+type Props = {
     records: {
         data: Correction[];
         prev_page_url: string | null;
         next_page_url: string | null;
     };
-    logs: Log[] | null;
-    advanceLabel: string;
+    selected: (Correction & { punches: string[] }) | null;
     employeeId: number | null;
     employeeNumber: string | null;
+    employeeView: boolean;
+    month: string;
+    flagged: Record<string, string>;
+    punches: Record<string, string[]>;
+    canFile: boolean;
     canManageAttendance: boolean;
-}) {
-    const search = useTableSearch(
-        records.data,
-        [
-            'Employee',
-            'Attendance date',
-            'Time in',
-            'Time out',
-            'Reason',
-            'Status',
-            'Day type',
-        ],
-        (row) => [
-            row.employee,
-            row.date,
-            row.timeIn,
-            row.timeOut,
-            row.reason,
-            row.status.replaceAll('_', ' '),
-            row.missingDay ? 'Missing day' : 'Existing record',
-        ],
-    );
-    const showReview = records.data.some((row) => row.canReview);
-    const columns = [
-        'Employee',
-        'Attendance date',
-        'Proposed time in',
-        'Proposed time out',
-        'Reason',
-        'Status',
-    ];
-    if (showReview) columns.push('Actions');
-    const form = useForm({
-        attendance_record_id: '',
-        time_in: '',
-        time_out: '',
-        reason: '',
-    });
-    const [reviewing, setReviewing] = useState(false);
-    const [decisionError, setDecisionError] = useState('');
+};
 
-    const feedback = useFeedback();
-    async function review(id: number, decision: 'advance' | 'reject') {
-        if (
-            !(await feedback.confirm(
-                decision === 'advance'
-                    ? advanceLabel + '?'
-                    : 'Reject this correction?',
-            ))
-        )
-            return;
-        setDecisionError('');
-        setReviewing(true);
-        router.post(
-            `${path}/${id}/review`,
-            { decision },
-            {
-                preserveScroll: true,
-                onError: (errors) =>
-                    setDecisionError(
-                        errors.decision ?? 'Could not save the decision.',
-                    ),
-                onFinish: () => setReviewing(false),
-            },
-        );
-    }
+function statusLabel(status: string) {
+    return ['pending', 'department_reviewed'].includes(status)
+        ? 'Requested'
+        : status.replaceAll('_', ' ');
+}
+
+export default function AttendanceCorrections({
+    records,
+    selected,
+    employeeId,
+    employeeNumber,
+    employeeView,
+    month,
+    flagged,
+    punches,
+    canFile,
+    canManageAttendance,
+}: Props) {
+    const filter = { month, ...(employeeId && !employeeView ? { employee: employeeId } : {}) };
+    const dates = Object.keys({ ...flagged, ...punches }).sort();
+    const request = useForm({
+        employee: employeeView ? null : employeeId,
+        work_date: '',
+        slot: '',
+        proposed_at: '',
+        reason: '',
+        evidence: '',
+    });
+    const review = useForm({ decision: '', comment: '' });
 
     return (
         <div className="workspace-page">
-            <Head title="Attendance records" />
-            <AttendanceWorkspaceHeader
-                active="corrections"
-                canManage={canManageAttendance}
-            />
-            {employeeId && (
-                <div className="workspace-panel space-y-2 p-4 text-sm">
-                    <p>
-                        Check{' '}
-                        <a href="#correction-history" className="underline">
-                            Correction history
-                        </a>{' '}
-                        for the affected date. If there is a pending request,
-                        verify the proposed times and click{' '}
-                        <strong>✓ Approve correction</strong>.
-                    </p>
-                    {logs && (
-                        <p>
-                            If there is no request, use <strong>New correction</strong>{' '}
-                            below. Select the existing attendance record, or
-                            choose <strong>Missing day</strong> if no record
-                            exists for that date. Submit the verified times and
-                            then approve the request in Correction history.
-                        </p>
-                    )}
-                    <Link href={path} className="inline-block underline">
-                        Show corrections for all employees
+            <Head title={employeeView ? 'My attendance' : 'Attendance records'} />
+            {employeeView ? (
+                <WorkspaceHeader title="My attendance" description="View your punches, flagged days, and correction requests.">
+                    <Link href="/hris/portal/my-attendance" className="underline">
+                        Daily time records
                     </Link>
-                </div>
+                </WorkspaceHeader>
+            ) : (
+                <AttendanceWorkspaceHeader active="corrections" month={month} canManage={canManageAttendance} />
             )}
 
-            <WorkspaceOverview
-                title="Correction overview"
-                description="Requests on this page and their review status."
-                metrics={[
-                    {
-                        label: 'Requests',
-                        count: records.data.length,
-                        icon: ClipboardList,
-                    },
-                    {
-                        label: 'Missing days',
-                        count: records.data.filter((row) => row.missingDay)
-                            .length,
-                        icon: CalendarMinus,
-                    },
-                    {
-                        label: 'In review',
-                        count: records.data.filter((row) =>
-                            ['pending', 'department_reviewed'].includes(
-                                row.status,
-                            ),
-                        ).length,
-                        icon: CalendarClock,
-                    },
-                    {
-                        label: 'Ready for your review',
-                        count: records.data.filter((row) => row.canReview)
-                            .length,
-                        icon: UserCheck,
-                    },
-                ]}
-            />
-            {logs && (
-                <section
-                    aria-labelledby="request-heading"
-                    className="workspace-panel p-6"
-                >
-                    <h2 id="request-heading" className="text-lg font-semibold">
-                        New correction for {employeeNumber}
-                    </h2>
-                    <form
-                        className="mt-4 grid gap-4 sm:grid-cols-2"
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            form.post(`${path}?employee=${employeeId}`, {
-                                preserveScroll: true,
-                                onSuccess: () => form.reset(),
-                            });
-                        }}
-                    >
-                        <label className="grid gap-1 text-sm sm:col-span-2">
-                            Attendance record
-                            <select
-                                className={control}
-                                value={form.data.attendance_record_id}
-                                onChange={(event) => {
-                                    const log = logs.find(
-                                        ({ id }) =>
-                                            String(id) === event.target.value,
-                                    );
-                                    form.setData({
-                                        ...form.data,
-                                        attendance_record_id:
-                                            event.target.value,
-                                        time_in:
-                                            log?.time_in
-                                                ?.replace(' ', 'T')
-                                                .slice(0, 16) ?? '',
-                                        time_out:
-                                            log?.time_out
-                                                ?.replace(' ', 'T')
-                                                .slice(0, 16) ?? '',
-                                    });
-                                }}
-                            >
-                                <option value="">
-                                    Missing day (no existing record)
-                                </option>
-                                {logs.map((log) => (
-                                    <option key={log.id} value={log.id}>
-                                        {log.attendance_date} · Record #{log.id}
-                                    </option>
-                                ))}
-                            </select>
-                            {form.errors.attendance_record_id && (
-                                <span className="text-destructive">
-                                    {form.errors.attendance_record_id}
-                                </span>
-                            )}
-                        </label>
-                        {(['time_in', 'time_out'] as const).map((field) => (
-                            <label key={field} className="grid gap-1 text-sm">
-                                {field === 'time_in'
-                                    ? 'Corrected time in'
-                                    : 'Corrected time out'}
-                                <input
-                                    required
-                                    type="datetime-local"
-                                    className={control}
-                                    value={form.data[field]}
-                                    onChange={(event) =>
-                                        form.setData(field, event.target.value)
-                                    }
-                                />
-                                {form.errors[field] && (
-                                    <span className="text-destructive">
-                                        {form.errors[field]}
-                                    </span>
-                                )}
+            {employeeId && (
+                <section className="workspace-panel space-y-4 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h2 className="font-semibold">
+                            {employeeView ? 'My punches and flagged days' : `Flagged days for ${employeeNumber}`}
+                        </h2>
+                        <form action={path} className="flex items-end gap-2">
+                            {!employeeView && <input type="hidden" name="employee" value={employeeId} />}
+                            <label className="grid gap-1 text-sm">
+                                Attendance month
+                                <Input type="month" name="month" defaultValue={month} required />
                             </label>
-                        ))}
-                        <label className="grid gap-1 text-sm sm:col-span-2">
-                            Reason
-                            <textarea
-                                required
-                                maxLength={2000}
-                                rows={3}
-                                className={control}
-                                value={form.data.reason}
-                                onChange={(event) =>
-                                    form.setData('reason', event.target.value)
-                                }
-                            />
-                            {form.errors.reason && (
-                                <span className="text-destructive">
-                                    {form.errors.reason}
-                                </span>
-                            )}
+                            <Button type="submit" variant="outline">Show month</Button>
+                        </form>
+                    </div>
+                    {dates.length ? (
+                        <ul className="divide-y border-y">
+                            {dates.map((date) => (
+                                <li key={date} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                                    <div>
+                                        <strong>{date}</strong>
+                                        {flagged[date] && (
+                                            <span className="ml-2 capitalize">{flagged[date].replaceAll('_', ' ')}</span>
+                                        )}
+                                        {employeeView && (
+                                            <p className="text-muted-foreground">
+                                                {punches[date]?.join(' · ') || 'No recorded punches'}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {canFile && flagged[date] && (
+                                        <Button asChild size="sm" variant="outline">
+                                            <a href="#file-correction" onClick={() => {
+                                                request.setData({
+                                                    ...request.data,
+                                                    work_date: date,
+                                                    proposed_at: '',
+                                                });
+                                            }}>
+                                                Request correction
+                                            </a>
+                                        </Button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    ) : <p className="text-sm text-muted-foreground">No days to display this month.</p>}
+                </section>
+            )}
+
+            {canFile && Object.keys(flagged).length > 0 && (
+                <section id="file-correction" className="workspace-panel p-4">
+                    <h2 className="font-semibold">{employeeView ? 'File a correction' : `File for ${employeeNumber}`}</h2>
+                    <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={(event) => {
+                        event.preventDefault();
+                        request.post(path, { preserveScroll: true, onSuccess: () => request.reset() });
+                    }}>
+                        <label className="grid gap-1 text-sm">
+                            Flagged date
+                            <select className="rounded-md border bg-background p-2" required value={request.data.work_date}
+                                onChange={(event) => request.setData('work_date', event.target.value)}>
+                                <option value="">Choose a date</option>
+                                {Object.keys(flagged).map((date) => <option key={date}>{date}</option>)}
+                            </select>
                         </label>
-                        <div className="flex items-center gap-3 sm:col-span-2">
-                            <button
-                                type="submit"
-                                className={button}
-                                disabled={form.processing}
-                            >
-                                Submit correction
-                            </button>
-                            {form.recentlySuccessful && (
-                                <span
-                                    role="status"
-                                    className="text-sm text-accent-foreground"
-                                >
-                                    Correction submitted.
-                                </span>
-                            )}
-                        </div>
+                        <label className="grid gap-1 text-sm">
+                            Slot
+                            <select className="rounded-md border bg-background p-2" required value={request.data.slot}
+                                onChange={(event) => request.setData('slot', event.target.value)}>
+                                <option value="">Choose a slot</option>
+                                {Object.entries(slots).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+                            </select>
+                        </label>
+                        <label className="grid gap-1 text-sm">
+                            Proposed date and time
+                            <Input type="datetime-local" required value={request.data.proposed_at}
+                                onChange={(event) => request.setData('proposed_at', event.target.value)} />
+                        </label>
+                        <label className="grid gap-1 text-sm">
+                            Evidence or memo reference (optional)
+                            <Input value={request.data.evidence} maxLength={2000}
+                                onChange={(event) => request.setData('evidence', event.target.value)} />
+                        </label>
+                        <label className="grid gap-1 text-sm sm:col-span-2">
+                            {employeeView ? 'Reason' : 'Reason for filing on the employee’s behalf'}
+                            <textarea className="rounded-md border bg-background p-2" required maxLength={2000} value={request.data.reason}
+                                onChange={(event) => request.setData('reason', event.target.value)} />
+                        </label>
+                        {Object.values(request.errors).map((error) => <p key={error} role="alert" className="text-sm text-destructive">{error}</p>)}
+                        <div><Button disabled={request.processing}>Submit correction</Button></div>
                     </form>
                 </section>
             )}
 
-            {decisionError && (
-                <p role="alert" className="text-sm text-destructive">
-                    {decisionError}
-                </p>
+            {selected && (
+                <section id="request-details" className="workspace-panel space-y-4 p-4">
+                    <h2 className="font-semibold">Request #{selected.id} · {selected.employee} · {selected.date}</h2>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <h3 className="text-sm font-semibold">Raw punches</h3>
+                            {selected.punches.length ? (
+                                <ul className="text-sm">{selected.punches.map((time, index) => <li key={index}>{time}</li>)}</ul>
+                            ) : <p className="text-sm">No recorded punches.</p>}
+                        </div>
+                        <div className="space-y-1 text-sm">
+                            <h3 className="font-semibold">Proposal</h3>
+                            <p>{selected.slot ? `${slots[selected.slot]} · ${selected.proposedAt}` : selected.legacyTimes.join(' · ')}</p>
+                            <p>Filed by {selected.filer ?? 'Unrecorded'}</p>
+                            <p>{selected.reason}</p>
+                            {selected.evidence && <p>Evidence or memo reference · {selected.evidence}</p>}
+                            <p className="capitalize">Status · {statusLabel(selected.status)}</p>
+                            {selected.comment && <p>Decision comment · {selected.comment}</p>}
+                        </div>
+                    </div>
+                    {selected.canReview && (
+                        <form key={selected.id} className="space-y-2" onSubmit={(event) => {
+                            event.preventDefault();
+                            const button = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+                            if (!button?.value) return;
+                            review.transform((data) => ({ ...data, decision: button.value }));
+                            review.post(`${path}/${selected.id}/review`, { preserveScroll: true, onSuccess: () => review.reset() });
+                        }}>
+                            {!selected.slot && <p className="text-sm">Return this older request for filing against a specific slot.</p>}
+                            <label className="grid gap-1 text-sm">
+                                Decision comment (required when returning)
+                                <textarea className="rounded-md border bg-background p-2" maxLength={2000} value={review.data.comment}
+                                    onChange={(event) => review.setData('comment', event.target.value)} />
+                            </label>
+                            {Object.values(review.errors).map((error) => <p key={error} role="alert" className="text-sm text-destructive">{error}</p>)}
+                            <div className="flex flex-wrap gap-2">
+                                {selected.slot && <Button value="approve" disabled={review.processing}>Approve</Button>}
+                                <Button value="return" variant="outline" disabled={review.processing}>Return with comment</Button>
+                                <Button value="reject" variant="destructive" disabled={review.processing}>Reject</Button>
+                            </div>
+                        </form>
+                    )}
+                </section>
             )}
-            <section
-                aria-labelledby="correction-history"
-                className="workspace-panel overflow-hidden"
-            >
-                <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-5 sm:px-6">
-                    <h2
-                        id="correction-history"
-                        className="text-lg font-semibold"
-                    >
-                        Correction history
-                    </h2>
-                    <span className="text-xs text-muted-foreground">
-                        {records.data.length} on this page
-                    </span>
-                </header>
-                {search.toolbar}
-                <Table
-                    aria-labelledby="correction-history"
-                    className="workspace-record-table"
-                >
-                    <TableHeader className="workspace-table-head">
-                        <TableRow>
-                            {columns.map((column) => (
-                                <TableHead scope="col" key={column}>
-                                    {column}
-                                </TableHead>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {search.rows.map((row) => (
-                            <TableRow key={row.id}>
-                                <TableHead scope="row">
-                                    <span className="inline-flex items-center gap-2">
-                                        <PersonAvatar
-                                            name={row.employee}
-                                            src={row.avatar}
-                                        />
-                                        {row.employee}
-                                    </span>
-                                </TableHead>
-                                <TableCell>
-                                    {row.date ?? 'Date unavailable'}
-                                    {row.missingDay && (
-                                        <span className="block text-xs text-muted-foreground">
-                                            Missing day
-                                        </span>
-                                    )}
-                                </TableCell>
-                                <TableCell>{row.timeIn ?? '—'}</TableCell>
-                                <TableCell>{row.timeOut ?? '—'}</TableCell>
-                                <TableCell className="max-w-sm min-w-48 break-words whitespace-normal">
-                                    {row.reason}
-                                </TableCell>
-                                <TableCell>
-                                    <span className="rounded-full bg-accent px-3 py-1 text-xs text-accent-foreground capitalize">
-                                        {row.status.replaceAll('_', ' ')}
-                                    </span>
-                                </TableCell>
-                                {showReview && (
-                                    <TableCell>
-                                        {row.canReview && (
-                                            <div className="flex gap-2">
-                                                <TableAction
-                                                    icon={Check}
-                                                    label={advanceLabel}
-                                                    disabled={reviewing}
-                                                    onClick={() =>
-                                                        review(
-                                                            row.id,
-                                                            'advance',
-                                                        )
-                                                    }
-                                                />
-                                                <TableAction
-                                                    icon={X}
-                                                    label="Reject correction"
-                                                    className="text-destructive"
-                                                    disabled={reviewing}
-                                                    onClick={() =>
-                                                        review(row.id, 'reject')
-                                                    }
-                                                />
-                                            </div>
-                                        )}
-                                    </TableCell>
-                                )}
-                            </TableRow>
+
+            <section className="workspace-panel space-y-3 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="font-semibold">Correction requests</h2>
+                    {!employeeView && employeeId && <Link href={path} className="text-sm underline">Show all employees</Link>}
+                </div>
+                {records.data.length ? (
+                    <ul className="divide-y border-y">
+                        {records.data.map((row) => (
+                            <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                                <span>#{row.id} · {row.employee} · {row.date} {row.slot && `· ${slots[row.slot]}`}</span>
+                                <span className="capitalize">{statusLabel(row.status)}</span>
+                                <Link className="underline" href={path} data={{ ...filter, request: row.id }} preserveScroll={false}>
+                                    {row.canReview ? 'Review request' : 'View request'}
+                                </Link>
+                            </li>
                         ))}
-                        {!search.rows.length && (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="py-8 text-center text-muted-foreground"
-                                >
-                                    No corrections found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-                {(records.prev_page_url || records.next_page_url) && (
-                    <nav
-                        aria-label="Correction pages"
-                        className="flex gap-4 border-t px-5 py-3 text-sm"
-                    >
-                        {records.prev_page_url && (
-                            <Link
-                                className="underline"
-                                href={records.prev_page_url}
-                            >
-                                Previous
-                            </Link>
-                        )}
-                        {records.next_page_url && (
-                            <Link
-                                className="underline"
-                                href={records.next_page_url}
-                            >
-                                Next
-                            </Link>
-                        )}
-                    </nav>
-                )}
+                    </ul>
+                ) : <p className="text-sm text-muted-foreground">No correction requests.</p>}
+                <nav aria-label="Request pages" className="flex gap-4 text-sm">
+                    {records.prev_page_url && <Link className="underline" href={records.prev_page_url}>Previous</Link>}
+                    {records.next_page_url && <Link className="underline" href={records.next_page_url}>Next</Link>}
+                </nav>
             </section>
         </div>
     );

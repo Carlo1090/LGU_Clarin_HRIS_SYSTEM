@@ -49,7 +49,7 @@ test('HR navigation includes attendance records and omits a separate corrections
             ->where('hrisNavigation.0.href', '/hris/attendance')
             ->where('hrisNavigation.1.href', '/hris/employees')
             ->where('hrisNavigation.2.href', '/hris/leave-applications')
-            ->where('canViewAttendanceCorrections', false)
+            ->where('canViewAttendanceCorrections', true)
             ->where('hrisNavigation', fn ($items) => ! collect($items)->contains('title', 'Attendance corrections')));
 
     $this->get('/hris/attendance-corrections')->assertRedirect('/hris/attendance/corrections');
@@ -270,73 +270,105 @@ test('leave advances through authorized reviewers and charges the balance once',
     $this->assertDatabaseCount('audit_logs', 3);
 });
 
-test('attendance corrections go directly to the HRMO Head for approval', function () {
-    $user = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'Employee'])->id]);
-    $employee = Employee::factory()->create(['user_id' => $user->id]);
+test('activated employees and HR officers file slot corrections for HRMO decision without editing punches', function () {
+    $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-26 12:00:00'));
+    $role = Role::factory()->create(['name' => 'Employee']);
+    $user = User::factory()->for($role)->create();
+    $employee = Employee::factory()->create(['user_id' => $user->id, 'biometric_id' => 1090, 'date_hired' => '2020-01-01']);
     $user->forceFill(['employee_id' => $employee->id])->save();
-    $log = AttendanceRecord::factory()->create(['employee_id' => $employee->id, 'attendance_date' => '2026-11-01', 'time_out' => null]);
-    $otherLog = AttendanceRecord::factory()->create(['attendance_date' => '2026-11-01']);
+    $other = Employee::factory()->create();
+    $officer = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+    $hrmo = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create();
+    \App\Models\AuditLog::create(['user_id' => $user->id, 'action' => 'employee.activation_completed']);
+    \App\Attendance\Models\DepartmentSchedule::create([
+        'department_id' => $employee->department_id,
+        'am_in' => '08:00', 'am_out' => '12:00', 'pm_in' => '13:00', 'pm_out' => '17:00',
+        'effective_from' => '2026-11-01',
+    ]);
+    $batch = \App\Models\AttendanceImport::create(['file_name' => 'test.dat', 'status' => 'completed']);
+    foreach (['08:00:00', '12:00:00', '17:00:00'] as $time) {
+        \App\Models\AttendancePunch::create([
+            'attendance_import_id' => $batch->id, 'import_batch_id' => $batch->id,
+            'biometric_id' => 1090, 'machine_user_id' => 1090, 'device_id' => 1,
+            'punched_at' => '2026-11-18 '.$time, 'created_at' => now(),
+        ]);
+    }
+    $raw = \App\Models\AttendancePunch::orderBy('id')->get()->toArray();
     $path = '/hris/attendance/corrections';
     $data = [
-        'employee' => $employee->id,
-        'attendance_record_id' => $log->id,
-        'time_in' => '2026-11-01T08:00',
-        'time_out' => '2026-11-01T16:00',
-        'reason' => 'Missing time out',
+        'work_date' => '2026-11-18',
+        'slot' => 'pm_in',
+        'proposed_at' => '2026-11-18T13:05',
+        'reason' => 'Missed lunch return punch',
+        'evidence' => 'Memo 18',
     ];
 
-    $this->actingAs($user)->get('/hris/portal/my-attendance')
-        ->assertInertia(fn (Assert $page) => $page->missing('correctionsUrl'));
-    $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create();
-    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
-    $hrmo = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create();
-    foreach ([$user, $head, $hr] as $otherRole) {
-        $this->actingAs($otherRole)->get($path)->assertForbidden();
-        $this->post($path, $data)->assertForbidden();
-    }
-
-    $employeeCorrections = $path.'?employee='.$employee->id;
-    $this->actingAs($hrmo)->get('/hris/attendance')
-        ->assertInertia(fn (Assert $page) => $page->where('canViewAttendanceCorrections', true));
-    $this->post($path, array_replace($data, ['attendance_record_id' => $otherLog->id]))->assertNotFound();
-    $this->post($employeeCorrections, array_diff_key($data, ['employee' => true]))->assertRedirect($employeeCorrections);
-    $this->post($path, $data)->assertSessionHasErrors('attendance_record_id');
-    $entry = $log->corrections()->sole();
-
-    $review = "{$path}/{$entry->id}/review";
-
-    $this->actingAs($hr)->post($review, ['decision' => 'advance'])->assertForbidden();
-    $this->actingAs($head)->post($review, ['decision' => 'advance'])->assertForbidden();
-    expect($entry->refresh()->status)->toBe('pending');
-    expect($log->refresh()->time_out)->toBeNull();
-    $this->actingAs($hrmo)->get($path.'?employee='.$otherLog->employee_id)
-        ->assertInertia(fn (Assert $page) => $page->has('records.data', 0));
-    $this->get($path.'?employee='.$employee->id)->assertInertia(fn (Assert $page) => $page
+    $this->actingAs($user)->get('/hris/portal/my-leave-credits')->assertRedirect('/hris/my-profile');
+    $this->get('/hris/portal/my-attendance')->assertInertia(fn (Assert $page) => $page->where('correctionsUrl', $path));
+    $this->get($path."?employee={$other->id}")->assertForbidden();
+    $this->get($path)->assertInertia(fn (Assert $page) => $page
         ->where('employeeId', $employee->id)
-        ->where('logs.0.id', $log->id)
-        ->where('records.data.0.canReview', true));
-    $this->post($review, ['decision' => 'advance'])->assertRedirect();
-    expect($entry->refresh()->status)->toBe('approved');
-    expect($log->refresh()->time_out)->toBe('2026-11-01 16:00:00');
-    expect((float) $log->total_hours)->toBe(8.0);
-    $this->assertDatabaseCount('audit_logs', 1);
+        ->where('flagged.2026-11-18', 'incomplete')
+        ->has('punches.2026-11-18', 3));
+    $this->post($path, $data + ['employee' => $other->id])->assertForbidden();
+    $this->post($path, array_replace($data, ['reason' => '']))->assertSessionHasErrors('reason');
+    $this->post($path, array_replace($data, ['work_date' => '2026-11-19', 'proposed_at' => '2026-11-19T13:05']))
+        ->assertSessionHasErrors('work_date');
+    $this->post($path, $data)->assertRedirect($path.'?month=2026-11');
+    $this->post($path, $data)->assertSessionHasErrors('slot');
+    $original = $employee->attendanceCorrections()->sole();
+    $review = "{$path}/{$original->id}/review";
+    $this->post($review, ['decision' => 'approve'])->assertRedirect('/hris/my-profile');
+    $this->actingAs($officer)->post($review, ['decision' => 'approve'])->assertForbidden();
 
-    $missing = array_replace($data, [
-        'attendance_record_id' => null,
-        'time_in' => '2026-11-02T08:00',
-        'time_out' => '2026-11-02T16:00',
+    $this->actingAs($hrmo)->post($path, $data + ['employee' => $employee->id])->assertForbidden();
+    $this->get($path.'?request='.$original->id)->assertInertia(fn (Assert $page) => $page
+        ->where('selected.canReview', true)->where('selected.evidence', 'Memo 18')->has('selected.punches', 3));
+    $this->post($review, ['decision' => 'return'])->assertSessionHasErrors('comment');
+    $this->post($review, ['decision' => 'return', 'comment' => 'Please confirm the return time.'])->assertRedirect();
+    $this->actingAs($user)->get($path.'?request='.$original->id)->assertInertia(fn (Assert $page) => $page
+        ->where('selected.status', 'returned')->where('selected.comment', 'Please confirm the return time.'));
+
+    $this->post($path, $data)->assertRedirect();
+    $rejected = $employee->attendanceCorrections()->where('status', 'pending')->sole();
+    $this->actingAs($hrmo)->post("{$path}/{$rejected->id}/review", ['decision' => 'reject'])->assertRedirect();
+    $this->assertDatabaseHas('audit_logs', ['action' => 'attendance_correction.rejected', 'user_id' => $hrmo->id, 'model_id' => $rejected->id]);
+
+    $officerData = $data + ['employee' => $employee->id];
+    $this->actingAs($officer)->post($path, $officerData)->assertRedirect();
+    $entry = $employee->attendanceCorrections()->where('status', 'pending')->sole();
+    $this->assertSame($officer->id, $entry->filed_by);
+    $attendanceUrl = '/hris/attendance?month=2026-11&q='.$employee->employee_number;
+    $this->actingAs($hrmo)->get($attendanceUrl)
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('records.data.0.requests_pending', 1)
+            ->where('records.data.0.review_days.0.state', 'Requested'));
+    $entry->update(['filed_by' => $hrmo->id]);
+    $this->post("{$path}/{$entry->id}/review", ['decision' => 'approve'])->assertForbidden();
+    $entry->update(['filed_by' => $officer->id, 'proposed_at' => '2026-11-18 18:00:00']);
+    $this->post("{$path}/{$entry->id}/review", ['decision' => 'approve'])->assertSessionHasErrors('decision');
+    expect($entry->refresh()->status)->toBe('pending');
+    $entry->update(['proposed_at' => '2026-11-18 13:05:00']);
+    $this->post("{$path}/{$entry->id}/review", ['decision' => 'approve'])->assertRedirect();
+    $this->post("{$path}/{$entry->id}/review", ['decision' => 'approve'])->assertSessionHasErrors('decision');
+    $this->assertDatabaseHas('attendance_daily', [
+        'employee_id' => $employee->id, 'work_date' => '2026-11-18',
+        'status' => 'complete', 'pm_in_at' => '2026-11-18 13:05:00', 'late_minutes_pm' => 5,
     ]);
-    $this->post($path, $missing)->assertRedirect($employeeCorrections);
-    $this->post($path, $missing)->assertSessionHasErrors('attendance_record_id');
-    $request = $employee->attendanceCorrections()->whereNull('attendance_record_id')->sole();
-    $missingReview = "{$path}/{$request->id}/review";
-    expect($employee->attendanceRecords()->where('attendance_date', '2026-11-02')->exists())->toBeFalse();
+    $this->assertDatabaseCount('attendance_records', 0);
+    $this->assertSame($raw, \App\Models\AttendancePunch::orderBy('id')->get()->toArray());
+    $this->assertDatabaseHas('audit_logs', ['action' => 'attendance_correction.filed', 'user_id' => $officer->id, 'model_id' => $entry->id]);
+    $this->assertDatabaseHas('audit_logs', ['action' => 'attendance_correction.returned', 'user_id' => $hrmo->id, 'model_id' => $original->id]);
+    $this->assertDatabaseHas('audit_logs', ['action' => 'attendance_correction.approved', 'user_id' => $hrmo->id, 'model_id' => $entry->id]);
 
-    $request->update(['status' => 'department_reviewed']);
-    $this->actingAs($hrmo)->post($missingReview, ['decision' => 'advance'])->assertRedirect();
-    $newLog = $employee->attendanceRecords()->where('attendance_date', '2026-11-02')->sole();
-    expect($request->refresh()->attendance_record_id)->toBe($newLog->id);
-    expect($newLog->source)->toBe('approved_correction');
-    $this->post($missingReview, ['decision' => 'advance'])->assertSessionHasErrors('decision');
+    $this->get($attendanceUrl)->assertInertia(fn (Assert $page) => $page
+        ->where('records.data.0.attendance_review_days', 0)
+        ->where('records.data.0.requests_pending', 0)
+        ->where('records.data.0.review_days.0.state', 'Approved'));
+    $this->get('/hris/attendance/daily-punches?start_date=2026-11-18&end_date=2026-11-18&employee='.$employee->id)
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('rows.data.0.correction_times.PM_IN', '13:05:00')->has('rows.data.0.punches', 3));
 
+    $this->actingAs($user)->get($path.'?request='.$entry->id)
+        ->assertInertia(fn (Assert $page) => $page->where('selected.status', 'approved'));
 });
