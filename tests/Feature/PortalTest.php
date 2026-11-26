@@ -267,7 +267,7 @@ test('leave advances through authorized reviewers and charges the balance once',
     $this->assertDatabaseCount('audit_logs', 3);
 });
 
-test('attendance corrections update the time record only after department and HR review', function () {
+test('attendance corrections go directly to the HRMO Head for approval', function () {
     $user = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'Employee'])->id]);
     $employee = Employee::factory()->create(['user_id' => $user->id]);
     $user->forceFill(['employee_id' => $employee->id])->save();
@@ -290,17 +290,20 @@ test('attendance corrections update the time record only after department and HR
     $headEmployee = Employee::factory()->create(['user_id' => $head->id, 'department_id' => $employee->department_id]);
     $head->forceFill(['employee_id' => $headEmployee->id])->save();
     $hr = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'HR Officer'])->id]);
+    $hrmo = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create();
     $review = "{$path}/{$entry->id}/review";
 
-    $this->actingAs($hr)->post($review, ['decision' => 'advance'])->assertSessionHasErrors('decision');
-    $this->actingAs($head)->post($review, ['decision' => 'advance'])->assertRedirect();
-    expect($entry->refresh()->status)->toBe('department_reviewed');
+    $this->actingAs($hr)->post($review, ['decision' => 'advance'])->assertForbidden();
+    $this->actingAs($head)->post($review, ['decision' => 'advance'])->assertForbidden();
+    expect($entry->refresh()->status)->toBe('pending');
     expect($log->refresh()->time_out)->toBeNull();
-    $this->actingAs($hr)->post($review, ['decision' => 'advance'])->assertRedirect();
+    $this->actingAs($hrmo)->get($path)->assertInertia(fn (Assert $page) => $page
+        ->where('records.data.0.canReview', true));
+    $this->post($review, ['decision' => 'advance'])->assertRedirect();
     expect($entry->refresh()->status)->toBe('approved');
     expect($log->refresh()->time_out)->toBe('2026-11-01 16:00:00');
     expect((float) $log->total_hours)->toBe(8.0);
-    $this->assertDatabaseCount('audit_logs', 2);
+    $this->assertDatabaseCount('audit_logs', 1);
 
     $missing = array_replace($data, [
         'attendance_record_id' => null,
@@ -313,10 +316,8 @@ test('attendance corrections update the time record only after department and HR
     $missingReview = "{$path}/{$request->id}/review";
     expect($employee->attendanceRecords()->where('attendance_date', '2026-11-02')->exists())->toBeFalse();
 
-    $this->actingAs($head)->post($missingReview, ['decision' => 'advance'])->assertRedirect();
-    expect($request->refresh()->attendance_record_id)->toBeNull();
-
-    $this->actingAs($hr)->post($missingReview, ['decision' => 'advance'])->assertRedirect();
+    $request->update(['status' => 'department_reviewed']);
+    $this->actingAs($hrmo)->post($missingReview, ['decision' => 'advance'])->assertRedirect();
     $newLog = $employee->attendanceRecords()->where('attendance_date', '2026-11-02')->sole();
     expect($request->refresh()->attendance_record_id)->toBe($newLog->id);
     expect($newLog->source)->toBe('approved_correction');

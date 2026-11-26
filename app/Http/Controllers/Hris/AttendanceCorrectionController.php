@@ -19,6 +19,8 @@ class AttendanceCorrectionController extends Controller
 {
     private const ROLES = ['Employee', 'Department Head', 'HR Officer', 'HRMO Head'];
 
+    public const OPEN_STATUSES = ['pending', 'department_reviewed'];
+
     public static function available(User $user): bool
     {
         return $user->is_active && in_array($user->role?->name, self::ROLES, true);
@@ -50,16 +52,13 @@ class AttendanceCorrectionController extends Controller
                 'timeOut' => $row->proposed_time_out,
                 'reason' => $row->reason,
                 'status' => $row->status,
-                'canReview' => $row->employee_id !== $user->employee_id && match ($role) {
-                    'Department Head' => $row->status === 'pending',
-                    'HR Officer', 'HRMO Head' => $row->status === 'department_reviewed',
-                    default => false,
-                },
+                'canReview' => $role === 'HRMO Head' && $row->employee_id !== $user->employee_id
+                    && in_array($row->status, self::OPEN_STATUSES, true),
             ]),
             'logs' => $role === 'Employee' && $linked
                 ? $employee->attendanceRecords()->orderByDesc('attendance_date')->latest('id')->limit(60)->get(['id', 'attendance_date', 'time_in', 'time_out'])
                 : null,
-            'advanceLabel' => $role === 'Department Head' ? 'Forward to HRMO' : 'Validate and apply',
+            'advanceLabel' => 'Approve correction',
         ]);
     }
 
@@ -93,7 +92,7 @@ class AttendanceCorrectionController extends Controller
                 throw ValidationException::withMessages(['attendance_record_id' => 'An attendance record already exists for this day. Select it to request a correction.']);
             }
 
-            $pending = $owner->attendanceCorrections()->whereIn('status', ['pending', 'department_reviewed']);
+            $pending = $owner->attendanceCorrections()->whereIn('status', self::OPEN_STATUSES);
             if ($log) {
                 $pending->where('attendance_record_id', $log->id);
             } else {
@@ -119,27 +118,20 @@ class AttendanceCorrectionController extends Controller
     public function review(Request $request, AttendanceCorrection $correction): RedirectResponse
     {
         $user = $request->user();
-        $role = $user->role?->name;
-        abort_unless(self::available($user) && $role !== 'Employee', 403);
+        abort_unless($user->is_active && $user->role?->name === 'HRMO Head', 403);
         $data = $request->validate(['decision' => ['required', 'in:advance,reject']]);
 
-        DB::transaction(function () use ($user, $role, $data, $correction): void {
+        DB::transaction(function () use ($user, $data, $correction): void {
             $owner = $correction->employee()->lockForUpdate()->firstOrFail();
             $entry = AttendanceCorrection::query()->lockForUpdate()->findOrFail($correction->id);
 
             abort_if($owner->user_id === $user->id || $owner->id === $user->employee_id, 403);
 
-            if ($role === 'Department Head') {
-                $head = $user->employee;
-                abort_unless($head && $head->user_id === $user->id && $head->department_id && $head->department_id === $owner->department_id, 403);
-            }
-
-            $expected = $role === 'Department Head' ? 'pending' : 'department_reviewed';
-            if ($entry->status !== $expected || ! $entry->proposed_time_in || ! $entry->proposed_time_out) {
+            if (! in_array($entry->status, self::OPEN_STATUSES, true) || ! $entry->proposed_time_in || ! $entry->proposed_time_out) {
                 throw ValidationException::withMessages(['decision' => 'This request is no longer available for this decision.']);
             }
 
-            $next = $data['decision'] === 'reject' ? 'rejected' : ($role === 'Department Head' ? 'department_reviewed' : 'approved');
+            $next = $data['decision'] === 'reject' ? 'rejected' : 'approved';
             if ($next === 'approved') {
                 $times = [
                     'time_in' => $entry->proposed_time_in,
