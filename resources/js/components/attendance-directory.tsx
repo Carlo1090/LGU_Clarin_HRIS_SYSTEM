@@ -180,6 +180,45 @@ export default function AttendanceDirectory({
                             : `${records.total} employees`}
                     </span>
                 </div>
+                {totals.review > 0 && (
+                    <details
+                        open
+                        className="mx-4 mb-4 rounded-lg border bg-muted/40 px-4 py-3 text-sm sm:mx-6"
+                    >
+                        <summary className="cursor-pointer font-medium">
+                            How to clear Needs review
+                        </summary>
+                        <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
+                            <li>
+                                Click <strong>Review days</strong> beside the
+                                employee. Check <strong>Remarks</strong> for the
+                                affected dates. Open <strong>Daily punches</strong>{' '}
+                                to inspect the recorded times.
+                            </li>
+                            {canManageAttendance && (
+                                <li>
+                                    If the date appears under{' '}
+                                    <strong>Manually confirm review days</strong>,
+                                    verify all four times and click{' '}
+                                    <strong>Confirm day</strong>.
+                                </li>
+                            )}
+                            {props.canViewAttendanceCorrections && (
+                                <li>
+                                    For a missing or wrong time-in or time-out,
+                                    open <strong>Corrections</strong> on the
+                                    employee’s row. Approve an existing request,
+                                    or submit a new one with the verified times
+                                    and then approve it.
+                                </li>
+                            )}
+                        </ol>
+                        <p className="mt-2 text-muted-foreground">
+                            The badge clears after all flagged days for the
+                            selected month are resolved.
+                        </p>
+                    </details>
+                )}
                 <DirectorySearch
                     columns={[
                         { name: 'employee', label: 'Employee' },
@@ -259,6 +298,9 @@ export default function AttendanceDirectory({
                                         </Button>
                                         <DailyTimeRecordDialog
                                             url={employee.dtr_url}
+                                            reviewDays={
+                                                employee.attendance_review_days > 0
+                                            }
                                         />
                                     </div>
                                 </li>

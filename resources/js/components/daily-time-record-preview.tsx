@@ -192,6 +192,10 @@ export default function DailyTimeRecordPreview({
                     <h2 id="manual-review-heading" className="font-semibold">
                         Manually confirm review days
                     </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Verify each prefilled time against the employee’s
+                        attendance records before confirming.
+                    </p>
                     <div className="mt-3 grid gap-3">
                         {Object.entries(punchTimes)
                             .filter(

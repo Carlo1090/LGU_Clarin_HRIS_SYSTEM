@@ -141,9 +141,29 @@ export default function AttendanceCorrections({
                 canManage={canManageAttendance}
             />
             {employeeId && (
-                <Link href={path} className="self-start text-sm underline">
-                    Show corrections for all employees
-                </Link>
+                <div className="workspace-panel space-y-2 p-4 text-sm">
+                    <p>
+                        Check{' '}
+                        <a href="#correction-history" className="underline">
+                            Correction history
+                        </a>{' '}
+                        for the affected date. If there is a pending request,
+                        verify the proposed times and click{' '}
+                        <strong>✓ Approve correction</strong>.
+                    </p>
+                    {logs && (
+                        <p>
+                            If there is no request, use <strong>New correction</strong>{' '}
+                            below. Select the existing attendance record, or
+                            choose <strong>Missing day</strong> if no record
+                            exists for that date. Submit the verified times and
+                            then approve the request in Correction history.
+                        </p>
+                    )}
+                    <Link href={path} className="inline-block underline">
+                        Show corrections for all employees
+                    </Link>
+                </div>
             )}
 
             <WorkspaceOverview

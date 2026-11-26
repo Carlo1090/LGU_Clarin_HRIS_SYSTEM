@@ -1,7 +1,7 @@
 # Graph Report - LGU_Clarin_HRIS_SYSTEM  (2026-11-26)
 
 ## Corpus Check
-- 384 files · ~481,073 words
+- 384 files · ~481,322 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 47 file(s) not represented in the graph (top: (none) 30, .css 10, .conf 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a3b5fa66`
+- Built from commit: `4d0fe5be`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

@@ -92,21 +92,29 @@ function PreviewContent({ url }: { url: string }) {
 export default function DailyTimeRecordDialog({
     url,
     demo = false,
+    reviewDays = false,
 }: {
     url: string;
     demo?: boolean;
+    reviewDays?: boolean;
 }) {
+    const label = demo
+        ? 'View DTR demo'
+        : reviewDays
+          ? 'Review days'
+          : 'Preview DTR';
+
     return (
         <Dialog>
             <DialogTrigger asChild>
                 <Button
                     type="button"
                     variant="outline"
-                    size={demo ? 'default' : 'icon'}
-                    aria-label={demo ? 'View DTR demo' : 'Preview DTR'}
-                    title={demo ? 'View DTR demo' : 'Preview DTR'}
+                    size={demo ? 'default' : reviewDays ? 'sm' : 'icon'}
+                    aria-label={label}
+                    title={label}
                 >
-                    {demo ? 'View DTR demo' : <Eye aria-hidden="true" />}
+                    {demo || reviewDays ? label : <Eye aria-hidden="true" />}
                 </Button>
             </DialogTrigger>
             <DialogContent
