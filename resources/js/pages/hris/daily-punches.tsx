@@ -3,6 +3,7 @@ import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import { Button } from '@/components/ui/button';
 import type { DailyPunchRow } from '@/types/attendance';
+import { attendanceStatusLabel } from '@/lib/attendance-status';
 
 type Props = {
     rows: {
@@ -252,10 +253,7 @@ export default function DailyPunches({
                                     <td className="min-w-44 space-y-1 p-3 text-xs">
                                         {row.status && (
                                             <p className="font-semibold capitalize">
-                                                {row.status.replaceAll(
-                                                    '_',
-                                                    ' ',
-                                                )}
+                                                {attendanceStatusLabel(row.status)}
                                             </p>
                                         )}
                                         {row.schedule_id !== null && (

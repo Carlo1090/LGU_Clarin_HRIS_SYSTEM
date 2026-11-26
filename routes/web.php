@@ -102,6 +102,7 @@ Route::middleware(['auth', EnsureHrisAccountReady::class.':verify-legacy'])->gro
         Route::get('attendance/corrections', [AttendanceCorrectionController::class, 'index'])->name('attendance-corrections.index');
         Route::post('attendance/corrections', [AttendanceCorrectionController::class, 'store'])->name('attendance-corrections.store');
         Route::post('attendance/corrections/{correction}/review', [AttendanceCorrectionController::class, 'review'])->name('attendance-corrections.review');
+        Route::post('attendance/corrections/{correction}/withdraw', [AttendanceCorrectionController::class, 'withdraw'])->name('attendance-corrections.withdraw');
         Route::get('attendance-corrections', fn () => to_route('hris.attendance-corrections.index', request()->query()));
         Route::post('attendance-corrections', [AttendanceCorrectionController::class, 'store']);
         Route::post('attendance-corrections/{correction}/review', [AttendanceCorrectionController::class, 'review']);

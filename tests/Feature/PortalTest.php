@@ -313,11 +313,19 @@ test('activated employees and HR officers file slot corrections for HRMO decisio
         ->has('punches.2026-11-18', 3));
     $this->post($path, $data + ['employee' => $other->id])->assertForbidden();
     $this->post($path, array_replace($data, ['reason' => '']))->assertSessionHasErrors('reason');
+    $this->post($path, array_replace($data, ['evidence' => '']))->assertSessionHasErrors('evidence');
     $this->post($path, array_replace($data, ['work_date' => '2026-11-19', 'proposed_at' => '2026-11-19T13:05']))
         ->assertSessionHasErrors('work_date');
     $this->post($path, $data)->assertRedirect($path.'?month=2026-11');
     $this->post($path, $data)->assertSessionHasErrors('slot');
-    $original = $employee->attendanceCorrections()->sole();
+    $withdrawn = $employee->attendanceCorrections()->sole();
+    $withdrawUrl = "{$path}/{$withdrawn->id}/withdraw";
+    $this->actingAs($officer)->post($withdrawUrl)->assertForbidden();
+    $this->actingAs($user)->post($withdrawUrl)->assertRedirect();
+    $this->post($withdrawUrl)->assertSessionHasErrors('withdraw');
+    $this->assertDatabaseHas('audit_logs', ['action' => 'attendance_correction.withdrawn', 'user_id' => $user->id, 'model_id' => $withdrawn->id]);
+    $this->post($path, $data)->assertRedirect();
+    $original = $employee->attendanceCorrections()->where('status', 'pending')->sole();
     $review = "{$path}/{$original->id}/review";
     $this->post($review, ['decision' => 'approve'])->assertRedirect('/hris/my-profile');
     $this->actingAs($officer)->post($review, ['decision' => 'approve'])->assertForbidden();
@@ -331,13 +339,14 @@ test('activated employees and HR officers file slot corrections for HRMO decisio
 
     $this->actingAs($hrmo)->post($path, $data + ['employee' => $employee->id])->assertForbidden();
     $this->get($path.'?request='.$original->id)->assertInertia(fn (Assert $page) => $page
-        ->where('selected.canReview', true)->where('selected.evidence', 'Memo 18')->has('selected.punches', 3));
+        ->where('selected.canReview', true)->where('selected.evidence', 'Memo 18')
+        ->where('selected.hasRawSlot', false)->has('selected.punches', 3));
     $this->post($review, ['decision' => 'return'])->assertSessionHasErrors('comment');
     $this->post($review, ['decision' => 'return', 'comment' => 'Please confirm the return time.'])->assertRedirect();
     $this->actingAs($user)->get($path.'?request='.$original->id)->assertInertia(fn (Assert $page) => $page
         ->where('selected.status', 'returned')->where('selected.comment', 'Please confirm the return time.'));
 
-    $this->post($path, $data)->assertRedirect();
+    $this->post($path, array_replace($data, ['slot' => 'am_in', 'proposed_at' => '2026-11-18T08:05', 'evidence' => '']))->assertRedirect();
     $rejected = $employee->attendanceCorrections()->where('status', 'pending')->sole();
     $this->actingAs($hrmo)->post("{$path}/{$rejected->id}/review", ['decision' => 'reject'])->assertRedirect();
     $this->assertDatabaseHas('audit_logs', ['action' => 'attendance_correction.rejected', 'user_id' => $hrmo->id, 'model_id' => $rejected->id]);
@@ -379,4 +388,8 @@ test('activated employees and HR officers file slot corrections for HRMO decisio
 
     $this->actingAs($user)->get($path.'?request='.$entry->id)
         ->assertInertia(fn (Assert $page) => $page->where('selected.status', 'approved'));
+    $this->getJson("/hris/attendance/dtr/{$employee->id}?month=2026-11")
+        ->assertOk()
+        ->assertJsonPath('records.18.pmIn', '13:05')
+        ->assertJsonPath('records.18.correctionNotes.pm_in', "PM in 13:05 corrected by {$hrmo->name} on 2026-11-26");
 });

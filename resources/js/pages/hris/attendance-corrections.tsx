@@ -2,6 +2,7 @@ import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header'
 import WorkspaceHeader from '@/components/workspace-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { attendanceStatusLabel } from '@/lib/attendance-status';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 const path = '/hris/attendance/corrections';
@@ -25,6 +26,7 @@ type Correction = {
     status: string;
     comment: string | null;
     canReview: boolean;
+    canWithdraw: boolean;
 };
 
 type Props = {
@@ -33,7 +35,7 @@ type Props = {
         prev_page_url: string | null;
         next_page_url: string | null;
     };
-    selected: (Correction & { punches: string[] }) | null;
+    selected: (Correction & { punches: string[]; hasRawSlot: boolean }) | null;
     employeeId: number | null;
     employeeNumber: string | null;
     employeeView: boolean;
@@ -43,6 +45,7 @@ type Props = {
     flagged: Record<string, string>;
     punches: Record<string, string[]>;
     canFile: boolean;
+    rawSlots: Record<string, string[]>;
     canManageAttendance: boolean;
 };
 
@@ -64,6 +67,7 @@ export default function AttendanceCorrections({
     flagged,
     punches,
     canFile,
+    rawSlots,
     canManageAttendance,
 }: Props) {
     const filter = {
@@ -80,6 +84,11 @@ export default function AttendanceCorrections({
         evidence: '',
     });
     const review = useForm({ decision: '', comment: '' });
+    const withdraw = useForm<{ withdraw?: string }>({});
+    const requiresEvidence = Boolean(
+        request.data.work_date && request.data.slot &&
+        !rawSlots[request.data.work_date]?.includes(request.data.slot),
+    );
 
     return (
         <div className="workspace-page">
@@ -122,6 +131,14 @@ export default function AttendanceCorrections({
                     <h2 className="font-semibold">
                         {employeeView ? 'My punches and flagged days' : `Flagged days for ${employeeNumber}`}
                     </h2>
+                    {canFile && (
+                        <p className="text-sm text-muted-foreground">
+                            You can request a time correction for incomplete
+                            punches, no punches on a scheduled workday, or no
+                            schedule. A time correction leaves a missing
+                            schedule to be resolved separately.
+                        </p>
+                    )}
                     {dates.length ? (
                         <ul className="divide-y border-y">
                             {dates.map((date) => (
@@ -129,11 +146,11 @@ export default function AttendanceCorrections({
                                     <div>
                                         <strong>{date}</strong>
                                         {flagged[date] && (
-                                            <span className="ml-2 capitalize">{flagged[date].replaceAll('_', ' ')}</span>
+                                            <span className="ml-2">{attendanceStatusLabel(flagged[date])}</span>
                                         )}
                                         {employeeView && (
                                             <p className="text-muted-foreground">
-                                                {punches[date]?.join(' · ') || 'No recorded punches'}
+                                                {punches[date]?.join(' · ') || 'No raw punch on record'}
                                             </p>
                                         )}
                                     </div>
@@ -186,8 +203,9 @@ export default function AttendanceCorrections({
                                 onChange={(event) => request.setData('proposed_at', event.target.value)} />
                         </label>
                         <label className="grid gap-1 text-sm">
-                            Evidence or memo reference (optional)
-                            <Input value={request.data.evidence} maxLength={2000}
+                            Evidence or memo reference {requiresEvidence ? '(required)' : '(optional)'}
+                            {requiresEvidence && <span className="text-muted-foreground">No raw punch on record for this slot.</span>}
+                            <Input value={request.data.evidence} maxLength={2000} required={requiresEvidence}
                                 onChange={(event) => request.setData('evidence', event.target.value)} />
                         </label>
                         <label className="grid gap-1 text-sm sm:col-span-2">
@@ -209,11 +227,12 @@ export default function AttendanceCorrections({
                             <h3 className="text-sm font-semibold">Raw punches</h3>
                             {selected.punches.length ? (
                                 <ul className="text-sm">{selected.punches.map((time, index) => <li key={index}>{time}</li>)}</ul>
-                            ) : <p className="text-sm">No recorded punches.</p>}
+                            ) : <p className="text-sm">No raw punch on record.</p>}
                         </div>
                         <div className="space-y-1 text-sm">
                             <h3 className="font-semibold">Proposal</h3>
                             <p>{selected.slot ? `${slots[selected.slot]} · ${selected.proposedAt}` : selected.legacyTimes.join(' · ')}</p>
+                            {selected.slot && !selected.hasRawSlot && <p>No raw punch on record for this slot.</p>}
                             <p>Filed by {selected.filer ?? 'Unrecorded'}</p>
                             <p>{selected.reason}</p>
                             {selected.evidence && <p>Evidence or memo reference · {selected.evidence}</p>}
@@ -221,6 +240,19 @@ export default function AttendanceCorrections({
                             {selected.comment && <p>Decision comment · {selected.comment}</p>}
                         </div>
                     </div>
+                    {selected.canWithdraw && (
+                        <form onSubmit={(event) => {
+                            event.preventDefault();
+                            withdraw.post(`${path}/${selected.id}/withdraw`, { preserveScroll: true });
+                        }}>
+                            <Button variant="outline" disabled={withdraw.processing}>Withdraw request</Button>
+                            {withdraw.errors.withdraw && (
+                                <p role="alert" className="text-sm text-destructive">
+                                    {withdraw.errors.withdraw}
+                                </p>
+                            )}
+                        </form>
+                    )}
                     {selected.canReview && (
                         <form key={selected.id} className="space-y-2" onSubmit={(event) => {
                             event.preventDefault();
@@ -248,6 +280,10 @@ export default function AttendanceCorrections({
 
             <section className="workspace-panel space-y-3 p-4">
                 <h2 className="font-semibold">Correction requests</h2>
+                <p className="text-sm text-muted-foreground">
+                    One pending request is allowed per slot per day. Filers can
+                    withdraw pending requests. Outcomes appear here.
+                </p>
                 {records.data.length ? (
                     <ul className="divide-y border-y">
                         {records.data.map((row) => (

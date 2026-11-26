@@ -474,6 +474,7 @@ class HrisResourceController extends Controller
                                 'approved' => 'Approved',
                                 'returned' => 'Returned',
                                 'rejected' => 'Rejected',
+                                'withdrawn' => 'Withdrawn',
                                 default => 'No request',
                             },
                         ];

@@ -1343,11 +1343,11 @@ The system updates the leave record and status.
 
 #### C. Correcting attendance
 
-The employee can view their own punches and flagged days and request a correction for a specific slot. Each request includes a proposed date and time, a required reason, and an optional evidence reference. An HR Officer can file for the employee with a required reason.
+The employee can request a slot correction for incomplete punches, no punches on a scheduled workday, or no schedule. Schedule setup is handled separately. Each request includes a proposed date and time and a required reason. An evidence reference is required when the slot has no raw punch on record. An HR Officer can file for the employee with a required reason.
 
-The HRMO Head sees the raw punches beside the proposal and chooses Approve, Return with comment, or Reject. The system blocks self-approval and logs filing and decisions. The employee can see the outcome.
+The HRMO Head sees the raw punches beside the proposal and chooses Approve, Return with comment, or Reject. The system blocks self-approval and logs filing, decisions, and withdrawals. Each slot can have one pending request per day. The filer can withdraw it while pending. Employees see outcomes in the app.
 
-Approval applies a slot override in the daily calculation. Raw punches remain immutable. Employees awaiting initial profile approval can use attendance self-service after satisfying account security checks.
+Approval applies a slot override in the daily calculation. Raw punches remain immutable. The DTR identifies corrected slots, their approvers, and their approval dates. Employees awaiting initial profile approval can use attendance self-service after satisfying account security checks.
 
 The Employees attendance screen shows flagged dates, their request status, and the pending request count. Daily punches is read-only.
 

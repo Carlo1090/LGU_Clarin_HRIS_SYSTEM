@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Hris;
 
 use App\Attendance\Models\AttendanceDaily;
+use App\Models\AttendanceCorrection;
 use App\Http\Controllers\Controller;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceRecord;
@@ -84,13 +85,26 @@ class DailyTimeRecordController extends Controller
 
         $corrected = AttendanceDaily::where('employee_id', $employee->id)
             ->whereBetween('work_date', [$startDate, $endDate])->whereNotNull('flags->correction_slots')->get();
+        $approvals = $employee->attendanceCorrections()->with('approvedBy:id,name')
+            ->whereBetween('work_date', [$startDate, $endDate])->where('status', 'approved')
+            ->whereNotNull('slot')->whereNotNull('proposed_at')->orderBy('id')->get()->groupBy('work_date');
+        $labels = ['am_in' => 'AM in', 'am_out' => 'AM out', 'pm_in' => 'PM in', 'pm_out' => 'PM out'];
         foreach ($corrected as $day) {
+            $notes = $approvals->get($day->work_date->toDateString(), collect())->keyBy('slot')
+                ->map(fn (AttendanceCorrection $approval) => sprintf(
+                    '%s %s corrected by %s on %s',
+                    $labels[$approval->slot],
+                    Date::parse($approval->proposed_at)->format('H:i'),
+                    $approval->approvedBy?->name ?? 'an unavailable approver',
+                    $approval->approved_at ? Date::parse($approval->approved_at)->timezone('Asia/Manila')->format('Y-m-d') : 'an unrecorded date',
+                ));
             $records[$day->work_date->day] = [
                 'amIn' => $day->am_in_at?->format('H:i'),
                 'amOut' => $day->am_out_at?->format('H:i'),
                 'pmIn' => $day->pm_in_at?->format('H:i'),
                 'pmOut' => $day->pm_out_at?->format('H:i'),
-                'remarks' => 'Approved correction'.($day->status === 'complete' ? '' : ' · '.str_replace('_', ' ', $day->status)),
+                'remarks' => $day->status === 'complete' ? null : str_replace('_', ' ', $day->status),
+                'correctionNotes' => (object) $notes->all(),
             ];
         }
 

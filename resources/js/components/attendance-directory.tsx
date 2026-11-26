@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PersonAvatar from '@/components/person-avatar';
+import { attendanceStatusLabel } from '@/lib/attendance-status';
 
 type EmployeeAttendance = {
     id: number;
@@ -243,7 +244,7 @@ export default function AttendanceDirectory({
                                                 {employee.review_days.map(({ date, finding, state }) => (
                                                     <li key={date} className="grid gap-1 py-2 sm:grid-cols-3">
                                                         <span>{date}</span>
-                                                        <span className="capitalize">{finding?.replaceAll('_', ' ') ?? 'Resolved'}</span>
+                                                        <span>{finding ? attendanceStatusLabel(finding) : 'Resolved'}</span>
                                                         <span>{state}</span>
                                                     </li>
                                                 ))}

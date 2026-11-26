@@ -22,6 +22,7 @@ export type DailyTimeRecordData = {
                 undertimeHours?: number;
                 undertimeMinutes?: number;
                 remarks?: string | null;
+                correctionNotes?: Partial<Record<'am_in' | 'am_out' | 'pm_in' | 'pm_out', string>>;
             }
         >
     >;
@@ -258,14 +259,17 @@ export default function DailyTimeRecordPreview({
                                         <th scope="row" className="font-normal">
                                             {day}
                                         </th>
-                                        <td>{record?.amIn}</td>
-                                        <td>{record?.amOut}</td>
-                                        <td>{record?.pmIn}</td>
-                                        <td>{record?.pmOut}</td>
+                                        <td>{record?.amIn}{record?.correctionNotes?.am_in && '*'}</td>
+                                        <td>{record?.amOut}{record?.correctionNotes?.am_out && '*'}</td>
+                                        <td>{record?.pmIn}{record?.correctionNotes?.pm_in && '*'}</td>
+                                        <td>{record?.pmOut}{record?.correctionNotes?.pm_out && '*'}</td>
                                         <td>{record?.undertimeHours}</td>
                                         <td>{record?.undertimeMinutes}</td>
                                         <td className="break-words">
                                             {record?.remarks}
+                                            {Object.values(record?.correctionNotes ?? {}).map((note) => (
+                                                <div key={note}>* {note}</div>
+                                            ))}
                                         </td>
                                     </tr>
                                 );

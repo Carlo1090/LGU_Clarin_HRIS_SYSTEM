@@ -56,18 +56,25 @@ class AttendanceCorrectionController extends Controller
         }
         $flagged = $employee ? $attendance->reviewSummary($employee, $from, $to)['flagged'] : [];
         $punches = [];
-        if ($self) {
-            foreach ($attendance->recordedWorkDates($employee->id, $from, $to) as $date) {
-                $punches[$date] = array_column($attendance->employeeDay($employee->id, $date)['punches'], 'punched_at');
+        $rawSlots = [];
+        $canFile = $employee !== null && ($self || $user->role?->name === 'HR Officer');
+        if ($canFile) {
+            $dates = $self ? array_unique([...array_keys($flagged), ...$attendance->recordedWorkDates($employee->id, $from, $to)]) : array_keys($flagged);
+            foreach ($dates as $date) {
+                $raw = $attendance->employeeDay($employee->id, $date)['punches'];
+                $rawSlots[$date] = array_values(array_unique(array_filter(array_column($raw, 'slot'))));
+                if ($self) {
+                    $punches[$date] = array_column($raw, 'punched_at');
+                }
             }
         }
 
         $details = null;
         if ($selected) {
             $details = $this->row($selected, $user);
-            $details['punches'] = $details['date']
-                ? array_column($attendance->employeeDay($selected->employee_id, $details['date'])['punches'], 'punched_at')
-                : [];
+            $raw = $details['date'] ? $attendance->employeeDay($selected->employee_id, $details['date'])['punches'] : [];
+            $details['punches'] = array_column($raw, 'punched_at');
+            $details['hasRawSlot'] = $selected->slot && collect($raw)->contains('slot', $selected->slot);
         }
 
         return Inertia::render('hris/attendance-corrections', [
@@ -88,7 +95,8 @@ class AttendanceCorrectionController extends Controller
             'queueMonth' => $employee ? $month : ($filters['month'] ?? null),
             'flagged' => (object) $flagged,
             'punches' => (object) $punches,
-            'canFile' => $employee !== null && ($self || $user->role?->name === 'HR Officer'),
+            'canFile' => $canFile,
+            'rawSlots' => (object) $rawSlots,
             'canManageAttendance' => $user->can('manage-hris-resource', 'attendance'),
         ]);
     }
@@ -126,6 +134,10 @@ class AttendanceCorrectionController extends Controller
             if ($owner->attendanceCorrections()->where('work_date', $date)->where('slot', $data['slot'])
                 ->whereIn('status', self::OPEN_STATUSES)->exists()) {
                 throw ValidationException::withMessages(['slot' => 'This slot already has a pending request.']);
+            }
+            $raw = $attendance->employeeDay($owner->id, $date)['punches'];
+            if (! collect($raw)->contains('slot', $data['slot']) && blank($data['evidence'] ?? null)) {
+                throw ValidationException::withMessages(['evidence' => 'No raw punch on record for this slot. Enter an evidence or memo reference.']);
             }
             $entry = $owner->attendanceCorrections()->create([
                 'correction_type' => 'slot_override',
@@ -169,6 +181,10 @@ class AttendanceCorrectionController extends Controller
             if ($status === 'approved' && (! $entry->slot || ! $entry->proposed_at || ! $entry->work_date)) {
                 throw ValidationException::withMessages(['decision' => 'Return this older request and have it filed for a specific slot.']);
             }
+            if ($status === 'approved' && blank($entry->evidence)
+                && ! collect($attendance->employeeDay($owner->id, $entry->work_date)['punches'])->contains('slot', $entry->slot)) {
+                throw ValidationException::withMessages(['decision' => 'No raw punch on record for this slot. Return the request for evidence.']);
+            }
             $entry->update([
                 'status' => $status,
                 'decision_comment' => $data['comment'] ?? null,
@@ -186,6 +202,26 @@ class AttendanceCorrectionController extends Controller
             $this->audit($user, $entry, $status, $entry->decision_comment);
         });
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance correction decision saved.']);
+
+        return back();
+    }
+
+    public function withdraw(Request $request, AttendanceCorrection $correction): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless(self::available($user) && $correction->filed_by === $user->id, 403);
+        DB::transaction(function () use ($user, $correction): void {
+            $owner = $correction->employee()->lockForUpdate()->firstOrFail();
+            $entry = AttendanceCorrection::query()->lockForUpdate()->findOrFail($correction->id);
+            abort_unless($entry->filed_by === $user->id, 403);
+            abort_if($user->role?->name === 'Employee' && ($owner->id !== $user->employee_id || $owner->user_id !== $user->id), 403);
+            if (! in_array($entry->status, self::OPEN_STATUSES, true)) {
+                throw ValidationException::withMessages(['withdraw' => 'Only a pending request can be withdrawn.']);
+            }
+            $entry->update(['status' => 'withdrawn']);
+            $this->audit($user, $entry, 'withdrawn', null);
+        });
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance correction withdrawn.']);
 
         return back();
     }
@@ -212,6 +248,7 @@ class AttendanceCorrectionController extends Controller
             'filer' => $row->filer?->name,
             'status' => $row->status,
             'comment' => $row->decision_comment,
+            'canWithdraw' => $row->filed_by === $user->id && in_array($row->status, self::OPEN_STATUSES, true),
             'canReview' => $user->role?->name === 'HRMO Head' && $row->filed_by !== $user->id
                 && $row->employee_id !== $user->employee_id && $row->employee?->user_id !== $user->id
                 && in_array($row->status, self::OPEN_STATUSES, true),
