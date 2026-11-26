@@ -74,7 +74,7 @@ export default function AttendanceDirectory({
     unlinkedMachineIds,
     records,
 }: AttendanceDirectoryProps) {
-    const { url, props } = usePage();
+    const { url } = usePage();
     const search = new URL(url, 'http://localhost').searchParams;
     const totals = { complete: 0, review: 0, empty: 0 };
     for (const employee of records.data) totals[statusFor(employee)]++;
@@ -220,16 +220,6 @@ export default function AttendanceDirectory({
                                         </Badge>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {props.canViewAttendanceCorrections && (
-                                            <Button asChild variant="outline" size="sm">
-                                                <Link
-                                                    href="/hris/attendance/corrections"
-                                                    data={{ employee: employee.id, month: attendanceMonth }}
-                                                >
-                                                    Corrections ({employee.requests_pending})
-                                                </Link>
-                                            </Button>
-                                        )}
                                         <Button
                                             asChild
                                             variant="outline"

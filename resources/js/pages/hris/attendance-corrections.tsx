@@ -37,7 +37,9 @@ type Props = {
     employeeId: number | null;
     employeeNumber: string | null;
     employeeView: boolean;
+    employees: { id: number; label: string }[];
     month: string;
+    queueMonth: string | null;
     flagged: Record<string, string>;
     punches: Record<string, string[]>;
     canFile: boolean;
@@ -56,13 +58,18 @@ export default function AttendanceCorrections({
     employeeId,
     employeeNumber,
     employeeView,
+    employees,
     month,
+    queueMonth,
     flagged,
     punches,
     canFile,
     canManageAttendance,
 }: Props) {
-    const filter = { month, ...(employeeId && !employeeView ? { employee: employeeId } : {}) };
+    const filter = {
+        ...(queueMonth ? { month: queueMonth } : {}),
+        ...(employeeId && !employeeView ? { employee: employeeId } : {}),
+    };
     const dates = Object.keys({ ...flagged, ...punches }).sort();
     const request = useForm({
         employee: employeeView ? null : employeeId,
@@ -87,21 +94,34 @@ export default function AttendanceCorrections({
                 <AttendanceWorkspaceHeader active="corrections" month={month} canManage={canManageAttendance} />
             )}
 
+            <form action={path} className="workspace-panel flex flex-wrap items-end gap-3 p-4">
+                {!employeeView && (
+                    <label className="grid min-w-0 gap-1 text-sm">
+                        Employee
+                        <select
+                            name="employee"
+                            defaultValue={employeeId ?? ''}
+                            className="w-full rounded-md border bg-background p-2"
+                        >
+                            <option value="">All employees</option>
+                            {employees.map(({ id, label }) => (
+                                <option value={id} key={id}>{label}</option>
+                            ))}
+                        </select>
+                    </label>
+                )}
+                <label className="grid gap-1 text-sm">
+                    {employeeView ? 'Attendance month' : 'Attendance month (optional)'}
+                    <Input type="month" name="month" defaultValue={queueMonth ?? ''} required={employeeView} />
+                </label>
+                <Button type="submit" variant="outline">Apply filters</Button>
+            </form>
+
             {employeeId && (
                 <section className="workspace-panel space-y-4 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h2 className="font-semibold">
-                            {employeeView ? 'My punches and flagged days' : `Flagged days for ${employeeNumber}`}
-                        </h2>
-                        <form action={path} className="flex items-end gap-2">
-                            {!employeeView && <input type="hidden" name="employee" value={employeeId} />}
-                            <label className="grid gap-1 text-sm">
-                                Attendance month
-                                <Input type="month" name="month" defaultValue={month} required />
-                            </label>
-                            <Button type="submit" variant="outline">Show month</Button>
-                        </form>
-                    </div>
+                    <h2 className="font-semibold">
+                        {employeeView ? 'My punches and flagged days' : `Flagged days for ${employeeNumber}`}
+                    </h2>
                     {dates.length ? (
                         <ul className="divide-y border-y">
                             {dates.map((date) => (
@@ -227,10 +247,7 @@ export default function AttendanceCorrections({
             )}
 
             <section className="workspace-panel space-y-3 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="font-semibold">Correction requests</h2>
-                    {!employeeView && employeeId && <Link href={path} className="text-sm underline">Show all employees</Link>}
-                </div>
+                <h2 className="font-semibold">Correction requests</h2>
                 {records.data.length ? (
                     <ul className="divide-y border-y">
                         {records.data.map((row) => (

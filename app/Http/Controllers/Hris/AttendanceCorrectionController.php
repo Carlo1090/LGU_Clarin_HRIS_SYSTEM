@@ -33,9 +33,9 @@ class AttendanceCorrectionController extends Controller
         $user = $request->user();
         abort_unless(self::available($user), 403);
         $filters = $request->validate([
-            'employee' => ['sometimes', 'required', 'integer', 'min:1'],
+            'employee' => ['nullable', 'integer', 'min:1'],
             'request' => ['sometimes', 'required', 'integer', 'min:1'],
-            'month' => ['sometimes', 'required', 'date_format:Y-m', 'regex:/^[1-9][0-9]{3}-/'],
+            'month' => ['nullable', 'date_format:Y-m', 'regex:/^[1-9][0-9]{3}-/'],
         ]);
 
         $self = $user->role?->name === 'Employee';
@@ -51,7 +51,7 @@ class AttendanceCorrectionController extends Controller
         $query = AttendanceCorrection::query()->with(['attendanceRecord', 'employee', 'filer'])
             ->when($employee, fn ($query) => $query->where('employee_id', $employee->id));
         $selected = isset($filters['request']) ? (clone $query)->findOrFail($filters['request']) : null;
-        if ($employee) {
+        if ($employee || isset($filters['month'])) {
             $query->forWorkDates($from, $to);
         }
         $flagged = $employee ? $attendance->reviewSummary($employee, $from, $to)['flagged'] : [];
@@ -77,7 +77,15 @@ class AttendanceCorrectionController extends Controller
             'employeeId' => $employee?->id,
             'employeeNumber' => $employee?->employee_number,
             'employeeView' => $self,
+            'employees' => $self ? [] : Employee::query()
+                ->orderBy('last_name')->orderBy('first_name')->orderBy('id')
+                ->get(['id', 'employee_number', 'first_name', 'last_name', 'suffix'])
+                ->map(fn (Employee $option) => [
+                    'id' => $option->id,
+                    'label' => trim("{$option->last_name}, {$option->first_name} {$option->suffix}").' · '.$option->employee_number,
+                ]),
             'month' => $month,
+            'queueMonth' => $employee ? $month : ($filters['month'] ?? null),
             'flagged' => (object) $flagged,
             'punches' => (object) $punches,
             'canFile' => $employee !== null && ($self || $user->role?->name === 'HR Officer'),

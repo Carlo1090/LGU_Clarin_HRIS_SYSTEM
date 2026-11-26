@@ -274,9 +274,9 @@ test('activated employees and HR officers file slot corrections for HRMO decisio
     $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-26 12:00:00'));
     $role = Role::factory()->create(['name' => 'Employee']);
     $user = User::factory()->for($role)->create();
-    $employee = Employee::factory()->create(['user_id' => $user->id, 'biometric_id' => 1090, 'date_hired' => '2020-01-01']);
+    $employee = Employee::factory()->create(['user_id' => $user->id, 'last_name' => 'Zulu', 'biometric_id' => 1090, 'date_hired' => '2020-01-01']);
     $user->forceFill(['employee_id' => $employee->id])->save();
-    $other = Employee::factory()->create();
+    $other = Employee::factory()->create(['last_name' => 'Adams']);
     $officer = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
     $hrmo = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create();
     \App\Models\AuditLog::create(['user_id' => $user->id, 'action' => 'employee.activation_completed']);
@@ -308,6 +308,7 @@ test('activated employees and HR officers file slot corrections for HRMO decisio
     $this->get($path."?employee={$other->id}")->assertForbidden();
     $this->get($path)->assertInertia(fn (Assert $page) => $page
         ->where('employeeId', $employee->id)
+        ->has('employees', 0)
         ->where('flagged.2026-11-18', 'incomplete')
         ->has('punches.2026-11-18', 3));
     $this->post($path, $data + ['employee' => $other->id])->assertForbidden();
@@ -320,6 +321,13 @@ test('activated employees and HR officers file slot corrections for HRMO decisio
     $review = "{$path}/{$original->id}/review";
     $this->post($review, ['decision' => 'approve'])->assertRedirect('/hris/my-profile');
     $this->actingAs($officer)->post($review, ['decision' => 'approve'])->assertForbidden();
+    $this->get($path.'?employee=&month=2026-11')->assertInertia(fn (Assert $page) => $page
+        ->where('employeeId', null)
+        ->where('employees.0.id', $other->id)
+        ->where('employees.1.id', $employee->id)
+        ->where('records.data.0.id', $original->id));
+    $this->get($path.'?month=2026-10')->assertInertia(fn (Assert $page) => $page
+        ->has('records.data', 0));
 
     $this->actingAs($hrmo)->post($path, $data + ['employee' => $employee->id])->assertForbidden();
     $this->get($path.'?request='.$original->id)->assertInertia(fn (Assert $page) => $page
