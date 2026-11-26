@@ -118,12 +118,10 @@ class DashboardInsights
                     'value' => (int) $row->employees_count, 'unit' => 'employees', 'href' => '/hris/portal/staffing',
                 ])->all();
         }
-        if (in_array($role, ['Employee', 'HRMO Head'], true) && AttendanceCorrectionController::available($user)) {
-            $corrections = AttendanceCorrection::query()->whereIn('employee_id', clone $ids);
-            $corrections->whereIn('status', AttendanceCorrectionController::OPEN_STATUSES);
-            if ($role !== 'Employee') {
-                $corrections->where('employee_id', '!=', $user->employee_id ?? 0);
-            }
+        if (AttendanceCorrectionController::available($user)) {
+            $corrections = AttendanceCorrection::query()->whereIn('employee_id', clone $ids)
+                ->whereIn('status', AttendanceCorrectionController::OPEN_STATUSES)
+                ->where('employee_id', '!=', $user->employee_id ?? 0);
             $tasks[] = $this->task('Attendance corrections', 'Time entries waiting for a follow-up.', $corrections->count(), route('hris.attendance-corrections.index', absolute: false), 'blue');
         }
         if (Gate::forUser($user)->allows('view-hris-resource', 'employees')) {

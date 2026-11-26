@@ -1,7 +1,6 @@
 import { useTableSearch } from '@/components/table-search';
 import WorkspaceHeader from '@/components/workspace-header';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import LeaveFormPreviewDialog, {
     leaveReasons,
@@ -24,7 +23,6 @@ type Props = {
     missingEmployee?: boolean;
     dtrPreviewUrl?: string | null;
     dtrDemoUrl?: string | null;
-    correctionsUrl?: string | null;
     leaveTypes?: { id: number; name: string }[] | null;
     leaveApplicant?: LeaveApplicant | null;
     filingDate?: string | null;
@@ -357,7 +355,6 @@ export default function PortalPage({
     missingEmployee,
     dtrPreviewUrl,
     dtrDemoUrl,
-    correctionsUrl,
     leaveTypes,
     leaveApplicant,
     filingDate,
@@ -383,11 +380,6 @@ export default function PortalPage({
                         <DailyTimeRecordDialog url={dtrPreviewUrl} />
                     )}
                     <DailyTimeRecordDialog url={dtrDemoUrl} demo />
-                    {correctionsUrl && (
-                        <Button asChild variant="outline">
-                            <Link href={correctionsUrl}>Corrections</Link>
-                        </Button>
-                    )}
                 </div>
             )}
 

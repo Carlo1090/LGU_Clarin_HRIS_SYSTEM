@@ -232,17 +232,16 @@ export default function AttendanceDirectory({
                                         )}
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {employee.attendance_review_days > 0 &&
-                                            props.canViewAttendanceCorrections && (
-                                                <Button asChild variant="outline" size="sm">
-                                                    <Link
-                                                        href="/hris/attendance/corrections"
-                                                        data={{ employee: employee.id }}
-                                                    >
-                                                        Corrections
-                                                    </Link>
-                                                </Button>
-                                            )}
+                                        {props.canViewAttendanceCorrections && (
+                                            <Button asChild variant="outline" size="sm">
+                                                <Link
+                                                    href="/hris/attendance/corrections"
+                                                    data={{ employee: employee.id }}
+                                                >
+                                                    Corrections
+                                                </Link>
+                                            </Button>
+                                        )}
                                         <Button
                                             asChild
                                             variant="outline"

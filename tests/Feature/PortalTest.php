@@ -49,7 +49,7 @@ test('HR navigation includes attendance records and omits a separate corrections
             ->where('hrisNavigation.0.href', '/hris/attendance')
             ->where('hrisNavigation.1.href', '/hris/employees')
             ->where('hrisNavigation.2.href', '/hris/leave-applications')
-            ->where('canViewAttendanceCorrections', true)
+            ->where('canViewAttendanceCorrections', false)
             ->where('hrisNavigation', fn ($items) => ! collect($items)->contains('title', 'Attendance corrections')));
 
     $this->get('/hris/attendance-corrections')->assertRedirect('/hris/attendance/corrections');
@@ -278,6 +278,7 @@ test('attendance corrections go directly to the HRMO Head for approval', functio
     $otherLog = AttendanceRecord::factory()->create(['attendance_date' => '2026-11-01']);
     $path = '/hris/attendance/corrections';
     $data = [
+        'employee' => $employee->id,
         'attendance_record_id' => $log->id,
         'time_in' => '2026-11-01T08:00',
         'time_out' => '2026-11-01T16:00',
@@ -285,17 +286,23 @@ test('attendance corrections go directly to the HRMO Head for approval', functio
     ];
 
     $this->actingAs($user)->get('/hris/portal/my-attendance')
-        ->assertInertia(fn (Assert $page) => $page->where('correctionsUrl', $path));
+        ->assertInertia(fn (Assert $page) => $page->missing('correctionsUrl'));
+    $head = User::factory()->for(Role::factory()->state(['name' => 'Department Head']))->create();
+    $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
+    $hrmo = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create();
+    foreach ([$user, $head, $hr] as $otherRole) {
+        $this->actingAs($otherRole)->get($path)->assertForbidden();
+        $this->post($path, $data)->assertForbidden();
+    }
+
+    $employeeCorrections = $path.'?employee='.$employee->id;
+    $this->actingAs($hrmo)->get('/hris/attendance')
+        ->assertInertia(fn (Assert $page) => $page->where('canViewAttendanceCorrections', true));
     $this->post($path, array_replace($data, ['attendance_record_id' => $otherLog->id]))->assertNotFound();
-    $this->post($path, $data)->assertRedirect($path);
+    $this->post($employeeCorrections, array_diff_key($data, ['employee' => true]))->assertRedirect($employeeCorrections);
     $this->post($path, $data)->assertSessionHasErrors('attendance_record_id');
     $entry = $log->corrections()->sole();
 
-    $head = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'Department Head'])->id]);
-    $headEmployee = Employee::factory()->create(['user_id' => $head->id, 'department_id' => $employee->department_id]);
-    $head->forceFill(['employee_id' => $headEmployee->id])->save();
-    $hr = User::factory()->create(['role_id' => Role::factory()->create(['name' => 'HR Officer'])->id]);
-    $hrmo = User::factory()->for(Role::factory()->state(['name' => 'HRMO Head']))->create();
     $review = "{$path}/{$entry->id}/review";
 
     $this->actingAs($hr)->post($review, ['decision' => 'advance'])->assertForbidden();
@@ -305,7 +312,8 @@ test('attendance corrections go directly to the HRMO Head for approval', functio
     $this->actingAs($hrmo)->get($path.'?employee='.$otherLog->employee_id)
         ->assertInertia(fn (Assert $page) => $page->has('records.data', 0));
     $this->get($path.'?employee='.$employee->id)->assertInertia(fn (Assert $page) => $page
-        ->where('employeeFiltered', true)
+        ->where('employeeId', $employee->id)
+        ->where('logs.0.id', $log->id)
         ->where('records.data.0.canReview', true));
     $this->post($review, ['decision' => 'advance'])->assertRedirect();
     expect($entry->refresh()->status)->toBe('approved');
@@ -318,7 +326,7 @@ test('attendance corrections go directly to the HRMO Head for approval', functio
         'time_in' => '2026-11-02T08:00',
         'time_out' => '2026-11-02T16:00',
     ]);
-    $this->actingAs($user)->post($path, $missing)->assertRedirect($path);
+    $this->post($path, $missing)->assertRedirect($employeeCorrections);
     $this->post($path, $missing)->assertSessionHasErrors('attendance_record_id');
     $request = $employee->attendanceCorrections()->whereNull('attendance_record_id')->sole();
     $missingReview = "{$path}/{$request->id}/review";

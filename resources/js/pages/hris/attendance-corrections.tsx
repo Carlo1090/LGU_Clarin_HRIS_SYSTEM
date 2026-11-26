@@ -10,7 +10,6 @@ import {
     TableCell,
     TableRow,
 } from '@/components/ui/table';
-import WorkspaceHeader from '@/components/workspace-header';
 import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
@@ -53,8 +52,8 @@ export default function AttendanceCorrections({
     records,
     logs,
     advanceLabel,
-    employeeFiltered,
-    employeeView,
+    employeeId,
+    employeeNumber,
     canManageAttendance,
 }: {
     records: {
@@ -64,8 +63,8 @@ export default function AttendanceCorrections({
     };
     logs: Log[] | null;
     advanceLabel: string;
-    employeeFiltered: boolean;
-    employeeView: boolean;
+    employeeId: number | null;
+    employeeNumber: string | null;
     canManageAttendance: boolean;
 }) {
     const search = useTableSearch(
@@ -136,23 +135,12 @@ export default function AttendanceCorrections({
 
     return (
         <div className="workspace-page">
-            <Head title={employeeView ? 'My attendance' : 'Attendance records'} />
-            {employeeView ? (
-                <WorkspaceHeader
-                    title="My attendance"
-                    description="Request corrections to your daily time records."
-                >
-                    <Link href="/hris/portal/my-attendance" className="underline">
-                        Back to my attendance
-                    </Link>
-                </WorkspaceHeader>
-            ) : (
-                <AttendanceWorkspaceHeader
-                    active="corrections"
-                    canManage={canManageAttendance}
-                />
-            )}
-            {employeeFiltered && !employeeView && (
+            <Head title="Attendance records" />
+            <AttendanceWorkspaceHeader
+                active="corrections"
+                canManage={canManageAttendance}
+            />
+            {employeeId && (
                 <Link href={path} className="self-start text-sm underline">
                     Show corrections for all employees
                 </Link>
@@ -196,13 +184,13 @@ export default function AttendanceCorrections({
                     className="workspace-panel p-6"
                 >
                     <h2 id="request-heading" className="text-lg font-semibold">
-                        New correction
+                        New correction for {employeeNumber}
                     </h2>
                     <form
                         className="mt-4 grid gap-4 sm:grid-cols-2"
                         onSubmit={(event) => {
                             event.preventDefault();
-                            form.post(path, {
+                            form.post(`${path}?employee=${employeeId}`, {
                                 preserveScroll: true,
                                 onSuccess: () => form.reset(),
                             });

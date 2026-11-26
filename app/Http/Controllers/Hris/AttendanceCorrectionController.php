@@ -17,30 +17,20 @@ use Inertia\Response;
 
 class AttendanceCorrectionController extends Controller
 {
-    private const ROLES = ['Employee', 'Department Head', 'HR Officer', 'HRMO Head'];
-
     public const OPEN_STATUSES = ['pending', 'department_reviewed'];
 
     public static function available(User $user): bool
     {
-        return $user->is_active && in_array($user->role?->name, self::ROLES, true);
+        return $user->is_active && $user->role?->name === 'HRMO Head';
     }
 
     public function index(Request $request): Response
     {
         $user = $request->user();
         abort_unless(self::available($user), 403);
-        $role = $user->role?->name;
         $employeeFilter = $request->validate(['employee' => ['sometimes', 'required', 'integer', 'min:1']])['employee'] ?? null;
-        $employee = $user->employee;
-        $linked = $employee && $employee->user_id === $user->id;
+        $employee = $employeeFilter ? Employee::findOrFail($employeeFilter) : null;
         $query = AttendanceCorrection::query()->with(['attendanceRecord', 'employee' => fn ($query) => $query->addSelect(['avatar' => Employee::accountAvatarQuery()])]);
-
-        if ($role === 'Employee') {
-            $query->where('employee_id', $linked ? $employee->id : 0);
-        } elseif ($role === 'Department Head') {
-            $query->whereHas('employee', fn ($owner) => $owner->where('department_id', $linked ? ($employee->department_id ?? 0) : 0));
-        }
 
         if ($employeeFilter) {
             $query->where('employee_id', $employeeFilter);
@@ -57,15 +47,15 @@ class AttendanceCorrectionController extends Controller
                 'timeOut' => $row->proposed_time_out,
                 'reason' => $row->reason,
                 'status' => $row->status,
-                'canReview' => $role === 'HRMO Head' && $row->employee_id !== $user->employee_id
+                'canReview' => $row->employee_id !== $user->employee_id && $row->employee?->user_id !== $user->id
                     && in_array($row->status, self::OPEN_STATUSES, true),
             ]),
-            'logs' => $role === 'Employee' && $linked
+            'logs' => $employee && $employee->id !== $user->employee_id && $employee->user_id !== $user->id
                 ? $employee->attendanceRecords()->orderByDesc('attendance_date')->latest('id')->limit(60)->get(['id', 'attendance_date', 'time_in', 'time_out'])
                 : null,
             'advanceLabel' => 'Approve correction',
-            'employeeFiltered' => $employeeFilter !== null,
-            'employeeView' => $role === 'Employee',
+            'employeeId' => $employee?->id,
+            'employeeNumber' => $employee?->employee_number,
             'canManageAttendance' => $user->can('manage-hris-resource', 'attendance'),
         ]);
     }
@@ -73,18 +63,18 @@ class AttendanceCorrectionController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $employee = $user->employee;
-        abort_unless(self::available($user) && $user->role?->name === 'Employee' && $employee && $employee->user_id === $user->id, 403);
+        abort_unless(self::available($user), 403);
         $data = $request->validate([
+            'employee' => ['required', 'integer', 'min:1'],
             'attendance_record_id' => ['nullable', 'integer'],
             'time_in' => ['required', 'date_format:Y-m-d\TH:i'],
             'time_out' => ['required', 'date_format:Y-m-d\TH:i', 'after:time_in'],
             'reason' => ['required', 'string', 'max:2000'],
         ]);
 
-        DB::transaction(function () use ($employee, $data): void {
-            $owner = Employee::query()->lockForUpdate()->findOrFail($employee->id);
-            abort_unless($owner->user_id === $employee->user_id, 403);
+        DB::transaction(function () use ($user, $data): void {
+            $owner = Employee::query()->lockForUpdate()->findOrFail($data['employee']);
+            abort_if($owner->user_id === $user->id || $owner->id === $user->employee_id, 403);
 
             $log = isset($data['attendance_record_id'])
                 ? $owner->attendanceRecords()->lockForUpdate()->findOrFail((int) $data['attendance_record_id'])
@@ -120,13 +110,13 @@ class AttendanceCorrectionController extends Controller
             ]);
         });
 
-        return to_route('hris.attendance-corrections.index');
+        return to_route('hris.attendance-corrections.index', ['employee' => $data['employee']]);
     }
 
     public function review(Request $request, AttendanceCorrection $correction): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user->is_active && $user->role?->name === 'HRMO Head', 403);
+        abort_unless(self::available($user), 403);
         $data = $request->validate(['decision' => ['required', 'in:advance,reject']]);
 
         DB::transaction(function () use ($user, $data, $correction): void {
