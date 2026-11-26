@@ -47,13 +47,6 @@ class PortalController extends Controller
                 : ['title' => $title, 'href' => route('hris.portal', $page, false)];
         }
 
-        if (AttendanceCorrectionController::available($user)) {
-            $items[] = [
-                'title' => 'Attendance corrections',
-                'href' => route('hris.attendance-corrections.index', [], false),
-            ];
-        }
-
         if ($user->role?->name === 'HRMO Head' && $user->requires_mfa && $user->hasEnabledTwoFactorAuthentication()) {
             $items[] = [
                 'title' => 'Invite an employee',
@@ -194,6 +187,8 @@ class PortalController extends Controller
             'missingEmployee' => $employee === null,
             'dtrPreviewUrl' => $page === 'my-attendance' && $employee ? route('hris.attendance.dtr', $employee, false) : null,
             'dtrDemoUrl' => $page === 'my-attendance' ? route('hris.attendance.dtr.demo', absolute: false) : null,
+            'correctionsUrl' => $page === 'my-attendance' && AttendanceCorrectionController::available($user)
+                ? route('hris.attendance-corrections.index', absolute: false) : null,
             'leaveApplicant' => $page === 'my-leave-requests' && $employee ? [
                 'firstName' => $employee->first_name,
                 'middleName' => $employee->middle_name,

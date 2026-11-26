@@ -11,6 +11,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import WorkspaceHeader from '@/components/workspace-header';
+import AttendanceWorkspaceHeader from '@/components/attendance-workspace-header';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     Check,
@@ -23,7 +24,7 @@ import {
 import { WorkspaceOverview } from '@/components/workspace-metrics';
 import { useState } from 'react';
 
-const path = '/hris/attendance-corrections';
+const path = '/hris/attendance/corrections';
 const control = 'w-full rounded-xl border border-input bg-background px-3 py-2';
 const button =
     'rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50';
@@ -52,6 +53,9 @@ export default function AttendanceCorrections({
     records,
     logs,
     advanceLabel,
+    employeeFiltered,
+    employeeView,
+    canManageAttendance,
 }: {
     records: {
         data: Correction[];
@@ -60,6 +64,9 @@ export default function AttendanceCorrections({
     };
     logs: Log[] | null;
     advanceLabel: string;
+    employeeFiltered: boolean;
+    employeeView: boolean;
+    canManageAttendance: boolean;
 }) {
     const search = useTableSearch(
         records.data,
@@ -129,11 +136,27 @@ export default function AttendanceCorrections({
 
     return (
         <div className="workspace-page">
-            <Head title="Attendance corrections" />
-            <WorkspaceHeader
-                title="Attendance corrections"
-                description="Request or review missing days and corrections to daily time records."
-            />
+            <Head title={employeeView ? 'My attendance' : 'Attendance records'} />
+            {employeeView ? (
+                <WorkspaceHeader
+                    title="My attendance"
+                    description="Request corrections to your daily time records."
+                >
+                    <Link href="/hris/portal/my-attendance" className="underline">
+                        Back to my attendance
+                    </Link>
+                </WorkspaceHeader>
+            ) : (
+                <AttendanceWorkspaceHeader
+                    active="corrections"
+                    canManage={canManageAttendance}
+                />
+            )}
+            {employeeFiltered && !employeeView && (
+                <Link href={path} className="self-start text-sm underline">
+                    Show corrections for all employees
+                </Link>
+            )}
 
             <WorkspaceOverview
                 title="Correction overview"

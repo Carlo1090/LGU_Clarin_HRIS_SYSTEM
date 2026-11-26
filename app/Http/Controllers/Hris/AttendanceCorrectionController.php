@@ -31,6 +31,7 @@ class AttendanceCorrectionController extends Controller
         $user = $request->user();
         abort_unless(self::available($user), 403);
         $role = $user->role?->name;
+        $employeeFilter = $request->validate(['employee' => ['sometimes', 'required', 'integer', 'min:1']])['employee'] ?? null;
         $employee = $user->employee;
         $linked = $employee && $employee->user_id === $user->id;
         $query = AttendanceCorrection::query()->with(['attendanceRecord', 'employee' => fn ($query) => $query->addSelect(['avatar' => Employee::accountAvatarQuery()])]);
@@ -41,8 +42,12 @@ class AttendanceCorrectionController extends Controller
             $query->whereHas('employee', fn ($owner) => $owner->where('department_id', $linked ? ($employee->department_id ?? 0) : 0));
         }
 
+        if ($employeeFilter) {
+            $query->where('employee_id', $employeeFilter);
+        }
+
         return Inertia::render('hris/attendance-corrections', [
-            'records' => $query->latest('id')->simplePaginate(20)->through(fn (AttendanceCorrection $row) => [
+            'records' => $query->latest('id')->simplePaginate(20)->withQueryString()->through(fn (AttendanceCorrection $row) => [
                 'id' => $row->id,
                 'date' => $row->attendanceRecord->attendance_date ?? ($row->proposed_time_in ? substr($row->proposed_time_in, 0, 10) : null),
                 'missingDay' => $row->correction_type === 'missing_day',
@@ -59,6 +64,9 @@ class AttendanceCorrectionController extends Controller
                 ? $employee->attendanceRecords()->orderByDesc('attendance_date')->latest('id')->limit(60)->get(['id', 'attendance_date', 'time_in', 'time_out'])
                 : null,
             'advanceLabel' => 'Approve correction',
+            'employeeFiltered' => $employeeFilter !== null,
+            'employeeView' => $role === 'Employee',
+            'canManageAttendance' => $user->can('manage-hris-resource', 'attendance'),
         ]);
     }
 

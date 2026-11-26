@@ -124,7 +124,7 @@ class DashboardInsights
             if ($role !== 'Employee') {
                 $corrections->where('employee_id', '!=', $user->employee_id ?? 0);
             }
-            $tasks[] = $this->task('Attendance corrections', 'Time entries waiting for a follow-up.', $corrections->count(), '/hris/attendance-corrections', 'blue');
+            $tasks[] = $this->task('Attendance corrections', 'Time entries waiting for a follow-up.', $corrections->count(), route('hris.attendance-corrections.index', absolute: false), 'blue');
         }
         if (Gate::forUser($user)->allows('view-hris-resource', 'employees')) {
             $incomplete = (clone $employees)->where(fn ($query) => $query->whereDoesntHave('educations')->orWhereDoesntHave('documents'))->count();

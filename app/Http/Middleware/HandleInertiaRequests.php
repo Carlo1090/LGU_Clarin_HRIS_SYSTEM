@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\Hris\AttendanceCorrectionController;
 use App\Http\Controllers\Hris\HrisResourceController;
 use App\Http\Controllers\Hris\PortalController;
 use App\Models\Announcement;
@@ -57,6 +58,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'isHrmoWorkspace' => fn (): bool => in_array($request->user()?->role?->name, ['HRMO Head', 'HR Officer'], true),
+            'canViewAttendanceCorrections' => fn (): bool => $request->user() && AttendanceCorrectionController::available($request->user()),
             'notifications' => fn (): array => $this->notificationFeed($request->user()),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'hrisNavigation' => fn (): array => $request->user()

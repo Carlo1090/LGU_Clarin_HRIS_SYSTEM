@@ -40,7 +40,7 @@ test('employee portal returns only the signed-in employee records', function () 
     $this->get('/hris/portal/staffing')->assertForbidden();
 });
 
-test('HR navigation puts daily work before attendance corrections', function () {
+test('HR navigation includes attendance records and omits a separate corrections entry', function () {
     $hr = User::factory()->for(Role::factory()->state(['name' => 'HR Officer']))->create();
 
     $this->actingAs($hr)->get('/hris/attendance')
@@ -49,7 +49,10 @@ test('HR navigation puts daily work before attendance corrections', function () 
             ->where('hrisNavigation.0.href', '/hris/attendance')
             ->where('hrisNavigation.1.href', '/hris/employees')
             ->where('hrisNavigation.2.href', '/hris/leave-applications')
-            ->where('hrisNavigation.3.href', '/hris/attendance-corrections'));
+            ->where('canViewAttendanceCorrections', true)
+            ->where('hrisNavigation', fn ($items) => ! collect($items)->contains('title', 'Attendance corrections')));
+
+    $this->get('/hris/attendance-corrections')->assertRedirect('/hris/attendance/corrections');
 });
 
 test('DTR preview returns the selected cutoff and respects attendance access', function () {
@@ -273,7 +276,7 @@ test('attendance corrections go directly to the HRMO Head for approval', functio
     $user->forceFill(['employee_id' => $employee->id])->save();
     $log = AttendanceRecord::factory()->create(['employee_id' => $employee->id, 'attendance_date' => '2026-11-01', 'time_out' => null]);
     $otherLog = AttendanceRecord::factory()->create(['attendance_date' => '2026-11-01']);
-    $path = '/hris/attendance-corrections';
+    $path = '/hris/attendance/corrections';
     $data = [
         'attendance_record_id' => $log->id,
         'time_in' => '2026-11-01T08:00',
@@ -281,7 +284,9 @@ test('attendance corrections go directly to the HRMO Head for approval', functio
         'reason' => 'Missing time out',
     ];
 
-    $this->actingAs($user)->post($path, array_replace($data, ['attendance_record_id' => $otherLog->id]))->assertNotFound();
+    $this->actingAs($user)->get('/hris/portal/my-attendance')
+        ->assertInertia(fn (Assert $page) => $page->where('correctionsUrl', $path));
+    $this->post($path, array_replace($data, ['attendance_record_id' => $otherLog->id]))->assertNotFound();
     $this->post($path, $data)->assertRedirect($path);
     $this->post($path, $data)->assertSessionHasErrors('attendance_record_id');
     $entry = $log->corrections()->sole();
@@ -297,7 +302,10 @@ test('attendance corrections go directly to the HRMO Head for approval', functio
     $this->actingAs($head)->post($review, ['decision' => 'advance'])->assertForbidden();
     expect($entry->refresh()->status)->toBe('pending');
     expect($log->refresh()->time_out)->toBeNull();
-    $this->actingAs($hrmo)->get($path)->assertInertia(fn (Assert $page) => $page
+    $this->actingAs($hrmo)->get($path.'?employee='.$otherLog->employee_id)
+        ->assertInertia(fn (Assert $page) => $page->has('records.data', 0));
+    $this->get($path.'?employee='.$employee->id)->assertInertia(fn (Assert $page) => $page
+        ->where('employeeFiltered', true)
         ->where('records.data.0.canReview', true));
     $this->post($review, ['decision' => 'advance'])->assertRedirect();
     expect($entry->refresh()->status)->toBe('approved');

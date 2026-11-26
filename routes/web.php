@@ -100,9 +100,12 @@ Route::middleware(['auth', EnsureHrisAccountReady::class.':verify-legacy'])->gro
         Route::get('attendance/dtr/demo', [DailyTimeRecordController::class, 'demo'])->name('attendance.dtr.demo');
         Route::get('attendance/dtr/{employee}', DailyTimeRecordController::class)->whereNumber('employee')->name('attendance.dtr');
         Route::put('attendance/dtr/{employee}/review', [DailyTimeRecordController::class, 'confirmReview'])->whereNumber('employee')->name('attendance.dtr.review');
-        Route::get('attendance-corrections', [AttendanceCorrectionController::class, 'index'])->name('attendance-corrections.index');
-        Route::post('attendance-corrections', [AttendanceCorrectionController::class, 'store'])->name('attendance-corrections.store');
-        Route::post('attendance-corrections/{correction}/review', [AttendanceCorrectionController::class, 'review'])->name('attendance-corrections.review');
+        Route::get('attendance/corrections', [AttendanceCorrectionController::class, 'index'])->name('attendance-corrections.index');
+        Route::post('attendance/corrections', [AttendanceCorrectionController::class, 'store'])->name('attendance-corrections.store');
+        Route::post('attendance/corrections/{correction}/review', [AttendanceCorrectionController::class, 'review'])->name('attendance-corrections.review');
+        Route::get('attendance-corrections', fn () => to_route('hris.attendance-corrections.index', request()->query()));
+        Route::post('attendance-corrections', [AttendanceCorrectionController::class, 'store']);
+        Route::post('attendance-corrections/{correction}/review', [AttendanceCorrectionController::class, 'review']);
         Route::redirect('/', '/hris/departments')->name('index');
         Route::get('{resource}', [HrisResourceController::class, 'index'])
             ->whereIn('resource', ['roles', 'departments', 'positions', 'plantilla-items', 'employees', 'attendance', 'leave-types', 'leave-applications', 'payroll-periods', 'payrolls', 'vacancies', 'applicants', 'evaluation-periods', 'performance-reviews', 'privacy-requests', 'privacy-incidents', 'announcements', 'system-settings'])

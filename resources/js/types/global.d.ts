@@ -12,6 +12,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             isHrmoWorkspace: boolean;
+            canViewAttendanceCorrections: boolean;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

@@ -1,5 +1,5 @@
 import WorkspaceHeader from '@/components/workspace-header';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import DailyTimeRecordDialog from '@/components/daily-time-record-dialog';
 import { Button } from '@/components/ui/button';
 
@@ -20,6 +20,11 @@ const views = [
         label: 'Monthly Attendance Report',
         href: '/hris/attendance/monthly-report',
     },
+    {
+        id: 'corrections',
+        label: 'Corrections',
+        href: '/hris/attendance/corrections',
+    },
 ] as const;
 
 export default function AttendanceWorkspaceHeader({
@@ -31,6 +36,7 @@ export default function AttendanceWorkspaceHeader({
     month?: string | null;
     canManage: boolean;
 }) {
+    const { canViewAttendanceCorrections } = usePage().props;
     function viewLink(view: (typeof views)[number]) {
         const current = active === view.id;
         return (
@@ -61,7 +67,8 @@ export default function AttendanceWorkspaceHeader({
                 {viewLink(views[0])}
                 {viewLink(views[1])}
                 <DailyTimeRecordDialog url="/hris/attendance/dtr/demo" demo />
-                {canManage && views.slice(2).map(viewLink)}
+                {canManage && views.slice(2, 4).map(viewLink)}
+                {canViewAttendanceCorrections && viewLink(views[4])}
             </nav>
         </>
     );
